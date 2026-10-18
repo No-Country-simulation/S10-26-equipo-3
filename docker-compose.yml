@@ -1,0 +1,16 @@
+services:
+  postgres_db:
+    image: postgres:16-alpine
+    container_name: delta_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: delta_user
+      POSTGRES_PASSWORD: delta_password
+      POSTGRES_DB: delta_tigre_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
