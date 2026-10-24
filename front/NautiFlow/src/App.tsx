@@ -4,9 +4,9 @@ function App() {
   
 
   return (
-    <div className=" ">
+    <body className=" bg-bg-fill-secondary p-16">
     <LancheroConfirmacion/>
-    </div>
+    </body>
   )
 }
 
