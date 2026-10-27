@@ -1,13 +1,11 @@
-import LancheroConfirmacion from "./components/LancheroConfirmacion"
+import LancheroRegistro from "./components/lanchero/LancheroRegistro";
 
 function App() {
-  
-
   return (
-    <body className=" bg-bg-fill-secondary p-16">
-    <LancheroConfirmacion/>
-    </body>
-  )
+    <div className="flex min-h-dvh flex-col bg-bg-fill-secondary p-4 md:p-16">
+      <LancheroRegistro />
+    </div>
+  );
 }
 
-export default App
+export default App;
