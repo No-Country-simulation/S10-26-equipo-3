@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  title: NautiFlow - API de registro de lancheros
+  version: 1.0.0
+  description: Contrato de registro de lancheros de NautiFlow.
+paths:
+  /lancheros/registrar:
+    post:
+      operationId: registrarLanchero
+      summary: Registrar un lanchero, su embarcación y sus documentos
+      description: >-
+        Endpoint público. Enviar `solicitud` como texto que contiene el JSON
+        serializado junto con licencia, seguro y antecedentes. Se pueden
+        adjuntar hasta cinco fotos.
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - solicitud
+                - licencia
+                - seguro
+                - antecedentes
+              properties:
+                solicitud:
+                  type: string
+                  description: JSON serializado con los datos del registro.
+                licencia:
+                  type: string
+                  format: binary
+                  description: Documento obligatorio de licencia.
+                seguro:
+                  type: string
+                  format: binary
+                  description: Documento obligatorio de seguro.
+                antecedentes:
+                  type: string
+                  format: binary
+                  description: Documento obligatorio de antecedentes.
+                fotos:
+                  type: array
+                  maxItems: 5
+                  description: Fotos opcionales de la embarcación (máximo cinco).
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              solicitud:
+                contentType: text/plain
+              licencia:
+                contentType: application/pdf, image/jpeg, image/png, image/webp
+              seguro:
+                contentType: application/pdf, image/jpeg, image/png, image/webp
+              antecedentes:
+                contentType: application/pdf, image/jpeg, image/png, image/webp
+              fotos:
+                contentType: image/*
+      responses:
+        "201":
+          description: Registro recibido; el lanchero queda en estado PENDIENTE.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistroCreado"
+              example:
+                idLanchero: 12
+                idLancha: 34
+                estado: PENDIENTE
+                mensaje: Solicitud de registro recibida correctamente.
+        "400":
+          description: >-
+            JSON `solicitud` inválido, campos que no pasan validación, parte
+            requerida ausente, archivo vacío/inválido, más de cinco fotos o
+            nombre sin nombre y apellido. El error devuelve un objeto
+            `{"mensaje":"..."}`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: >-
+            Archivo mayor al límite. Por defecto: 15 MiB por documento y
+            10 MiB por foto; los límites de almacenamiento son configurables.
+            La solicitud completa también está limitada por la configuración
+            multipart del servidor. El error devuelve `{"mensaje":"..."}`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: >-
+            Documento de identidad o correo ya registrado. También puede
+            producirse por una restricción de integridad; esa ruta devuelve el
+            error en el formato `{"mensaje":"..."}`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "415":
+          description: Tipo de contenido de la solicitud no soportado por el endpoint multipart.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno al guardar archivos u otro error inesperado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: Fallo al comunicarse con Cloudflare R2.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Configuración requerida de Cloudflare R2 incompleta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    LancheroRegistro:
+      type: object
+      required:
+        - nombreCompleto
+        - documentoIdentidad
+        - whatsapp
+        - correo
+        - contrasena
+        - nombreEmbarcacion
+        - capacidadPasajeros
+      properties:
+        nombreCompleto:
+          type: string
+          maxLength: 201
+          description: >-
+            No puede estar vacío. Tras quitar espacios externos, debe incluir
+            nombre y apellido separados por espacio(s); cada parte resultante
+            debe tener como máximo 100 caracteres.
+          example: Ana Pérez
+        documentoIdentidad:
+          type: string
+          maxLength: 50
+          description: No puede estar vacío. Debe ser único entre lancheros.
+          example: "12345678"
+        whatsapp:
+          type: string
+          pattern: '^\+?[0-9 ()-]{8,20}$'
+          description: >-
+            No puede estar vacío. De 8 a 20 caracteres permitidos por el patrón:
+            dígitos, espacios, paréntesis y guiones; puede comenzar con `+`.
+          example: "+5491123456789"
+        correo:
+          type: string
+          format: email
+          maxLength: 100
+          description: No puede estar vacío y debe ser único entre lancheros.
+          example: ana@example.com
+        contrasena:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          description: No puede estar vacía; no hay otras reglas de composición en el DTO.
+          example: ClaveSegura123
+        nombreEmbarcacion:
+          type: string
+          maxLength: 100
+          description: No puede estar vacío.
+          example: La Aurora
+        capacidadPasajeros:
+          type: integer
+          format: int32
+          exclusiveMinimum: 0
+          description: Valor obligatorio mayor que cero.
+          example: 8
+    RegistroCreado:
+      type: object
+      required:
+        - idLanchero
+        - idLancha
+        - estado
+        - mensaje
+      properties:
+        idLanchero:
+          type: integer
+          format: int64
+        idLancha:
+          type: integer
+          format: int64
+        estado:
+          type: string
+          enum:
+            - PENDIENTE
+          example: PENDIENTE
+        mensaje:
+          type: string
+          example: Solicitud de registro recibida correctamente.
+    Error:
+      type: object
+      required:
+        - mensaje
+      properties:
+        mensaje:
+          type: string
+          example: Los datos registrados entran en conflicto con un registro existente.
