@@ -27,6 +27,9 @@ public class Lanchero {
     @Column(nullable = false, unique = true, length = 100)
     private String correo;
 
+    @Column(name = "password_hash", length = 100)
+    private String passwordHash;
+
     @Column(nullable = false, length = 20)
     private String estado = "PENDIENTE";
 
@@ -53,6 +56,9 @@ public class Lanchero {
 
     public String getCorreo() { return correo; }
     public void setCorreo(String correo) { this.correo = correo; }
+
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }

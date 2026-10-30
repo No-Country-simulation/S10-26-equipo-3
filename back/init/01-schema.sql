@@ -6,6 +6,7 @@ CREATE TABLE lanchero (
     documento_identidad VARCHAR(50) UNIQUE NOT NULL,
     telefono VARCHAR(20) NOT NULL,
     correo VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(100) NOT NULL,
     estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE', -- PENDIENTE, VERIFICADO, RECHAZADO
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -79,5 +80,3 @@ CREATE TABLE trayecto_retorno_vacio (
     CONSTRAINT fk_retorno_zona_origen FOREIGN KEY (id_zona_origen) REFERENCES zona(id_zona),
     CONSTRAINT fk_retorno_zona_destino FOREIGN KEY (id_zona_destino) REFERENCES zona(id_zona)
 );
-
-
