@@ -6,14 +6,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 public record LancheroRegistroDTO(
         @NotBlank(message = "El nombre completo es obligatorio")
         @Size(max = 201, message = "El nombre completo no puede superar 201 caracteres")
         String nombreCompleto,
-
-        @NotBlank(message = "El documento de identidad es obligatorio")
-        @Size(max = 50, message = "El documento de identidad no puede superar 50 caracteres")
-        String documentoIdentidad,
 
         @NotBlank(message = "El número de WhatsApp es obligatorio")
         @Pattern(regexp = "^\\+?[0-9 ()-]{8,20}$", message = "El número de WhatsApp no es válido")
@@ -34,6 +32,10 @@ public record LancheroRegistroDTO(
 
         @NotNull(message = "La capacidad de pasajeros es obligatoria")
         @jakarta.validation.constraints.Positive(message = "La capacidad debe ser mayor que cero")
-        Integer capacidadPasajeros
+        Integer capacidadPasajeros,
+
+        List<@NotNull @jakarta.validation.constraints.Positive(
+                message = "Los IDs de zonas deben ser positivos"
+        ) Long> zonasIds
 ) {
 }

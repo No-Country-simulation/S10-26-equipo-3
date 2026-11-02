@@ -25,22 +25,9 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.ImageInputStream;
-import javax.imageio.stream.ImageOutputStream;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -48,8 +35,6 @@ import java.util.UUID;
 @Service
 public class ArchivoLancheroStorage {
     private static final Logger logger = LoggerFactory.getLogger(ArchivoLancheroStorage.class);
-    private static final long MAX_PIXELES = 40_000_000L;
-    private static final int MAX_DIMENSION = 1920;
     private static final Map<String, String> EXTENSIONES_DOCUMENTO = Map.of(
             "application/pdf", ".pdf",
             "image/jpeg", ".jpg",
@@ -65,6 +50,7 @@ public class ArchivoLancheroStorage {
     private final long maxDocumentoBytes;
     private final long maxFotoBytes;
     private final long urlPrefirmadaMinutos;
+    private final ImagenWebpConverter imagenWebpConverter;
     private volatile S3Client s3Client;
     private volatile S3Presigner s3Presigner;
 
@@ -76,7 +62,8 @@ public class ArchivoLancheroStorage {
             @Value("${nautiflow.r2.region:auto}") String region,
             @Value("${nautiflow.storage.max-document-bytes:15728640}") long maxDocumentoBytes,
             @Value("${nautiflow.storage.max-photo-bytes:10485760}") long maxFotoBytes,
-            @Value("${nautiflow.storage.presigned-url-minutes:15}") long urlPrefirmadaMinutos
+            @Value("${nautiflow.storage.presigned-url-minutes:15}") long urlPrefirmadaMinutos,
+            ImagenWebpConverter imagenWebpConverter
     ) {
         this.endpoint = endpoint;
         this.accessKeyId = accessKeyId;
@@ -86,12 +73,13 @@ public class ArchivoLancheroStorage {
         this.maxDocumentoBytes = maxDocumentoBytes;
         this.maxFotoBytes = maxFotoBytes;
         this.urlPrefirmadaMinutos = urlPrefirmadaMinutos;
+        this.imagenWebpConverter = imagenWebpConverter;
         if (maxDocumentoBytes <= 0 || maxFotoBytes <= 0 || urlPrefirmadaMinutos <= 0) {
             throw new IllegalArgumentException("Los límites de almacenamiento y vigencia de URL deben ser positivos.");
         }
     }
 
-    public String guardar(MultipartFile archivo, TipoArchivo tipo) throws IOException {
+    public ArchivoAlmacenado guardar(MultipartFile archivo, TipoArchivo tipo) throws IOException {
         if (archivo == null || archivo.isEmpty()) {
             throw new SolicitudInvalidaException("Los documentos y fotos enviados no pueden estar vacíos.");
         }
@@ -108,7 +96,13 @@ public class ArchivoLancheroStorage {
                         "Cada foto puede pesar como máximo " + maxFotoBytes / (1024 * 1024) + " MB."
                 );
             }
-            contenido = convertirAWebp(contenido);
+            contenido = imagenWebpConverter.convertir(contenido);
+            if (contenido.length > maxFotoBytes) {
+                throw new ArchivoDemasiadoGrandeException(
+                        "La foto convertida supera el límite de "
+                                + maxFotoBytes / (1024 * 1024) + " MB."
+                );
+            }
             contentType = "image/webp";
             extension = ".webp";
         } else {
@@ -122,6 +116,17 @@ public class ArchivoLancheroStorage {
                 );
             }
             validarContenidoDocumento(contenido, contentType);
+            if (contentType.startsWith("image/")) {
+                contenido = imagenWebpConverter.convertir(contenido);
+                if (contenido.length > maxDocumentoBytes) {
+                    throw new ArchivoDemasiadoGrandeException(
+                            "La imagen convertida supera el límite de "
+                                    + maxDocumentoBytes / (1024 * 1024) + " MB."
+                    );
+                }
+                contentType = "image/webp";
+                extension = ".webp";
+            }
         }
 
         String carpeta = tipo == TipoArchivo.FOTO ? "fotos" : "documentos";
@@ -135,7 +140,7 @@ public class ArchivoLancheroStorage {
                             .build(),
                     RequestBody.fromBytes(contenido)
             );
-            return clave;
+            return new ArchivoAlmacenado(clave, contentType);
         } catch (SdkException exception) {
             registrarErrorR2("subir archivo", exception);
             throw new ErrorAlmacenamientoException(
@@ -283,63 +288,6 @@ public class ArchivoLancheroStorage {
         return s3Presigner;
     }
 
-    private byte[] convertirAWebp(byte[] contenido) throws IOException {
-        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(contenido))) {
-            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
-            if (!readers.hasNext()) {
-                throw new SolicitudInvalidaException("El archivo enviado no es una imagen válida.");
-            }
-            ImageReader reader = readers.next();
-            BufferedImage imagen;
-            try {
-                reader.setInput(input, true, true);
-                int ancho = reader.getWidth(0);
-                int alto = reader.getHeight(0);
-                if (ancho <= 0 || alto <= 0 || (long) ancho * alto > MAX_PIXELES) {
-                    throw new SolicitudInvalidaException("La foto supera el límite de 40 megapíxeles.");
-                }
-                imagen = reader.read(0);
-            } finally {
-                reader.dispose();
-            }
-
-            double escala = Math.min(1.0, Math.min((double) MAX_DIMENSION / imagen.getWidth(), (double) MAX_DIMENSION / imagen.getHeight()));
-            int anchoDestino = Math.max(1, (int) Math.round(imagen.getWidth() * escala));
-            int altoDestino = Math.max(1, (int) Math.round(imagen.getHeight() * escala));
-            BufferedImage redimensionada = new BufferedImage(anchoDestino, altoDestino, BufferedImage.TYPE_INT_RGB);
-            Graphics2D graphics = redimensionada.createGraphics();
-            try {
-                graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-                graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                graphics.drawImage(imagen, 0, 0, anchoDestino, altoDestino, null);
-            } finally {
-                graphics.dispose();
-                imagen.flush();
-            }
-
-            Iterator<ImageWriter> writers = ImageIO.getImageWritersByMIMEType("image/webp");
-            if (!writers.hasNext()) {
-                throw new IllegalStateException("No está disponible el codificador WebP.");
-            }
-            ImageWriter writer = writers.next();
-            try (ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                 ImageOutputStream output = ImageIO.createImageOutputStream(bytes)) {
-                writer.setOutput(output);
-                ImageWriteParam params = writer.getDefaultWriteParam();
-                if (params.canWriteCompressed()) {
-                    params.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                    params.setCompressionQuality(0.82f);
-                }
-                writer.write(null, new IIOImage(redimensionada, null, null), params);
-                output.flush();
-                return bytes.toByteArray();
-            } finally {
-                redimensionada.flush();
-                writer.dispose();
-            }
-        }
-    }
-
     private void validarContenidoDocumento(byte[] contenido, String contentType) {
         boolean valido = switch (contentType) {
             case "application/pdf" -> contenido.length >= 5
@@ -364,5 +312,8 @@ public class ArchivoLancheroStorage {
     public enum TipoArchivo {
         FOTO,
         DOCUMENTO
+    }
+
+    public record ArchivoAlmacenado(String clave, String tipoContenido) {
     }
 }

@@ -19,13 +19,13 @@ public class Documento {
     @Column(name = "tipo_documento", nullable = false, length = 50)
     private String tipoDocumento;
 
-    @Column(name = "ruta_archivo", nullable = false, length = 255)
-    private String rutaArchivo;
+    @Column(name = "clave_archivo", nullable = false, length = 255)
+    private String claveArchivo;
 
-    @Column(nullable = false, length = 20)
-    private String estado = "PENDIENTE";
+    @Column(name = "tipo_contenido", nullable = false, length = 255)
+    private String tipoContenido;
 
-    @Column
+    @Column(nullable = false)
     private OffsetDateTime fecha = OffsetDateTime.now();
 
     public Long getIdDocumento() { return idDocumento; }
@@ -37,11 +37,11 @@ public class Documento {
     public String getTipoDocumento() { return tipoDocumento; }
     public void setTipoDocumento(String tipoDocumento) { this.tipoDocumento = tipoDocumento; }
 
-    public String getRutaArchivo() { return rutaArchivo; }
-    public void setRutaArchivo(String rutaArchivo) { this.rutaArchivo = rutaArchivo; }
+    public String getClaveArchivo() { return claveArchivo; }
+    public void setClaveArchivo(String claveArchivo) { this.claveArchivo = claveArchivo; }
 
-    public String getEstado() { return estado; }
-    public void setEstado(String estado) { this.estado = estado; }
+    public String getTipoContenido() { return tipoContenido; }
+    public void setTipoContenido(String tipoContenido) { this.tipoContenido = tipoContenido; }
 
     public OffsetDateTime getFecha() { return fecha; }
     public void setFecha(OffsetDateTime fecha) { this.fecha = fecha; }
