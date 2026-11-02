@@ -22,6 +22,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -96,6 +97,48 @@ class LancheroControllerErrorTest {
                 eq(solicitud), any(MultipartFile.class), any(MultipartFile.class),
                 any(MultipartFile.class), anyList()
         );
+    }
+
+    @Test
+    void registroAceptaContrasenaOmitidaOVacia() throws Exception {
+        when(lancheroService.registrarLanchero(
+                any(LancheroRegistroDTO.class), any(MultipartFile.class), any(MultipartFile.class),
+                any(MultipartFile.class), anyList()
+        )).thenReturn(new RegistroLancheroResponse(
+                12L, 34L, "PENDIENTE", "Solicitud de registro recibida correctamente."
+        ));
+
+        for (String campoContrasena : List.of("", ",\"contrasena\":\"\"")) {
+            String solicitud = """
+                    {"nombreCompleto":"Ana Pérez","whatsapp":"+573212684025",
+                     "correo":"ana@example.com"%s,"nombreEmbarcacion":"Brisa Marina",
+                     "capacidadPasajeros":8,"zonasIds":[1,3]}
+                    """.formatted(campoContrasena);
+            mockMvc.perform(requestWithParts(solicitud))
+                    .andExpect(status().isCreated());
+        }
+
+        verify(lancheroService, org.mockito.Mockito.times(2)).registrarLanchero(
+                argThat(solicitud -> solicitud.contrasena() == null
+                        || solicitud.contrasena().isEmpty()),
+                any(MultipartFile.class),
+                any(MultipartFile.class),
+                any(MultipartFile.class),
+                anyList()
+        );
+    }
+
+    @Test
+    void registroRechazaContrasenaDemasiadoCorta() throws Exception {
+        mockMvc.perform(requestWithParts("""
+                        {"nombreCompleto":"Ana Pérez","whatsapp":"+573212684025",
+                         "correo":"ana@example.com","contrasena":"corta",
+                         "nombreEmbarcacion":"Brisa Marina","capacidadPasajeros":8}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("entre 8 y 72 caracteres")
+                ));
     }
 
     private MockMultipartHttpServletRequestBuilder requestWithParts(String solicitud) {

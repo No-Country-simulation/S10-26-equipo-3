@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -118,6 +119,28 @@ class LancheroPersistenceServiceTest {
         assertEquals(Set.of(), lanchaCaptor.getValue().getZonas());
         verify(zonaRepository).findAllById(List.of());
         verify(zonaRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void permiteRegistroSinContrasenaYGuardaNullEnPasswordHash() {
+        when(zonaRepository.findAllById(List.of())).thenReturn(List.of());
+        LancheroRegistroDTO solicitud = new LancheroRegistroDTO(
+                "María Pérez",
+                "+573212684025",
+                "maria@example.com",
+                null,
+                "Brisa Marina",
+                8,
+                null
+        );
+
+        service.registrar(solicitud, "l.pdf", "application/pdf",
+                "s.pdf", "application/pdf", "a.pdf", "application/pdf", List.of());
+
+        ArgumentCaptor<Lanchero> lancheroCaptor = ArgumentCaptor.forClass(Lanchero.class);
+        verify(lancheroRepository).save(lancheroCaptor.capture());
+        assertEquals(null, lancheroCaptor.getValue().getPasswordHash());
+        verify(passwordEncoder, never()).encode(any());
     }
 
     @Test

@@ -82,7 +82,10 @@ public class LancheroPersistenceService {
         lanchero.setNombreCompleto(nombreCompleto);
         lanchero.setWhatsapp(solicitud.whatsapp().strip());
         lanchero.setCorreo(solicitud.correo().strip());
-        lanchero.setPasswordHash(passwordEncoder.encode(solicitud.contrasena()));
+        String contrasena = solicitud.contrasena();
+        lanchero.setPasswordHash(contrasena == null || contrasena.isBlank()
+                ? null
+                : passwordEncoder.encode(contrasena));
         lanchero = lancheroRepository.save(lanchero);
 
         Lancha lancha = new Lancha();

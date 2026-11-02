@@ -22,8 +22,10 @@ public record LancheroRegistroDTO(
         @Size(max = 100, message = "El correo no puede superar 100 caracteres")
         String correo,
 
-        @NotBlank(message = "La contraseña es obligatoria")
-        @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres")
+        @Pattern(
+                regexp = "^(?:|(?=.*\\S).{8,72})$",
+                message = "Si proporciona una contraseña, debe tener entre 8 y 72 caracteres"
+        )
         String contrasena,
 
         @NotBlank(message = "El nombre de la embarcación es obligatorio")
