@@ -1,0 +1,327 @@
+{
+  "info": {
+    "_postman_id": "c1b4764e-7abd-4af3-b465-9e52378f9a6a",
+    "name": "NautiFlow API",
+    "description": "Colección para probar los endpoints actuales de NautiFlow. Configura baseUrl, adminEmail y adminPassword; ejecuta Login antes de los endpoints protegidos. Los endpoints de reseñas son públicos y el endpoint de finalización guarda tokenResena en una variable para continuar el flujo.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "adminEmail", "value": "", "type": "string" },
+    { "key": "adminPassword", "value": "", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "idSolicitud", "value": "12", "type": "string" },
+    { "key": "idLanchero", "value": "12", "type": "string" },
+    { "key": "idLancha", "value": "34", "type": "string" },
+    { "key": "idZonaOrigen", "value": "1", "type": "string" },
+    { "key": "idZonaDestino", "value": "2", "type": "string" },
+    { "key": "idViaje", "value": "25", "type": "string" },
+    { "key": "tokenResena", "value": "", "type": "string" },
+    { "key": "page", "value": "0", "type": "string" },
+    { "key": "size", "value": "10", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Autenticación",
+      "item": [
+        {
+          "name": "Login administrador",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["login"]
+            },
+            "description": "Público. Completa adminEmail y adminPassword en las variables de la colección. Guarda el JWT recibido como adminToken."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login responde 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "if (body.token) pm.collectionVariables.set('adminToken', body.token);",
+                  "pm.test('La respuesta contiene un token', function () { pm.expect(body.token).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Administración",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": { "raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"] }
+          }
+        },
+        {
+          "name": "Listar solicitudes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseUrl}}/admin/solicitudes?estado=PENDIENTE&page={{page}}&size={{size}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "solicitudes"],
+              "query": [
+                { "key": "estado", "value": "PENDIENTE" },
+                { "key": "page", "value": "{{page}}" },
+                { "key": "size", "value": "{{size}}" }
+              ]
+            },
+            "description": "Prueba con estado=PENDIENTE, APROBADO, RECHAZADO o TODOS."
+          }
+        },
+        {
+          "name": "Detalle de solicitud",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": { "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}", "host": ["{{baseUrl}}"], "path": ["admin", "solicitudes", "{{idSolicitud}}"] }
+          }
+        },
+        {
+          "name": "Aprobar solicitud",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": { "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}/aprobar", "host": ["{{baseUrl}}"], "path": ["admin", "solicitudes", "{{idSolicitud}}", "aprobar"] }
+          },
+          "description": "Solo acepta solicitudes en estado PENDIENTE. El envío del correo depende de la configuración SMTP."
+        },
+        {
+          "name": "Rechazar solicitud",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "body": { "mode": "raw", "raw": "{\n  \"motivo\": \"Documento ilegible\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}/rechazar", "host": ["{{baseUrl}}"], "path": ["admin", "solicitudes", "{{idSolicitud}}", "rechazar"] }
+          }
+        },
+        {
+          "name": "Listar lancheros",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseUrl}}/admin/lancheros?estado=APROBADO&page={{page}}&size={{size}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lancheros"],
+              "query": [
+                { "key": "estado", "value": "APROBADO" },
+                { "key": "page", "value": "{{page}}" },
+                { "key": "size", "value": "{{size}}" }
+              ]
+            },
+            "description": "El filtro estado se aplica a estadoSolicitud. Valores: PENDIENTE, APROBADO, RECHAZADO o TODOS."
+          }
+        },
+        {
+          "name": "Establecer estado operativo del lanchero",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estadoViaje\": \"INACTIVO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/lancheros/{{idLanchero}}/activar", "host": ["{{baseUrl}}"], "path": ["admin", "lancheros", "{{idLanchero}}", "activar"] }
+          },
+          "description": "Envía estadoViaje=ACTIVO o INACTIVO para establecer el estado deseado. Repetir la petición no alterna el estado."
+        },
+        {
+          "name": "Listar viajes en curso",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseUrl}}/admin/viajes?estado=EN_VIAJE&page={{page}}&size={{size}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "viajes"],
+              "query": [
+                { "key": "estado", "value": "EN_VIAJE" },
+                { "key": "page", "value": "{{page}}" },
+                { "key": "size", "value": "{{size}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar reseñas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseUrl}}/admin/resenas?page={{page}}&size={{size}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "resenas"],
+              "query": [
+                { "key": "page", "value": "{{page}}" },
+                { "key": "size", "value": "{{size}}" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Viajes",
+      "item": [
+        {
+          "name": "Crear e iniciar viaje",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLancha\": {{idLancha}},\n  \"idZonaOrigen\": {{idZonaOrigen}},\n  \"idZonaDestino\": {{idZonaDestino}},\n  \"cantidadPasajeros\": 2,\n  \"turistaNombreCompleto\": \"Ana Pérez\",\n  \"turistaWhatsapp\": \"5491123456789\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/viajes", "host": ["{{baseUrl}}"], "path": ["admin", "viajes"] },
+            "description": "Inicia el viaje inmediatamente. Requiere lanchero aprobado y activo, zonas existentes, capacidad disponible y ningún viaje sin finalizar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.id) pm.collectionVariables.set('idViaje', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finalizar viaje y generar token de reseña",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "url": { "raw": "{{baseUrl}}/admin/viajes/{{idViaje}}/finalizar", "host": ["{{baseUrl}}"], "path": ["admin", "viajes", "{{idViaje}}", "finalizar"] },
+            "description": "Finaliza el viaje y guarda tokenResena. La respuesta incluye nombreUsuario, whatsappUsuario y mensajeResena. El frontend construye la ruta pública /resena/{token}; esta colección guarda tokenResena automáticamente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.tokenResena) pm.collectionVariables.set('tokenResena', body.tokenResena);",
+                  "  pm.test('Finalización devuelve token y datos de reserva', function () {",
+                  "    pm.expect(body.tokenResena).to.be.a('string').and.have.length(64);",
+                  "    pm.expect(body.nombreUsuario).to.be.a('string');",
+                  "    pm.expect(body.whatsappUsuario).to.be.a('string');",
+                  "    pm.expect(body.mensajeResena).to.be.a('string');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reseñas públicas",
+      "item": [
+        {
+          "name": "Consultar datos de la reserva por token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/resena/{{tokenResena}}", "host": ["{{baseUrl}}"], "path": ["resena", "{{tokenResena}}"] },
+            "description": "Público. Consume el token obtenido al finalizar el viaje. Devuelve nombre y datos del viaje, no el WhatsApp."
+          }
+        },
+        {
+          "name": "Crear reseña",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"puntuacion\": 5,\n  \"comentario\": \"Excelente servicio\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/resena/{{tokenResena}}", "host": ["{{baseUrl}}"], "path": ["resena", "{{tokenResena}}"] },
+            "description": "Público. Solo envía puntuacion y comentario; el token identifica el viaje. No se puede crear otra reseña para el mismo viaje."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registro público",
+      "item": [
+        {
+          "name": "Listar zonas disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/zonas", "host": ["{{baseUrl}}"], "path": ["zonas"] },
+            "description": "Público. Devuelve los IDs y nombres para elegir las zonas que se incluirán en `solicitud.zonasIds`."
+          }
+        },
+        {
+          "name": "Registrar lanchero (multipart/form-data)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "solicitud",
+                  "value": "{\n  \"nombreCompleto\": \"Ana Pérez\",\n  \"whatsapp\": \"+5491123456789\",\n  \"correo\": \"ana@example.com\",\n  \"contrasena\": \"CambiarClave123\",\n  \"nombreEmbarcacion\": \"La Aurora\",\n  \"capacidadPasajeros\": 8,\n  \"zonasIds\": [1, 3]\n}",
+                  "type": "text",
+                  "contentType": "text/plain"
+                },
+                { "key": "licencia", "type": "file", "src": "" },
+                { "key": "seguro", "type": "file", "src": "" },
+                { "key": "antecedentes", "type": "file", "src": "" },
+                { "key": "fotos", "type": "file", "src": "", "disabled": true }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/lancheros/registrar", "host": ["{{baseUrl}}"], "path": ["lancheros", "registrar"] },
+            "description": "Público. Selecciona archivos locales para licencia, seguro y antecedentes antes de enviar. `fotos` es opcional; puedes habilitarlo y adjuntar una o más imágenes."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,17 +1,67 @@
 openapi: 3.1.0
 info:
-  title: NautiFlow - API de registro de lancheros
+  title: NautiFlow API
   version: 1.0.0
-  description: Contrato de registro de lancheros de NautiFlow.
+  description: Contrato de los endpoints públicos y administrativos de NautiFlow.
 paths:
+  /zonas:
+    get:
+      operationId: listarZonas
+      summary: Listar zonas disponibles para el registro
+      security: []
+      responses:
+        "200":
+          description: Zonas existentes ordenadas por nombre.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Zona"
+              example:
+                - id: 1
+                  nombre: Zona Norte
+                - id: 3
+                  nombre: Zona Centro
+  /login:
+    post:
+      operationId: iniciarSesionAdministrador
+      summary: Iniciar sesión como administrador
+      description: Endpoint público. Devuelve un JWT de tipo Bearer con vigencia de 12 horas.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              email: admin@nautiflow.com
+              password: reemplazar-por-clave-local
+      responses:
+        "200":
+          description: Sesión iniciada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Falta email o password.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credenciales inválidas.
   /lancheros/registrar:
     post:
       operationId: registrarLanchero
       summary: Registrar un lanchero, su embarcación y sus documentos
       description: >-
         Endpoint público. Enviar `solicitud` como texto que contiene el JSON
-        serializado junto con licencia, seguro y antecedentes. Se pueden
-        adjuntar hasta cinco fotos.
+        serializado junto con licencia, seguro y antecedentes. `zonasIds` es
+        opcional dentro del JSON; debe contener IDs existentes y sin duplicados.
+        Se pueden adjuntar hasta cinco fotos.
       security: []
       requestBody:
         required: true
@@ -27,7 +77,8 @@ paths:
               properties:
                 solicitud:
                   type: string
-                  description: JSON serializado con los datos del registro.
+                  description: JSON serializado con los datos del registro, incluyendo opcionalmente zonasIds.
+                  example: '{"nombreCompleto":"María Pérez","whatsapp":"+573212684025","correo":"maria@example.com","contrasena":"UnaClaveSegura123","nombreEmbarcacion":"Brisa Marina","capacidadPasajeros":8,"zonasIds":[1,3]}'
                 licencia:
                   type: string
                   format: binary
@@ -92,9 +143,8 @@ paths:
                 $ref: "#/components/schemas/Error"
         "409":
           description: >-
-            Documento de identidad o correo ya registrado. También puede
-            producirse por una restricción de integridad; esa ruta devuelve el
-            error en el formato `{"mensaje":"..."}`.
+            Correo ya registrado o conflicto con una restricción de integridad;
+            el error devuelve `{"mensaje":"..."}`.
           content:
             application/json:
               schema:
@@ -123,13 +173,793 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /admin/dashboard:
+    get:
+      operationId: obtenerDashboardAdministrador
+      summary: Consultar los indicadores del dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cantidad de solicitudes pendientes, lanchas aprobadas y viajes activos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+  /admin/solicitudes:
+    get:
+      operationId: listarSolicitudes
+      summary: Listar solicitudes de registro
+      description: Ordena por fecha de registro descendente y, en empate, por ID descendente.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EstadoSolicitud"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Página de solicitudes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginaSolicitudes"
+        "400":
+          description: Estado o parámetros de paginación inválidos.
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+  /admin/solicitudes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdLanchero"
+    get:
+      operationId: obtenerDetalleSolicitud
+      summary: Consultar el detalle de una solicitud
+      description: Incluye URLs prefirmadas de documentos de R2; nunca devuelve las claves internas de los objetos.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Detalle de la solicitud.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudDetalle"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Solicitud inexistente.
+  /admin/solicitudes/{id}/aprobar:
+    parameters:
+      - $ref: "#/components/parameters/IdLanchero"
+    patch:
+      operationId: aprobarSolicitud
+      summary: Aprobar una solicitud pendiente
+      description: Guarda la decisión y la fecha, activa automáticamente al lanchero y envía una notificación al correo registrado.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Solicitud aprobada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionSolicitud"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Lanchero inexistente.
+        "409":
+          description: La solicitud ya fue decidida.
+        "503":
+          description: No fue posible enviar la notificación; la transacción se revierte.
+  /admin/solicitudes/{id}/rechazar:
+    parameters:
+      - $ref: "#/components/parameters/IdLanchero"
+    patch:
+      operationId: rechazarSolicitud
+      summary: Rechazar una solicitud pendiente
+      description: Guarda el motivo y la fecha, y envía el motivo al correo registrado. No modifica el estado operativo.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RechazarSolicitudRequest"
+            example:
+              motivo: La licencia adjunta no es legible.
+      responses:
+        "200":
+          description: Solicitud rechazada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoSolicitud"
+        "400":
+          description: Motivo vacío, ausente o de más de 500 caracteres.
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Lanchero inexistente.
+        "409":
+          description: La solicitud ya fue decidida.
+        "503":
+          description: No fue posible enviar la notificación; la transacción se revierte.
+  /admin/lancheros:
+    get:
+      operationId: listarLancheros
+      summary: Listar lancheros
+      description: Ordena por fecha de registro descendente y, en empate, por ID descendente.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/EstadoSolicitud"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Página de lancheros con estados de solicitud y operativos separados.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginaLancheros"
+        "400":
+          description: Estado o parámetros de paginación inválidos.
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+  /admin/lancheros/{id}/activar:
+    parameters:
+      - $ref: "#/components/parameters/IdLanchero"
+    patch:
+      operationId: establecerEstadoOperativoLanchero
+      summary: Establecer el estado operativo de un lanchero aprobado
+      description: >-
+        Recibe el estado deseado ACTIVO o INACTIVO. La operación es idempotente:
+        repetir el mismo estado no lo alterna. No permite cambiar el estado
+        mientras el lanchero está EN_VIAJE. La aprobación permanece sin cambios.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [estadoViaje]
+              properties:
+                estadoViaje:
+                  type: string
+                  enum: [ACTIVO, INACTIVO]
+            example:
+              estadoViaje: INACTIVO
+      responses:
+        "200":
+          description: Estado operativo establecido; devuelve el lanchero actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LancheroAdmin"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Lanchero inexistente.
+        "409":
+          description: La solicitud no está aprobada, el lanchero está EN_VIAJE o su estado operativo no es válido.
+  /admin/viajes:
+    post:
+      operationId: crearViaje
+      summary: Crear e iniciar un viaje
+      description: >-
+        Requiere que la lancha pertenezca a un lanchero aprobado y ACTIVO,
+        que no tenga otro viaje en curso, que las zonas existan y que los
+        pasajeros no superen la capacidad. El inicio usa la hora actual.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearViajeRequest"
+            example:
+              idLancha: 34
+              idZonaOrigen: 1
+              idZonaDestino: 3
+              cantidadPasajeros: 4
+              turistaNombreCompleto: Pasajero Ejemplo
+              turistaWhatsapp: "+573001234567"
+      responses:
+        "201":
+          description: Viaje creado e iniciado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViajeAdmin"
+        "400":
+          description: Campos ausentes o inválidos, pasajeros por encima de la capacidad o zona de origen igual a la de destino.
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Lancha o zona inexistente.
+        "409":
+          description: La lancha no está aprobada y activa o el lanchero ya tiene un viaje sin finalizar.
+    get:
+      operationId: listarViajesEnCurso
+      summary: Listar viajes en curso
+      description: El endpoint solo admite estado EN_VIAJE; pagina viajes sin fecha de fin.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [EN_VIAJE]
+            default: EN_VIAJE
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Página de viajes en curso.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginaViajes"
+        "400":
+          description: Estado o parámetros de paginación inválidos.
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+  /admin/viajes/{id}/finalizar:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+    patch:
+      operationId: finalizarViaje
+      summary: Finalizar un viaje
+      description: Guarda la hora de fin, genera un token de reseña y actualiza el estado operativo del lanchero.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Viaje finalizado; devuelve los datos para enviar al turista el enlace de reseña.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViajeFinalizado"
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Viaje o lanchero inexistente.
+        "409":
+          description: El viaje no está en curso.
+  /admin/resenas:
+    get:
+      operationId: listarResenas
+      summary: Listar reseñas
+      description: Ordena por fecha descendente y, en empate, por ID descendente.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Página de reseñas con datos mínimos del lanchero calificado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginaResenas"
+        "400":
+          description: Parámetros de paginación inválidos.
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+  /resena/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 64
+          maxLength: 64
+        description: Token aleatorio asociado únicamente a la reserva finalizada.
+    get:
+      operationId: consultarReservaParaResena
+      summary: Consultar los datos guardados de la reserva
+      description: >-
+        Público. El token identifica la reserva; el nombre se obtiene del viaje
+        guardado. No se devuelve el WhatsApp del pasajero.
+      security: []
+      responses:
+        "200":
+          description: Información pública de la reserva y estado de la reseña.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservaResena"
+        "404":
+          description: Enlace inexistente o viaje aún no finalizado.
+    post:
+      operationId: crearResenaDeReserva
+      summary: Crear una reseña para la reserva identificada por el token
+      description: >-
+        Público. El token es la única referencia y autorización del viaje.
+        No se aceptan el nombre, WhatsApp ni ID de viaje desde el formulario.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - puntuacion
+              properties:
+                puntuacion:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comentario:
+                  type: string
+                  maxLength: 500
+      responses:
+        "201":
+          description: Reseña creada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResenaCreada"
+        "400":
+          description: Puntuación o comentario inválidos.
+        "404":
+          description: Enlace inexistente o viaje aún no finalizado.
+        "409":
+          description: El viaje ya tiene una reseña.
+        "503":
+          description: No fue posible completar una notificación obligatoria.
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdLanchero:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Índice de página basado en cero.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      description: Elementos por página.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    EstadoSolicitud:
+      name: estado
+      in: query
+      required: false
+      description: Estado de la solicitud; TODOS o ausente incluye todos los estados.
+      schema:
+        type: string
+        enum: [PENDIENTE, APROBADO, RECHAZADO, TODOS]
+  responses:
+    NoAutenticado:
+      description: JWT ausente, inválido o expirado.
+    SinPermiso:
+      description: El usuario autenticado no tiene rol administrador.
   schemas:
+    Zona:
+      type: object
+      required:
+        - id
+        - nombre
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+          maxLength: 100
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          example: admin@nautiflow.com
+        password:
+          type: string
+          format: password
+    LoginResponse:
+      type: object
+      required: [token, tipo, mensaje]
+      properties:
+        token:
+          type: string
+          description: JWT con vigencia de 12 horas.
+        tipo:
+          type: string
+          enum: [Bearer]
+        mensaje:
+          type: string
+          example: Inicio de sesión exitoso.
+    AdminDashboard:
+      type: object
+      required: [solicitudesPendientes, lanchasVerificadas, viajesActivos]
+      properties:
+        solicitudesPendientes:
+          type: integer
+          format: int64
+        lanchasVerificadas:
+          type: integer
+          format: int64
+        viajesActivos:
+          type: integer
+          format: int64
+    PaginaSolicitudes:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/SolicitudResumen"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+    SolicitudResumen:
+      type: object
+      required: [id, nombreCompleto, fechaRegistro, estado]
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombreCompleto:
+          type: string
+        fechaRegistro:
+          type: string
+          format: date
+        estado:
+          type: string
+          enum: [PENDIENTE, APROBADO, RECHAZADO]
+    SolicitudDetalle:
+      type: object
+      required: [id, nombreCompleto, correo, whatsapp, estado, fechaRegistro, documentos]
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombreCompleto:
+          type: string
+        correo:
+          type: string
+          format: email
+        whatsapp:
+          type: string
+        estado:
+          type: string
+          enum: [PENDIENTE, APROBADO, RECHAZADO]
+        fechaRegistro:
+          type: string
+          format: date-time
+        fechaDecision:
+          type: [string, "null"]
+          format: date-time
+        motivoRechazo:
+          type: [string, "null"]
+        embarcacion:
+          anyOf:
+            - $ref: "#/components/schemas/EmbarcacionSolicitud"
+            - type: "null"
+        documentos:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentoSolicitud"
+    EmbarcacionSolicitud:
+      type: object
+      required: [id, nombre, capacidadPasajeros, zonas]
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        capacidadPasajeros:
+          type: integer
+        zonas:
+          type: array
+          items:
+            type: string
+    DocumentoSolicitud:
+      type: object
+      required: [tipo, url]
+      properties:
+        tipo:
+          type: string
+          enum: [LICENCIA, SEGURO, ANTECEDENTES, FOTO_LANCHA]
+        url:
+          type: string
+          format: uri
+          description: URL prefirmada temporal de acceso al documento.
+    DecisionSolicitud:
+      type: object
+      required: [id, estado, mensaje]
+      properties:
+        id:
+          type: integer
+          format: int64
+        estado:
+          type: string
+          enum: [APROBADO]
+        mensaje:
+          type: string
+          example: Solicitud aprobada.
+    RechazarSolicitudRequest:
+      type: object
+      required: [motivo]
+      properties:
+        motivo:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: La licencia adjunta no es legible.
+    RechazoSolicitud:
+      type: object
+      required: [id, estado, motivo]
+      properties:
+        id:
+          type: integer
+          format: int64
+        estado:
+          type: string
+          enum: [RECHAZADO]
+        motivo:
+          type: string
+          maxLength: 500
+    PaginaLancheros:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/LancheroAdmin"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+    LancheroAdmin:
+      type: object
+      required: [id, nombreCompleto, fechaRegistro, estadoSolicitud, estadoViaje]
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombreCompleto:
+          type: string
+        fechaRegistro:
+          type: string
+          format: date-time
+        estadoSolicitud:
+          type: string
+          enum: [PENDIENTE, APROBADO, RECHAZADO]
+        estadoViaje:
+          type: string
+          enum: [ACTIVO, INACTIVO, EN_VIAJE]
+    CrearViajeRequest:
+      type: object
+      required:
+        - idLancha
+        - idZonaOrigen
+        - idZonaDestino
+        - cantidadPasajeros
+        - turistaNombreCompleto
+        - turistaWhatsapp
+      properties:
+        idLancha:
+          type: integer
+          format: int64
+          minimum: 1
+        idZonaOrigen:
+          type: integer
+          format: int64
+          minimum: 1
+        idZonaDestino:
+          type: integer
+          format: int64
+          minimum: 1
+        cantidadPasajeros:
+          type: integer
+          minimum: 1
+        turistaNombreCompleto:
+          type: string
+          minLength: 1
+          maxLength: 201
+        turistaWhatsapp:
+          type: string
+          minLength: 1
+          maxLength: 20
+    PaginaViajes:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViajeAdmin"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+    ViajeAdmin:
+      type: object
+      required:
+        - id
+        - idLancha
+        - idLanchero
+        - lancheroNombreCompleto
+        - zonaOrigen
+        - zonaDestino
+        - fechaHoraInicio
+        - cantidadPasajeros
+        - turistaNombreCompleto
+      properties:
+        id:
+          type: integer
+          format: int64
+        idLancha:
+          type: integer
+          format: int64
+        idLanchero:
+          type: integer
+          format: int64
+        lancheroNombreCompleto:
+          type: string
+        zonaOrigen:
+          type: string
+        zonaDestino:
+          type: string
+        fechaHoraInicio:
+          type: string
+          format: date-time
+        fechaHoraFin:
+          type: [string, "null"]
+          format: date-time
+        cantidadPasajeros:
+          type: integer
+        turistaNombreCompleto:
+          type: string
+    ViajeFinalizado:
+      type: object
+      required: [id, fechaHoraFin, tokenResena, nombreUsuario, whatsappUsuario, mensajeResena]
+      properties:
+        id:
+          type: integer
+          format: int64
+        fechaHoraFin:
+          type: string
+          format: date-time
+        tokenResena:
+          type: string
+          minLength: 64
+          maxLength: 64
+        nombreUsuario:
+          type: string
+        whatsappUsuario:
+          type: string
+        mensajeResena:
+          type: string
+    PaginaResenas:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResenaAdmin"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+    ResenaAdmin:
+      type: object
+      required: [idResena, idViaje, puntuacion, idLanchero, nombreLanchero, fecha]
+      properties:
+        idResena:
+          type: integer
+          format: int64
+        idViaje:
+          type: integer
+          format: int64
+        puntuacion:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comentario:
+          type: [string, "null"]
+          maxLength: 500
+        idLanchero:
+          type: integer
+          format: int64
+        nombreLanchero:
+          type: string
+        fecha:
+          type: string
+          format: date-time
     LancheroRegistro:
       type: object
       required:
         - nombreCompleto
-        - documentoIdentidad
         - whatsapp
         - correo
         - contrasena
@@ -144,11 +974,6 @@ components:
             nombre y apellido separados por espacio(s); cada parte resultante
             debe tener como máximo 100 caracteres.
           example: Ana Pérez
-        documentoIdentidad:
-          type: string
-          maxLength: 50
-          description: No puede estar vacío. Debe ser único entre lancheros.
-          example: "12345678"
         whatsapp:
           type: string
           pattern: '^\+?[0-9 ()-]{8,20}$'
@@ -180,8 +1005,17 @@ components:
           exclusiveMinimum: 0
           description: Valor obligatorio mayor que cero.
           example: 8
+        zonasIds:
+          type: array
+          uniqueItems: true
+          description: IDs existentes y sin duplicados; opcional. Si se omite, la lancha queda sin zonas asociadas.
+          items:
+            type: integer
+            format: int64
+            minimum: 1
     RegistroCreado:
       type: object
+      additionalProperties: false
       required:
         - idLanchero
         - idLancha
@@ -210,3 +1044,54 @@ components:
         mensaje:
           type: string
           example: Los datos registrados entran en conflicto con un registro existente.
+    ReservaResena:
+      type: object
+      required:
+        - idViaje
+        - nombreUsuario
+        - zonaOrigen
+        - zonaDestino
+        - fechaHoraInicio
+        - fechaHoraFin
+        - resenaRegistrada
+      properties:
+        idViaje:
+          type: integer
+          format: int64
+        nombreUsuario:
+          type: string
+        zonaOrigen:
+          type: string
+        zonaDestino:
+          type: string
+        fechaHoraInicio:
+          type: string
+          format: date-time
+        fechaHoraFin:
+          type: string
+          format: date-time
+        resenaRegistrada:
+          type: boolean
+    ResenaCreada:
+      type: object
+      required:
+        - idResena
+        - idViaje
+        - puntuacion
+        - fecha
+      properties:
+        idResena:
+          type: integer
+          format: int64
+        idViaje:
+          type: integer
+          format: int64
+        puntuacion:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comentario:
+          type: [string, "null"]
+        fecha:
+          type: string
+          format: date-time
