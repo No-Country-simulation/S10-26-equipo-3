@@ -7,10 +7,10 @@ info:
     Los campos date-time representan instantes en UTC, serializados en ISO-8601 con sufijo Z
     y precisión de microsegundos. Los campos date representan fechas calendario en formato YYYY-MM-DD.
 tags:
-  - name: Lanchero
-    description: Registro de un lanchero, su embarcación y sus documentos.
   - name: Autenticación
     description: Inicio de sesión como administrador.
+  - name: Lanchero
+    description: Registro de un lanchero, su embarcación y sus documentos.
   - name: Dashboard
     description: Indicadores principales del administrador.
   - name: Solicitudes
