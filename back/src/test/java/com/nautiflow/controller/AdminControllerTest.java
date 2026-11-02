@@ -51,13 +51,16 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -97,6 +100,20 @@ class AdminControllerTest {
 
     @MockitoBean
     private ZonaService zonaService;
+
+    @Test
+    void preflightCorsPermiteHeadersYMetodosEnRutasAdministrativasSinValidarJwt() throws Exception {
+        mockMvc.perform(options("/admin/viajes")
+                        .header("Origin", "https://frontend.example")
+                        .header("Access-Control-Request-Method", "PATCH")
+                        .header("Access-Control-Request-Headers", "authorization,content-type")
+                        .header("Authorization", "Bearer token-invalido"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "https://frontend.example"))
+                .andExpect(header().string("Access-Control-Allow-Methods", containsString("PATCH")))
+                .andExpect(header().string("Access-Control-Allow-Headers", containsString("authorization")))
+                .andExpect(header().doesNotExist("Access-Control-Allow-Credentials"));
+    }
 
     @Test
     void listarZonasEsPublicoYDevuelveSoloIdYNombre() throws Exception {
