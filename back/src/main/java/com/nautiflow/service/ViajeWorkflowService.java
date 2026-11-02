@@ -1,10 +1,13 @@
 package com.nautiflow.service;
 
 import com.nautiflow.dto.CrearViajeRequest;
+import com.nautiflow.dto.LanchaDisponibleDTO;
 import com.nautiflow.dto.PaginaViajesDTO;
+import com.nautiflow.dto.PaginaSeguimientoViajesDTO;
 import com.nautiflow.dto.ViajeAdminDTO;
 import com.nautiflow.dto.ViajeEnCursoDTO;
 import com.nautiflow.dto.ViajeFinalizadoDTO;
+import com.nautiflow.dto.ViajeSeguimientoDTO;
 import com.nautiflow.model.Lanchero;
 import com.nautiflow.model.Lancha;
 import com.nautiflow.model.Viaje;
@@ -25,11 +28,18 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.HexFormat;
+import java.util.List;
 
 @Service
 public class ViajeWorkflowService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final ZoneId ZONA_NEGOCIO = ZoneId.of("America/Bogota");
 
     private final LancheroRepository lancheroRepository;
     private final LanchaRepository lanchaRepository;
@@ -110,6 +120,59 @@ public class ViajeWorkflowService {
                 )
                 .map(this::toViajeEnCursoDTO);
         return new PaginaViajesDTO(
+                resultados.getContent(),
+                resultados.getNumber(),
+                resultados.getSize(),
+                resultados.getTotalElements(),
+                resultados.getTotalPages()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<LanchaDisponibleDTO> buscarDisponibles(
+            Integer capacidad,
+            String zonaOrigen,
+            String zonaDestino,
+            LocalTime hora
+    ) {
+        if (hora == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora seleccionada es obligatoria.");
+        }
+        if (capacidad != null && capacidad < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La capacidad debe ser mayor que cero.");
+        }
+
+        Clock clockNegocio = clock.withZone(ZONA_NEGOCIO);
+        LocalDateTime fechaHoraLocal = LocalDateTime.of(LocalDate.now(clockNegocio), hora);
+        OffsetDateTime fechaHoraConsulta = fechaHoraLocal.atZone(ZONA_NEGOCIO).toOffsetDateTime();
+        if (fechaHoraConsulta.isBefore(OffsetDateTime.now(clockNegocio))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora seleccionada ya pasó para la fecha actual.");
+        }
+
+        Zona origen = validarZona(zonaOrigen, "origen");
+        Zona destino = validarZona(zonaDestino, "destino");
+        if (origen != null && destino != null && origen.getIdZona().equals(destino.getIdZona())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El origen y el destino deben ser distintos.");
+        }
+        return lanchaRepository.buscarDisponibles(
+                        capacidad,
+                        origen == null ? null : origen.getIdZona(),
+                        destino == null ? null : destino.getIdZona(),
+                        fechaHoraConsulta
+                ).stream()
+                .map(this::toLanchaDisponibleDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PaginaSeguimientoViajesDTO listarSeguimiento(int page, int size) {
+        PaginacionValidator.validar(page, size);
+        Sort sort = Sort.by(Sort.Direction.DESC, "fechaHoraInicio")
+                .and(Sort.by(Sort.Direction.DESC, "idViaje"));
+        Page<ViajeSeguimientoDTO> resultados = viajeRepository
+                .findAllForSeguimiento(PageRequest.of(page, size, sort))
+                .map(this::toViajeSeguimientoDTO);
+        return new PaginaSeguimientoViajesDTO(
                 resultados.getContent(),
                 resultados.getNumber(),
                 resultados.getSize(),
@@ -218,6 +281,68 @@ public class ViajeWorkflowService {
                 viaje.getCantidadPasajeros(),
                 viaje.getTuristaNombreCompleto(),
                 viaje.getTuristaWhatsapp()
+        );
+    }
+
+    private Zona validarZona(String filtro, String tipo) {
+        if (filtro == null) {
+            return null;
+        }
+        String filtroNormalizado = filtro.strip();
+        if (filtroNormalizado.isEmpty() || filtroNormalizado.length() > 100) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La zona de " + tipo + " debe tener entre 1 y 100 caracteres."
+            );
+        }
+        try {
+            long idZona = Long.parseLong(filtroNormalizado);
+            if (idZona < 1) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El ID de zona debe ser mayor que cero.");
+            }
+            return zonaRepository.findById(idZona)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Zona de " + tipo + " no encontrada."
+                    ));
+        } catch (NumberFormatException exception) {
+            return zonaRepository.findByNombreIgnoreCase(filtroNormalizado)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Zona de " + tipo + " no encontrada."
+                    ));
+        }
+    }
+
+    private LanchaDisponibleDTO toLanchaDisponibleDTO(Lancha lancha) {
+        Lanchero lanchero = lancha.getLanchero();
+        return new LanchaDisponibleDTO(
+                lancha.getIdLancha(),
+                lancha.getNombre(),
+                lancha.getCapacidad(),
+                lancha.getZonas().stream().map(Zona::getNombre).sorted().toList(),
+                "APROBADO".equals(lanchero.getEstadoSolicitud()),
+                lanchero.getEstadoViaje(),
+                lanchero.getWhatsapp()
+        );
+    }
+
+    private ViajeSeguimientoDTO toViajeSeguimientoDTO(Viaje viaje) {
+        String ultimaUbicacionConfirmada = viajeRepository
+                .findFirstByLancha_IdLanchaAndFechaHoraFinIsNotNullOrderByFechaHoraFinDescIdViajeDesc(
+                        viaje.getLancha().getIdLancha()
+                )
+                .map(ultimoViajeFinalizado -> ultimoViajeFinalizado.getZonaDestino().getNombre())
+                .orElse(null);
+        return new ViajeSeguimientoDTO(
+                viaje.getIdViaje(),
+                viaje.getLancha().getNombre(),
+                viaje.getZonaOrigen().getNombre(),
+                viaje.getZonaDestino().getNombre(),
+                viaje.getFechaHoraInicio(),
+                viaje.getFechaHoraFin(),
+                viaje.getFechaHoraFin() == null ? "EN_VIAJE" : "FINALIZADO",
+                ultimaUbicacionConfirmada
         );
     }
 }

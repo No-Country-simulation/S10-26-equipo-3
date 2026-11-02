@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -411,6 +416,121 @@ class AdminWorkflowServiceTest {
         verify(viajeRepository).findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
                 eq("EN_VIAJE"), any(Pageable.class)
         );
+    }
+
+    @Test
+    void buscarDisponiblesConstruyeLaFechaActualConLaHoraYFiltraLasZonasPedidas() {
+        Clock clock = Clock.fixed(Instant.parse("2026-11-02T22:06:00Z"), ZoneOffset.UTC);
+        ViajeWorkflowService servicio = new ViajeWorkflowService(
+                lancheroRepository, lanchaRepository, viajeRepository, zonaRepository, eventPublisher, clock
+        );
+        Zona origen = zona(2L, "Delta");
+        Zona destino = zona(3L, "Primera Seccion");
+        Lanchero lanchero = pendiente();
+        lanchero.setEstadoSolicitud("APROBADO");
+        lanchero.setEstadoViaje("ACTIVO");
+        lanchero.setWhatsapp("+573001234567");
+        Lancha lancha = new Lancha();
+        lancha.setIdLancha(34L);
+        lancha.setNombre("Brisa Marina");
+        lancha.setCapacidad(8);
+        lancha.setLanchero(lanchero);
+        lancha.setZonas(new HashSet<>(List.of(origen, destino)));
+        when(zonaRepository.findByNombreIgnoreCase("DELTA")).thenReturn(Optional.of(origen));
+        when(zonaRepository.findByNombreIgnoreCase("PRIMERA_SECCION")).thenReturn(Optional.of(destino));
+        when(lanchaRepository.buscarDisponibles(eq(5), eq(2L), eq(3L), any()))
+                .thenReturn(List.of(lancha));
+
+        var resultado = servicio.buscarDisponibles(5, "DELTA", "PRIMERA_SECCION", LocalTime.of(18, 0));
+
+        assertEquals(1, resultado.size());
+        assertEquals(34L, resultado.getFirst().id());
+        assertEquals("Brisa Marina", resultado.getFirst().nombre());
+        assertEquals(8, resultado.getFirst().capacidad());
+        assertTrue(resultado.getFirst().verificada());
+        assertEquals("ACTIVO", resultado.getFirst().estadoOperativo());
+        assertEquals("+573001234567", resultado.getFirst().whatsappLanchero());
+        ArgumentCaptor<OffsetDateTime> fechaConsulta = ArgumentCaptor.forClass(OffsetDateTime.class);
+        verify(lanchaRepository).buscarDisponibles(eq(5), eq(2L), eq(3L), fechaConsulta.capture());
+        assertEquals(OffsetDateTime.parse("2026-11-02T18:00:00-05:00"), fechaConsulta.getValue());
+        assertEquals(OffsetDateTime.parse("2026-11-02T23:00:00Z").toInstant(), fechaConsulta.getValue().toInstant());
+    }
+
+    @Test
+    void buscarDisponiblesRechazaCapacidadInvalidaYHoraPasada() {
+        Clock clock = Clock.fixed(Instant.parse("2026-11-02T19:30:00Z"), ZoneOffset.UTC);
+        ViajeWorkflowService servicio = new ViajeWorkflowService(
+                lancheroRepository, lanchaRepository, viajeRepository, zonaRepository, eventPublisher, clock
+        );
+
+        assertEquals(400, assertThrows(
+                ResponseStatusException.class,
+                () -> servicio.buscarDisponibles(0, null, null, LocalTime.of(15, 0))
+        ).getStatusCode().value());
+        assertEquals(400, assertThrows(
+                ResponseStatusException.class,
+                () -> servicio.buscarDisponibles(null, null, null, LocalTime.of(14, 0))
+        ).getStatusCode().value());
+        verifyNoInteractions(lanchaRepository);
+    }
+
+    @Test
+    void propagaElErrorRealDeLaConsultaDeDisponibilidad() {
+        Clock clock = Clock.fixed(Instant.parse("2026-11-02T22:06:00Z"), ZoneOffset.UTC);
+        ViajeWorkflowService servicio = new ViajeWorkflowService(
+                lancheroRepository, lanchaRepository, viajeRepository, zonaRepository, eventPublisher, clock
+        );
+        DataAccessResourceFailureException errorConsulta =
+                new DataAccessResourceFailureException("fallo de consulta");
+        when(lanchaRepository.buscarDisponibles(eq(null), eq(null), eq(null), any()))
+                .thenThrow(errorConsulta);
+
+        DataAccessResourceFailureException errorPropagado = assertThrows(
+                DataAccessResourceFailureException.class,
+                () -> servicio.buscarDisponibles(null, null, null, LocalTime.of(23, 0))
+        );
+
+        assertSame(errorConsulta, errorPropagado);
+    }
+
+    @Test
+    void seguimientoIncluyeViajesActivosFinalizadosYDestinoMasRecienteConfirmado() {
+        Lanchero lanchero = pendiente();
+        lanchero.setEstadoViaje("EN_VIAJE");
+        Lancha lancha = new Lancha();
+        lancha.setIdLancha(34L);
+        lancha.setNombre("Brisa Marina");
+        lancha.setLanchero(lanchero);
+        Zona origen = zona(2L, "Delta");
+        Zona destinoActual = zona(3L, "Primera Seccion");
+        Zona destinoAnterior = zona(4L, "Segunda Seccion");
+        Viaje activo = new Viaje();
+        activo.setIdViaje(26L);
+        activo.setLancha(lancha);
+        activo.setZonaOrigen(origen);
+        activo.setZonaDestino(destinoActual);
+        activo.setFechaHoraInicio(OffsetDateTime.parse("2026-11-02T14:00:00Z"));
+        Viaje finalizado = new Viaje();
+        finalizado.setIdViaje(25L);
+        finalizado.setLancha(lancha);
+        finalizado.setZonaOrigen(origen);
+        finalizado.setZonaDestino(destinoAnterior);
+        finalizado.setFechaHoraInicio(OffsetDateTime.parse("2026-11-01T14:00:00Z"));
+        finalizado.setFechaHoraFin(OffsetDateTime.parse("2026-11-01T14:30:00Z"));
+        when(viajeRepository.findAllForSeguimiento(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(activo, finalizado), PageRequest.of(0, 10), 2));
+        when(viajeRepository.findFirstByLancha_IdLanchaAndFechaHoraFinIsNotNullOrderByFechaHoraFinDescIdViajeDesc(34L))
+                .thenReturn(Optional.of(finalizado));
+
+        var resultado = viajeService.listarSeguimiento(0, 10);
+
+        assertEquals(2, resultado.totalElements());
+        assertEquals("EN_VIAJE", resultado.content().getFirst().estado());
+        assertNull(resultado.content().getFirst().fechaHoraFin());
+        assertEquals("Segunda Seccion", resultado.content().getFirst().ultimaUbicacionConfirmada());
+        assertEquals("FINALIZADO", resultado.content().get(1).estado());
+        assertEquals("Segunda Seccion", resultado.content().get(1).ultimaUbicacionConfirmada());
+        assertEquals(OffsetDateTime.parse("2026-11-01T14:30:00Z"), resultado.content().get(1).fechaHoraFin());
     }
 
     private Lanchero pendiente() {

@@ -353,6 +353,96 @@ paths:
           $ref: "#/components/responses/NoAutenticado"
         "403":
           $ref: "#/components/responses/SinPermiso"
+  /admin/lancheros/disponibles:
+    get:
+      operationId: buscarLanchasDisponibles
+      tags: [Lancheros]
+      summary: Buscar embarcaciones activas para una ruta y hora
+      description: >-
+        La hora usa formato HH:mm y se combina con la fecha actual en
+        America/Bogota, usando el Clock inyectado. Solo se incluyen lancheros aprobados
+        y activos, con capacidad suficiente y las zonas solicitadas. Se excluyen
+        viajes que abarcan el instante consultado y retornos vacíos en estado
+        ACTIVO. El sistema no registra reservas futuras ni duraciones de viaje:
+        el resultado no confirma disponibilidad futura y debe verificarse con el
+        lanchero por WhatsApp. Para confirmarla se requeriría persistir reservas
+        con inicio y fin confirmados explícitamente e integrarlas a la asignación;
+        no se calculan duraciones estimadas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: capacidad
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          example: 5
+        - name: zonaOrigen
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: DELTA
+        - name: zonaDestino
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: PRIMERA_SECCION
+        - name: zona_origen
+          in: query
+          required: false
+          description: ID de zona; forma snake_case compatible con clientes existentes. No combinar con zonaOrigen.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+        - name: zona_destino
+          in: query
+          required: false
+          description: ID de zona; forma snake_case compatible con clientes existentes. No combinar con zonaDestino.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 2
+        - name: hora
+          in: query
+          required: true
+          description: Hora del viaje; no se envía fecha. Se construye con la fecha actual de America/Bogota.
+          schema:
+            type: string
+            pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          example: "14:00"
+      responses:
+        "200":
+          description: Embarcaciones candidatas según los estados y viajes conocidos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LanchaDisponible"
+              example:
+                - id: 34
+                  nombre: Brisa Marina
+                  capacidad: 8
+                  zonasDisponibles: [DELTA, PRIMERA_SECCION]
+                  verificada: true
+                  estadoOperativo: ACTIVO
+                  whatsappLanchero: "+573001234567"
+        "400":
+          description: Hora o capacidad inválida, hora pasada, zonas iguales, o parámetros duplicados para una zona.
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: La zona solicitada por nombre o ID no existe.
   /admin/lancheros/{id}/estado-viaje:
     parameters:
       - $ref: "#/components/parameters/IdLanchero"
@@ -499,6 +589,34 @@ paths:
           description: Viaje o lanchero inexistente.
         "409":
           description: El viaje no está en curso.
+  /admin/viajes/seguimiento:
+    get:
+      operationId: listarSeguimientoViajes
+      tags: [Viajes]
+      summary: Consultar viajes actuales e históricos con ubicación confirmada
+      description: >-
+        Página el historial completo en orden descendente. El estado se deriva
+        de fechaHoraFin (EN_VIAJE si es null; FINALIZADO en otro caso). La última
+        ubicación confirmada es el destino del viaje finalizado más reciente de
+        la embarcación; un viaje en curso no se considera llegado al destino.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Página de seguimiento con viajes activos y finalizados.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginaSeguimientoViajes"
+        "400":
+          description: Parámetros de paginación inválidos.
+        "401":
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          $ref: "#/components/responses/SinPermiso"
   /admin/resenas:
     get:
       operationId: listarResenas
@@ -846,6 +964,28 @@ components:
         estadoViaje:
           type: string
           enum: [ACTIVO, INACTIVO, EN_VIAJE]
+    LanchaDisponible:
+      type: object
+      required: [id, nombre, capacidad, zonasDisponibles, verificada, estadoOperativo, whatsappLanchero]
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        capacidad:
+          type: integer
+        zonasDisponibles:
+          type: array
+          items:
+            type: string
+        verificada:
+          type: boolean
+        estadoOperativo:
+          type: string
+          enum: [ACTIVO]
+        whatsappLanchero:
+          type: string
     CrearViajeRequest:
       type: object
       required:
@@ -894,6 +1034,47 @@ components:
           format: int64
         totalPages:
           type: integer
+    PaginaSeguimientoViajes:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViajeSeguimiento"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+    ViajeSeguimiento:
+      type: object
+      required: [id, nombreEmbarcacion, zonaOrigen, zonaDestino, fechaHoraInicio, estado]
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombreEmbarcacion:
+          type: string
+        zonaOrigen:
+          type: string
+        zonaDestino:
+          type: string
+        fechaHoraInicio:
+          type: string
+          format: date-time
+        fechaHoraFin:
+          type: [string, "null"]
+          format: date-time
+        estado:
+          type: string
+          enum: [EN_VIAJE, FINALIZADO]
+        ultimaUbicacionConfirmada:
+          type: [string, "null"]
     ViajeAdmin:
       type: object
       required:

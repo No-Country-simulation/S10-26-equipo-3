@@ -6,11 +6,13 @@ import com.nautiflow.dto.AdminDashboardDTO;
 import com.nautiflow.dto.DecisionSolicitudDTO;
 import com.nautiflow.dto.ViajeAdminDTO;
 import com.nautiflow.dto.LancheroAdminDTO;
+import com.nautiflow.dto.LanchaDisponibleDTO;
 import com.nautiflow.dto.LoginRequest;
 import com.nautiflow.dto.LoginResponse;
 import com.nautiflow.dto.PaginaLancherosDTO;
 import com.nautiflow.dto.PaginaSolicitudesDTO;
 import com.nautiflow.dto.PaginaViajesDTO;
+import com.nautiflow.dto.PaginaSeguimientoViajesDTO;
 import com.nautiflow.dto.RechazoSolicitudDTO;
 import com.nautiflow.dto.PaginaResenasDTO;
 import com.nautiflow.dto.ResenaAdminDTO;
@@ -20,6 +22,7 @@ import com.nautiflow.dto.ResenaViajeDTO;
 import com.nautiflow.dto.SolicitudDetalleDTO;
 import com.nautiflow.dto.SolicitudResumenDTO;
 import com.nautiflow.dto.ViajeEnCursoDTO;
+import com.nautiflow.dto.ViajeSeguimientoDTO;
 import com.nautiflow.dto.ZonaDTO;
 import com.nautiflow.service.AdminAuthService;
 import com.nautiflow.service.AdminAuthService.CredencialesInvalidasException;
@@ -178,6 +181,82 @@ class AdminControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.path").value("/admin/dashboard"));
+    }
+
+    @Test
+    void endpointsNuevosDeAdministracionRequierenAutenticacion() throws Exception {
+        mockMvc.perform(get("/admin/lancheros/disponibles").param("hora", "14:00"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/admin/viajes/seguimiento"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void buscarDisponiblesValidaFormatoDeHoraYExponeDatosDeContacto() throws Exception {
+        when(viajeWorkflowService.buscarDisponibles(null, "DELTA", "PRIMERA_SECCION", java.time.LocalTime.of(14, 0)))
+                .thenReturn(List.of(new LanchaDisponibleDTO(
+                        34L, "Brisa Marina", 8, List.of("DELTA", "PRIMERA_SECCION"), true,
+                        "ACTIVO", "+573001234567"
+                )));
+
+        mockMvc.perform(get("/admin/lancheros/disponibles")
+                        .header("Authorization", bearerToken())
+                        .param("zonaOrigen", "DELTA")
+                        .param("zonaDestino", "PRIMERA_SECCION")
+                        .param("hora", "14:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(34))
+                .andExpect(jsonPath("$[0].nombre").value("Brisa Marina"))
+                .andExpect(jsonPath("$[0].capacidad").value(8))
+                .andExpect(jsonPath("$[0].verificada").value(true))
+                .andExpect(jsonPath("$[0].estadoOperativo").value("ACTIVO"))
+                .andExpect(jsonPath("$[0].whatsappLanchero").value("+573001234567"));
+        verify(viajeWorkflowService).buscarDisponibles(
+                null, "DELTA", "PRIMERA_SECCION", java.time.LocalTime.of(14, 0)
+        );
+
+        mockMvc.perform(get("/admin/lancheros/disponibles")
+                        .header("Authorization", bearerToken())
+                        .param("hora", "25:00"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void buscarDisponiblesAceptaLosParametrosSnakeCaseConIdsDeZona() throws Exception {
+        when(viajeWorkflowService.buscarDisponibles(null, "1", "2", java.time.LocalTime.of(23, 0)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/lancheros/disponibles")
+                        .header("Authorization", bearerToken())
+                        .param("capacidad", "4")
+                        .param("zona_origen", "1")
+                        .param("zona_destino", "2")
+                        .param("hora", "23:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        verify(viajeWorkflowService).buscarDisponibles(
+                4, "1", "2", java.time.LocalTime.of(23, 0)
+        );
+    }
+
+    @Test
+    void seguimientoDevuelveHistorialConEstadoYUltimaUbicacion() throws Exception {
+        when(viajeWorkflowService.listarSeguimiento(0, 10)).thenReturn(new PaginaSeguimientoViajesDTO(
+                List.of(new ViajeSeguimientoDTO(
+                        25L, "Brisa Marina", "Delta", "Primera Seccion",
+                        OffsetDateTime.parse("2026-11-02T14:00:00Z"), null,
+                        "EN_VIAJE", "Segunda Seccion"
+                )),
+                0, 10, 1, 1
+        ));
+
+        mockMvc.perform(get("/admin/viajes/seguimiento").header("Authorization", bearerToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(25))
+                .andExpect(jsonPath("$.content[0].nombreEmbarcacion").value("Brisa Marina"))
+                .andExpect(jsonPath("$.content[0].estado").value("EN_VIAJE"))
+                .andExpect(jsonPath("$.content[0].ultimaUbicacionConfirmada").value("Segunda Seccion"));
     }
 
     @Test

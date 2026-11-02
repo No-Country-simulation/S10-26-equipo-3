@@ -30,4 +30,13 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
             String estadoViaje,
             Pageable pageable
     );
+
+    @EntityGraph(attributePaths = {"lancha", "lancha.lanchero", "zonaOrigen", "zonaDestino"})
+    @Query("select v from Viaje v")
+    Page<Viaje> findAllForSeguimiento(Pageable pageable);
+
+    @EntityGraph(attributePaths = "zonaDestino")
+    Optional<Viaje> findFirstByLancha_IdLanchaAndFechaHoraFinIsNotNullOrderByFechaHoraFinDescIdViajeDesc(
+            Long idLancha
+    );
 }
