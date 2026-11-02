@@ -1,7 +1,7 @@
 package com.nautiflow.exception;
 
 import org.springframework.http.HttpStatus;
-import com.nautiflow.time.FechaHoraUtc;
+import com.nautiflow.util.FechaHoraUtc;
 
 import java.time.OffsetDateTime;
 

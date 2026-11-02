@@ -2,6 +2,8 @@ package com.nautiflow.service;
 
 import com.nautiflow.dto.SolicitudDetalleDTO;
 import com.nautiflow.model.Documento;
+import com.nautiflow.model.EstadoOperativoLanchero;
+import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.model.Lancha;
 import com.nautiflow.model.Lanchero;
 import com.nautiflow.model.Zona;
@@ -48,9 +50,9 @@ class AdminServiceTest {
 
     @Test
     void dashboardCalculaLosTresIndicadoresConConsultasDeConteo() {
-        when(lancheroRepository.countByEstadoSolicitud("PENDIENTE")).thenReturn(12L);
-        when(lanchaRepository.countByLanchero_EstadoSolicitud("APROBADO")).thenReturn(28L);
-        when(lancheroRepository.countByEstadoViaje("EN_VIAJE")).thenReturn(4L);
+        when(lancheroRepository.countByEstadoSolicitud(EstadoSolicitud.PENDIENTE)).thenReturn(12L);
+        when(lanchaRepository.countByLanchero_EstadoSolicitud(EstadoSolicitud.APROBADO)).thenReturn(28L);
+        when(lancheroRepository.countByEstadoViaje(EstadoOperativoLanchero.EN_VIAJE)).thenReturn(4L);
 
         var dashboard = adminService.obtenerDashboard();
 
@@ -79,13 +81,13 @@ class AdminServiceTest {
 
     @Test
     void listadoPorEstadoUsaConsultaPaginadaEnRepositorio() {
-        when(lancheroRepository.findByEstadoSolicitud(eq("APROBADO"), argThat(pageable ->
+        when(lancheroRepository.findByEstadoSolicitud(eq(EstadoSolicitud.APROBADO), argThat(pageable ->
                 pageable.getPageNumber() == 0 && pageable.getPageSize() == 10
         ))).thenReturn(new PageImpl<>(List.of()));
 
-        adminService.listarSolicitudes("APROBADO", 0, 10);
+        adminService.listarSolicitudes(EstadoSolicitud.APROBADO, 0, 10);
 
-        verify(lancheroRepository).findByEstadoSolicitud(eq("APROBADO"), argThat(pageable ->
+        verify(lancheroRepository).findByEstadoSolicitud(eq(EstadoSolicitud.APROBADO), argThat(pageable ->
                 pageable.getSort().getOrderFor("fechaRegistro").getDirection() == Sort.Direction.DESC
         ));
     }
@@ -95,7 +97,7 @@ class AdminServiceTest {
         Lanchero lanchero = new Lanchero();
         lanchero.setIdLanchero(12L);
         lanchero.setNombreCompleto("Ana Pérez");
-        lanchero.setEstadoSolicitud("PENDIENTE");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.PENDIENTE);
         lanchero.setFechaRegistro(OffsetDateTime.parse("2026-11-02T00:30:00+05:00"));
         when(lancheroRepository.findAll(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(lanchero), PageRequest.of(0, 10), 1));

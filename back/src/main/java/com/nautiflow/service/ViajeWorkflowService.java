@@ -10,13 +10,15 @@ import com.nautiflow.dto.ViajeFinalizadoDTO;
 import com.nautiflow.dto.ViajeSeguimientoDTO;
 import com.nautiflow.model.Lanchero;
 import com.nautiflow.model.Lancha;
+import com.nautiflow.model.EstadoOperativoLanchero;
+import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.model.Viaje;
 import com.nautiflow.model.Zona;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
 import com.nautiflow.repository.ViajeRepository;
 import com.nautiflow.repository.ZonaRepository;
-import com.nautiflow.time.FechaHoraUtc;
+import com.nautiflow.util.FechaHoraUtc;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -91,7 +93,7 @@ public class ViajeWorkflowService {
         viaje.setTuristaWhatsapp(solicitud.turistaWhatsapp().strip());
         viaje = viajeRepository.saveAndFlush(viaje);
 
-        lanchero.setEstadoViaje("EN_VIAJE");
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_VIAJE);
         lancheroRepository.save(lanchero);
         eventPublisher.publishEvent(new ViajeProgramadoEvent(
                 viaje.getIdViaje(),
@@ -100,7 +102,7 @@ public class ViajeWorkflowService {
                 lanchero.getNombreCompleto(),
                 origen.getNombre(),
                 destino.getNombre(),
-                viaje.getFechaHoraInicio().toString(),
+                viaje.getFechaHoraInicio(),
                 viaje.getCantidadPasajeros(),
                 viaje.getTuristaNombreCompleto(),
                 viaje.getTuristaWhatsapp()
@@ -115,7 +117,7 @@ public class ViajeWorkflowService {
                 .and(Sort.by(Sort.Direction.DESC, "idViaje"));
         Page<ViajeEnCursoDTO> resultados = viajeRepository
                 .findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
-                        "EN_VIAJE",
+                        EstadoOperativoLanchero.EN_VIAJE,
                         PageRequest.of(page, size, sort)
                 )
                 .map(this::toViajeEnCursoDTO);
@@ -158,6 +160,8 @@ public class ViajeWorkflowService {
                         capacidad,
                         origen == null ? null : origen.getIdZona(),
                         destino == null ? null : destino.getIdZona(),
+                        EstadoSolicitud.APROBADO,
+                        EstadoOperativoLanchero.ACTIVO,
                         fechaHoraConsulta
                 ).stream()
                 .map(this::toLanchaDisponibleDTO)
@@ -189,7 +193,7 @@ public class ViajeWorkflowService {
         Viaje viaje = viajeRepository.findById(idViaje)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Viaje no encontrado."));
         viaje.getLancha().setLanchero(lanchero);
-        if (!"EN_VIAJE".equals(lanchero.getEstadoViaje()) || viaje.getFechaHoraFin() != null) {
+        if (lanchero.getEstadoViaje() != EstadoOperativoLanchero.EN_VIAJE || viaje.getFechaHoraFin() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El viaje no está en curso.");
         }
 
@@ -202,7 +206,7 @@ public class ViajeWorkflowService {
                 idLanchero,
                 idViaje
         )) {
-            lanchero.setEstadoViaje("ACTIVO");
+            lanchero.setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
         }
         viajeRepository.saveAndFlush(viaje);
         lancheroRepository.save(lanchero);
@@ -222,7 +226,8 @@ public class ViajeWorkflowService {
     }
 
     private void validarLancheroDisponible(Lanchero lanchero) {
-        if (!"APROBADO".equals(lanchero.getEstadoSolicitud()) || !"ACTIVO".equals(lanchero.getEstadoViaje())) {
+        if (lanchero.getEstadoSolicitud() != EstadoSolicitud.APROBADO
+                || lanchero.getEstadoViaje() != EstadoOperativoLanchero.ACTIVO) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "La lancha debe estar aprobada y activa para iniciar un viaje."
@@ -321,8 +326,8 @@ public class ViajeWorkflowService {
                 lancha.getNombre(),
                 lancha.getCapacidad(),
                 lancha.getZonas().stream().map(Zona::getNombre).sorted().toList(),
-                "APROBADO".equals(lanchero.getEstadoSolicitud()),
-                lanchero.getEstadoViaje(),
+                lanchero.getEstadoSolicitud() == EstadoSolicitud.APROBADO,
+                lanchero.getEstadoViaje().name(),
                 lanchero.getWhatsapp()
         );
     }

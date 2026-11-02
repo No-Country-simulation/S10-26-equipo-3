@@ -16,6 +16,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Service
 public class GmailRegistroNotificacionService implements RegistroNotificacionService {
@@ -33,6 +37,9 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
 
             El equipo de NautiFlow
             """;
+    private static final ZoneId ZONA_NEGOCIO = ZoneId.of("America/Bogota");
+    private static final DateTimeFormatter FORMATO_FECHA_VIAJE =
+            DateTimeFormatter.ofPattern("d/M/uuuu h:mma", Locale.ROOT);
 
     private final JavaMailSender mailSender;
     private final String remitente;
@@ -160,13 +167,13 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
                 : "";
         String comentarioHtml = comentario != null && !comentario.isBlank()
                 ? """
-                        <tr>
-                          <td style="padding:12px">
-                            <strong>Comentario del pasajero:</strong>
-                            <div style="margin-top:8px;white-space:pre-wrap;overflow-wrap:anywhere">%s</div>
-                          </td>
-                        </tr>
-                        """.formatted(CorreoHtmlTemplate.escapar(comentario))
+                <tr>
+                  <td style="padding:12px">
+                    <strong>Comentario del pasajero:</strong>
+                    <div style="margin-top:8px;white-space:pre-wrap;overflow-wrap:anywhere">%s</div>
+                  </td>
+                </tr>
+                """.formatted(CorreoHtmlTemplate.escapar(comentario))
                 : "";
         String texto = """
                 ⭐ ¡Nueva reseña en NautiFlow!
@@ -212,6 +219,7 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
             return;
         }
 
+        String fechaHoraInicio = formatearFechaHoraViaje(viaje.fechaHoraInicio());
         String asunto = "¡Tienes un nuevo viaje programado en NautiFlow!";
         String texto = """
                 Hola, %s:
@@ -231,7 +239,7 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
 
                 El equipo de NautiFlow
                 """.formatted(viaje.nombreLanchero(), viaje.zonaOrigen(), viaje.zonaDestino(),
-                viaje.fechaHoraInicio(), viaje.cantidadPasajeros(), viaje.turistaNombreCompleto(),
+                fechaHoraInicio, viaje.cantidadPasajeros(), viaje.turistaNombreCompleto(),
                 viaje.turistaWhatsapp());
         String html = """
                 <p>Hola, <strong>%s</strong>:</p>
@@ -251,7 +259,7 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
                 CorreoHtmlTemplate.escapar(viaje.nombreLanchero()),
                 CorreoHtmlTemplate.escapar(viaje.zonaOrigen()),
                 CorreoHtmlTemplate.escapar(viaje.zonaDestino()),
-                CorreoHtmlTemplate.escapar(viaje.fechaHoraInicio()),
+                CorreoHtmlTemplate.escapar(fechaHoraInicio),
                 CorreoHtmlTemplate.escapar(String.valueOf(viaje.cantidadPasajeros())),
                 CorreoHtmlTemplate.escapar(viaje.turistaNombreCompleto()),
                 CorreoHtmlTemplate.escapar(viaje.turistaWhatsapp())
@@ -270,6 +278,11 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
             logger.error("No se pudo enviar el correo del viaje {} al lanchero {}.",
                     viaje.idViaje(), viaje.idLanchero(), exception);
         }
+    }
+
+    private String formatearFechaHoraViaje(OffsetDateTime fechaHoraInicio) {
+        return FORMATO_FECHA_VIAJE.format(fechaHoraInicio.atZoneSameInstant(ZONA_NEGOCIO))
+                .toLowerCase(Locale.ROOT);
     }
 
     private void enviarNotificacionEstrictaHtml(

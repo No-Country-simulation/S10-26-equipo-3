@@ -104,7 +104,7 @@ public class LancheroPersistenceService {
         return new RegistroLancheroResponse(
                 lanchero.getIdLanchero(),
                 lancha.getIdLancha(),
-                lanchero.getEstadoSolicitud(),
+                lanchero.getEstadoSolicitud().name(),
                 "Solicitud de registro recibida correctamente."
         );
     }

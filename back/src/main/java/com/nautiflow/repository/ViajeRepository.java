@@ -1,6 +1,7 @@
 package com.nautiflow.repository;
 
 import com.nautiflow.model.Viaje;
+import com.nautiflow.model.EstadoOperativoLanchero;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +14,7 @@ import java.util.Optional;
 
 public interface ViajeRepository extends JpaRepository<Viaje, Long> {
     List<Viaje> findByLancha_IdLancha(Long idLancha);
+
     @EntityGraph(attributePaths = {"lancha", "lancha.lanchero", "zonaOrigen", "zonaDestino"})
     Optional<Viaje> findByTokenResena(String tokenResena);
 
@@ -20,6 +22,7 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
     Optional<Long> findLancheroIdByIdViaje(@Param("id") Long idViaje);
 
     boolean existsByLancha_Lanchero_IdLancheroAndFechaHoraFinIsNull(Long idLanchero);
+
     boolean existsByLancha_Lanchero_IdLancheroAndIdViajeNotAndFechaHoraFinIsNull(
             Long idLanchero,
             Long idViaje
@@ -27,7 +30,7 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
 
     @EntityGraph(attributePaths = {"lancha", "lancha.lanchero", "zonaOrigen", "zonaDestino"})
     Page<Viaje> findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
-            String estadoViaje,
+            EstadoOperativoLanchero estadoViaje,
             Pageable pageable
     );
 

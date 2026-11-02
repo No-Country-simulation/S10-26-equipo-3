@@ -5,6 +5,8 @@ import com.nautiflow.dto.PaginaSolicitudesDTO;
 import com.nautiflow.dto.SolicitudDetalleDTO;
 import com.nautiflow.dto.SolicitudResumenDTO;
 import com.nautiflow.model.Documento;
+import com.nautiflow.model.EstadoOperativoLanchero;
+import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.model.Lanchero;
 import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.LancheroRepository;
@@ -43,19 +45,19 @@ public class AdminService {
     @Transactional(readOnly = true)
     public AdminDashboardDTO obtenerDashboard() {
         return new AdminDashboardDTO(
-                lancheroRepository.countByEstadoSolicitud("PENDIENTE"),
-                lanchaRepository.countByLanchero_EstadoSolicitud("APROBADO"),
-                lancheroRepository.countByEstadoViaje("EN_VIAJE")
+                lancheroRepository.countByEstadoSolicitud(EstadoSolicitud.PENDIENTE),
+                lanchaRepository.countByLanchero_EstadoSolicitud(EstadoSolicitud.APROBADO),
+                lancheroRepository.countByEstadoViaje(EstadoOperativoLanchero.EN_VIAJE)
         );
     }
 
     @Transactional(readOnly = true)
-    public PaginaSolicitudesDTO listarSolicitudes(String estado, int page, int size) {
+    public PaginaSolicitudesDTO listarSolicitudes(EstadoSolicitud estado, int page, int size) {
         PaginacionValidator.validar(page, size);
         Sort sort = Sort.by(Sort.Direction.DESC, "fechaRegistro")
                 .and(Sort.by(Sort.Direction.DESC, "idLanchero"));
         PageRequest pageRequest = PageRequest.of(page, size, sort);
-        Page<Lanchero> resultados = estado == null || "TODOS".equals(estado)
+        Page<Lanchero> resultados = estado == null
                 ? lancheroRepository.findAll(pageRequest)
                 : lancheroRepository.findByEstadoSolicitud(estado, pageRequest);
 
@@ -64,7 +66,7 @@ public class AdminService {
                         lanchero.getIdLanchero(),
                         lanchero.getNombreCompleto(),
                         lanchero.getFechaRegistro().withOffsetSameInstant(ZoneOffset.UTC).toLocalDate(),
-                        lanchero.getEstadoSolicitud()
+                        lanchero.getEstadoSolicitud().name()
                 ))
                 .toList();
 
@@ -85,14 +87,14 @@ public class AdminService {
         SolicitudDetalleDTO.EmbarcacionDTO embarcacion = lanchero.getLancha() == null
                 ? null
                 : new SolicitudDetalleDTO.EmbarcacionDTO(
-                        lanchero.getLancha().getIdLancha(),
-                        lanchero.getLancha().getNombre(),
-                        lanchero.getLancha().getCapacidad(),
-                        lanchero.getLancha().getZonas().stream()
-                                .map(zona -> zona.getNombre())
-                                .sorted()
-                                .toList()
-                );
+                lanchero.getLancha().getIdLancha(),
+                lanchero.getLancha().getNombre(),
+                lanchero.getLancha().getCapacidad(),
+                lanchero.getLancha().getZonas().stream()
+                        .map(zona -> zona.getNombre())
+                        .sorted()
+                        .toList()
+        );
 
         List<SolicitudDetalleDTO.DocumentoDTO> documentos =
                 documentoRepository.findByLanchero_IdLancheroOrderByIdDocumentoAsc(lanchero.getIdLanchero()).stream()
@@ -110,7 +112,7 @@ public class AdminService {
                 lanchero.getNombreCompleto(),
                 lanchero.getCorreo(),
                 lanchero.getWhatsapp(),
-                lanchero.getEstadoSolicitud(),
+                lanchero.getEstadoSolicitud().name(),
                 lanchero.getFechaRegistro(),
                 lanchero.getFechaDecision(),
                 lanchero.getMotivoRechazo(),

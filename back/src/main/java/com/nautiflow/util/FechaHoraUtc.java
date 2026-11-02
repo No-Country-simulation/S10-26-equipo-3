@@ -1,4 +1,4 @@
-package com.nautiflow.time;
+package com.nautiflow.util;
 
 import java.time.Clock;
 import java.time.Instant;

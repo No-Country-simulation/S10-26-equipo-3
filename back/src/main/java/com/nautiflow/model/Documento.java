@@ -1,7 +1,7 @@
 package com.nautiflow.model;
 
 import jakarta.persistence.*;
-import com.nautiflow.time.FechaHoraUtc;
+import com.nautiflow.util.FechaHoraUtc;
 
 import java.time.OffsetDateTime;
 

@@ -1,6 +1,8 @@
 package com.nautiflow.repository;
 
 import com.nautiflow.model.Lancha;
+import com.nautiflow.model.EstadoSolicitud;
+import com.nautiflow.model.EstadoOperativoLanchero;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,8 +14,10 @@ import java.util.Optional;
 
 public interface LanchaRepository extends JpaRepository<Lancha, Long> {
     List<Lancha> findDistinctByZonas_IdZona(Long idZona);
+
     Optional<Lancha> findByLanchero_IdLanchero(Long idLanchero);
-    long countByLanchero_EstadoSolicitud(String estadoSolicitud);
+
+    long countByLanchero_EstadoSolicitud(EstadoSolicitud estadoSolicitud);
 
     @Query("select l.lanchero.idLanchero from Lancha l where l.idLancha = :id")
     Optional<Long> findLancheroIdByIdLancha(@Param("id") Long idLancha);
@@ -21,8 +25,8 @@ public interface LanchaRepository extends JpaRepository<Lancha, Long> {
     @EntityGraph(attributePaths = {"lanchero", "zonas"})
     @Query("""
             select distinct l from Lancha l
-            where l.lanchero.estadoSolicitud = 'APROBADO'
-              and l.lanchero.estadoViaje = 'ACTIVO'
+            where l.lanchero.estadoSolicitud = :estadoSolicitud
+              and l.lanchero.estadoViaje = :estadoViaje
               and (:capacidad is null or l.capacidad >= :capacidad)
               and (:idZonaOrigen is null or exists (
                     select z from Lancha lOrigen join lOrigen.zonas z
@@ -47,6 +51,8 @@ public interface LanchaRepository extends JpaRepository<Lancha, Long> {
             @Param("capacidad") Integer capacidad,
             @Param("idZonaOrigen") Long idZonaOrigen,
             @Param("idZonaDestino") Long idZonaDestino,
+            @Param("estadoSolicitud") EstadoSolicitud estadoSolicitud,
+            @Param("estadoViaje") EstadoOperativoLanchero estadoViaje,
             @Param("fechaHoraConsulta") OffsetDateTime fechaHoraConsulta
     );
 }

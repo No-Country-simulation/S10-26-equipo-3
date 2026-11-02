@@ -6,6 +6,8 @@ import com.nautiflow.model.Lanchero;
 import com.nautiflow.model.Lancha;
 import com.nautiflow.model.Viaje;
 import com.nautiflow.model.Zona;
+import com.nautiflow.model.EstadoOperativoLanchero;
+import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
 import com.nautiflow.repository.ViajeRepository;
@@ -38,12 +40,18 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AdminWorkflowServiceTest {
-    @Mock private LancheroRepository lancheroRepository;
-    @Mock private LanchaRepository lanchaRepository;
-    @Mock private ViajeRepository viajeRepository;
-    @Mock private ZonaRepository zonaRepository;
-    @Mock private RegistroNotificacionService notificacionService;
-    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private LancheroRepository lancheroRepository;
+    @Mock
+    private LanchaRepository lanchaRepository;
+    @Mock
+    private ViajeRepository viajeRepository;
+    @Mock
+    private ZonaRepository zonaRepository;
+    @Mock
+    private RegistroNotificacionService notificacionService;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
     private AdminWorkflowService service;
     private ViajeWorkflowService viajeService;
 
@@ -59,13 +67,13 @@ class AdminWorkflowServiceTest {
     @Test
     void aprobarActivaAlLancheroYNotificaAlCorreoRegistrado() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoViaje("INACTIVO");
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.INACTIVO);
         when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
 
         var resultado = service.aprobarSolicitud(12L);
 
         assertEquals("APROBADO", resultado.estado());
-        assertEquals("ACTIVO", lanchero.getEstadoViaje());
+        assertEquals(EstadoOperativoLanchero.ACTIVO, lanchero.getEstadoViaje());
         assertNotNull(lanchero.getFechaDecision());
         verify(lancheroRepository).saveAndFlush(lanchero);
         verify(notificacionService).enviarDecisionAprobada(12L, "Ana Pérez", "ana@example.com");
@@ -80,7 +88,7 @@ class AdminWorkflowServiceTest {
 
         assertEquals("Documento ilegible", resultado.motivo());
         assertEquals("Documento ilegible", lanchero.getMotivoRechazo());
-        assertEquals("RECHAZADO", lanchero.getEstadoSolicitud());
+        assertEquals(EstadoSolicitud.RECHAZADO, lanchero.getEstadoSolicitud());
         verify(lancheroRepository).saveAndFlush(lanchero);
         verify(notificacionService).enviarDecisionRechazada(
                 12L, "Ana Pérez", "ana@example.com", "Documento ilegible"
@@ -92,7 +100,7 @@ class AdminWorkflowServiceTest {
         Lanchero lanchero = pendiente();
         when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
 
-        for (String estado : List.of("APROBADO", "RECHAZADO")) {
+        for (EstadoSolicitud estado : List.of(EstadoSolicitud.APROBADO, EstadoSolicitud.RECHAZADO)) {
             lanchero.setEstadoSolicitud(estado);
             lanchero.setMotivoRechazo("Motivo existente");
 
@@ -115,7 +123,7 @@ class AdminWorkflowServiceTest {
         Lanchero lanchero = pendiente();
         when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
 
-        for (String estado : List.of("RECHAZADO", "APROBADO")) {
+        for (EstadoSolicitud estado : List.of(EstadoSolicitud.RECHAZADO, EstadoSolicitud.APROBADO)) {
             lanchero.setEstadoSolicitud(estado);
             lanchero.setMotivoRechazo("Motivo existente");
 
@@ -177,8 +185,8 @@ class AdminWorkflowServiceTest {
     @Test
     void estableceEstadoActivoEnLancheroAprobadoInactivo() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoSolicitud("APROBADO");
-        lanchero.setEstadoViaje("INACTIVO");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.INACTIVO);
         when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
 
         var resultado = service.actualizarEstadoOperativo(
@@ -194,8 +202,8 @@ class AdminWorkflowServiceTest {
     @Test
     void estableceEstadoInactivoEnLancheroAprobadoActivo() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoSolicitud("APROBADO");
-        lanchero.setEstadoViaje("ACTIVO");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
         when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
 
         var resultado = service.actualizarEstadoOperativo(
@@ -211,8 +219,8 @@ class AdminWorkflowServiceTest {
     @Test
     void establecerElEstadoOperativoActualNoLoAlterna() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoSolicitud("APROBADO");
-        lanchero.setEstadoViaje("ACTIVO");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
         when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
 
         var resultado = service.actualizarEstadoOperativo(
@@ -221,14 +229,14 @@ class AdminWorkflowServiceTest {
         );
 
         assertEquals("ACTIVO", resultado.estadoViaje());
-        assertEquals("ACTIVO", lanchero.getEstadoViaje());
+        assertEquals(EstadoOperativoLanchero.ACTIVO, lanchero.getEstadoViaje());
     }
 
     @Test
     void noPermiteCambiarEstadoOperativoDeLancheroEnViaje() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoSolicitud("APROBADO");
-        lanchero.setEstadoViaje("EN_VIAJE");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_VIAJE);
         when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
 
         ResponseStatusException exception = assertThrows(
@@ -240,15 +248,15 @@ class AdminWorkflowServiceTest {
         );
 
         assertEquals(409, exception.getStatusCode().value());
-        assertEquals("EN_VIAJE", lanchero.getEstadoViaje());
+        assertEquals(EstadoOperativoLanchero.EN_VIAJE, lanchero.getEstadoViaje());
         verify(lancheroRepository, never()).save(lanchero);
     }
 
     @Test
     void crearViajeValidoIniciaViajeYActualizaSoloEstadoOperativo() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoSolicitud("APROBADO");
-        lanchero.setEstadoViaje("ACTIVO");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
         Lancha lancha = new Lancha();
         lancha.setIdLancha(34L);
         lancha.setLanchero(lanchero);
@@ -273,8 +281,8 @@ class AdminWorkflowServiceTest {
 
         assertEquals(25L, resultado.id());
         assertEquals("5491123456789", resultado.turistaWhatsapp());
-        assertEquals("EN_VIAJE", lanchero.getEstadoViaje());
-        assertEquals("APROBADO", lanchero.getEstadoSolicitud());
+        assertEquals(EstadoOperativoLanchero.EN_VIAJE, lanchero.getEstadoViaje());
+        assertEquals(EstadoSolicitud.APROBADO, lanchero.getEstadoSolicitud());
         ArgumentCaptor<Viaje> captor = ArgumentCaptor.forClass(Viaje.class);
         verify(viajeRepository).saveAndFlush(captor.capture());
         assertNotNull(captor.getValue().getFechaHoraInicio());
@@ -285,7 +293,7 @@ class AdminWorkflowServiceTest {
                 "Ana Pérez",
                 "Primera Sección",
                 "Segunda Sección",
-                captor.getValue().getFechaHoraInicio().toString(),
+                captor.getValue().getFechaHoraInicio(),
                 4,
                 "Turista",
                 "5491123456789"
@@ -295,8 +303,8 @@ class AdminWorkflowServiceTest {
     @Test
     void noPermiteCrearViajeSiLaLanchaNoEstaActiva() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoSolicitud("APROBADO");
-        lanchero.setEstadoViaje("INACTIVO");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.INACTIVO);
         Lancha lancha = new Lancha();
         lancha.setLanchero(lanchero);
         when(lanchaRepository.findLancheroIdByIdLancha(34L)).thenReturn(Optional.of(12L));
@@ -316,8 +324,8 @@ class AdminWorkflowServiceTest {
     @Test
     void noNotificaSiFallaLaPersistenciaDelEstadoDelLanchero() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoSolicitud("APROBADO");
-        lanchero.setEstadoViaje("ACTIVO");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
         Lancha lancha = new Lancha();
         lancha.setLanchero(lanchero);
         lancha.setCapacidad(8);
@@ -347,7 +355,7 @@ class AdminWorkflowServiceTest {
     @Test
     void finalizarViajeGeneraTokenYLiberaLanchero() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoViaje("EN_VIAJE");
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_VIAJE);
         Lancha lancha = new Lancha();
         lancha.setLanchero(lanchero);
         Viaje viaje = new Viaje();
@@ -360,7 +368,7 @@ class AdminWorkflowServiceTest {
         when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
         var resultado = viajeService.finalizar(25L);
 
-        assertEquals("ACTIVO", lanchero.getEstadoViaje());
+        assertEquals(EstadoOperativoLanchero.ACTIVO, lanchero.getEstadoViaje());
         assertNotNull(resultado.fechaHoraFin());
         assertEquals(viaje.getTokenResena(), resultado.tokenResena());
         assertEquals(64, resultado.tokenResena().length());
@@ -377,7 +385,7 @@ class AdminWorkflowServiceTest {
     @Test
     void listaViajesIncluyeWhatsappDelTuristaYConservaPaginacion() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoViaje("EN_VIAJE");
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_VIAJE);
         Lancha lancha = new Lancha();
         lancha.setIdLancha(34L);
         lancha.setLanchero(lanchero);
@@ -393,7 +401,7 @@ class AdminWorkflowServiceTest {
         viaje.setTuristaNombreCompleto("Ana Pérez");
         viaje.setTuristaWhatsapp("+573001234567");
         when(viajeRepository.findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
-                eq("EN_VIAJE"), any(Pageable.class)
+                eq(EstadoOperativoLanchero.EN_VIAJE), any(Pageable.class)
         )).thenReturn(new PageImpl<>(List.of(viaje), PageRequest.of(0, 2), 3));
 
         var resultado = viajeService.listarEnCurso(0, 2);
@@ -414,7 +422,7 @@ class AdminWorkflowServiceTest {
         assertEquals(2, viajeDTO.cantidadPasajeros());
 
         verify(viajeRepository).findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
-                eq("EN_VIAJE"), any(Pageable.class)
+                eq(EstadoOperativoLanchero.EN_VIAJE), any(Pageable.class)
         );
     }
 
@@ -427,8 +435,8 @@ class AdminWorkflowServiceTest {
         Zona origen = zona(2L, "Delta");
         Zona destino = zona(3L, "Primera Seccion");
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoSolicitud("APROBADO");
-        lanchero.setEstadoViaje("ACTIVO");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
         lanchero.setWhatsapp("+573001234567");
         Lancha lancha = new Lancha();
         lancha.setIdLancha(34L);
@@ -438,7 +446,10 @@ class AdminWorkflowServiceTest {
         lancha.setZonas(new HashSet<>(List.of(origen, destino)));
         when(zonaRepository.findByNombreIgnoreCase("DELTA")).thenReturn(Optional.of(origen));
         when(zonaRepository.findByNombreIgnoreCase("PRIMERA_SECCION")).thenReturn(Optional.of(destino));
-        when(lanchaRepository.buscarDisponibles(eq(5), eq(2L), eq(3L), any()))
+        when(lanchaRepository.buscarDisponibles(
+                eq(5), eq(2L), eq(3L), eq(EstadoSolicitud.APROBADO),
+                eq(EstadoOperativoLanchero.ACTIVO), any()
+        ))
                 .thenReturn(List.of(lancha));
 
         var resultado = servicio.buscarDisponibles(5, "DELTA", "PRIMERA_SECCION", LocalTime.of(18, 0));
@@ -451,7 +462,10 @@ class AdminWorkflowServiceTest {
         assertEquals("ACTIVO", resultado.getFirst().estadoOperativo());
         assertEquals("+573001234567", resultado.getFirst().whatsappLanchero());
         ArgumentCaptor<OffsetDateTime> fechaConsulta = ArgumentCaptor.forClass(OffsetDateTime.class);
-        verify(lanchaRepository).buscarDisponibles(eq(5), eq(2L), eq(3L), fechaConsulta.capture());
+        verify(lanchaRepository).buscarDisponibles(
+                eq(5), eq(2L), eq(3L), eq(EstadoSolicitud.APROBADO),
+                eq(EstadoOperativoLanchero.ACTIVO), fechaConsulta.capture()
+        );
         assertEquals(OffsetDateTime.parse("2026-11-02T18:00:00-05:00"), fechaConsulta.getValue());
         assertEquals(OffsetDateTime.parse("2026-11-02T23:00:00Z").toInstant(), fechaConsulta.getValue().toInstant());
     }
@@ -482,7 +496,10 @@ class AdminWorkflowServiceTest {
         );
         DataAccessResourceFailureException errorConsulta =
                 new DataAccessResourceFailureException("fallo de consulta");
-        when(lanchaRepository.buscarDisponibles(eq(null), eq(null), eq(null), any()))
+        when(lanchaRepository.buscarDisponibles(
+                eq(null), eq(null), eq(null), eq(EstadoSolicitud.APROBADO),
+                eq(EstadoOperativoLanchero.ACTIVO), any()
+        ))
                 .thenThrow(errorConsulta);
 
         DataAccessResourceFailureException errorPropagado = assertThrows(
@@ -496,7 +513,7 @@ class AdminWorkflowServiceTest {
     @Test
     void seguimientoIncluyeViajesActivosFinalizadosYDestinoMasRecienteConfirmado() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoViaje("EN_VIAJE");
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_VIAJE);
         Lancha lancha = new Lancha();
         lancha.setIdLancha(34L);
         lancha.setNombre("Brisa Marina");
@@ -538,7 +555,7 @@ class AdminWorkflowServiceTest {
         lanchero.setIdLanchero(12L);
         lanchero.setNombreCompleto("Ana Pérez");
         lanchero.setCorreo("ana@example.com");
-        lanchero.setEstadoSolicitud("PENDIENTE");
+        lanchero.setEstadoSolicitud(EstadoSolicitud.PENDIENTE);
         return lanchero;
     }
 

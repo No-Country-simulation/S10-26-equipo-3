@@ -24,6 +24,7 @@ import com.nautiflow.dto.SolicitudResumenDTO;
 import com.nautiflow.dto.ViajeEnCursoDTO;
 import com.nautiflow.dto.ViajeSeguimientoDTO;
 import com.nautiflow.dto.ZonaDTO;
+import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.service.AdminAuthService;
 import com.nautiflow.service.AdminAuthService.CredencialesInvalidasException;
 import com.nautiflow.service.AdminService;
@@ -48,6 +49,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -60,7 +62,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {
-        AdminController.class, LoginController.class, ResenaController.class, ZonaController.class
+        AdminDashboardController.class,
+        SolicitudAdminController.class,
+        LancheroAdminController.class,
+        ViajeAdminController.class,
+        ResenaAdminController.class,
+        LoginController.class,
+        ResenaController.class,
+        ZonaController.class
 },
         properties = "nautiflow.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")
 @Import({SecurityConfig.class, JacksonConfig.class, JwtTokenService.class})
@@ -341,7 +350,7 @@ class AdminControllerTest {
 
     @Test
     void listadoFiltraPorEstadoYRespetaPaginacion() throws Exception {
-        when(adminService.listarSolicitudes("PENDIENTE", 1, 2)).thenReturn(new PaginaSolicitudesDTO(
+        when(adminService.listarSolicitudes(EstadoSolicitud.PENDIENTE, 1, 2)).thenReturn(new PaginaSolicitudesDTO(
                 List.of(new SolicitudResumenDTO(2L, "Ana Pérez", LocalDate.parse("2026-10-25"), "PENDIENTE")),
                 1, 2, 3, 2
         ));
@@ -357,13 +366,18 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.size").value(2))
                 .andExpect(jsonPath("$.totalElements").value(3))
                 .andExpect(jsonPath("$.totalPages").value(2));
-        verify(adminService).listarSolicitudes("PENDIENTE", 1, 2);
+        verify(adminService).listarSolicitudes(EstadoSolicitud.PENDIENTE, 1, 2);
     }
 
     @Test
     void estadosPermitidosSonAceptados() throws Exception {
-        for (String estado : List.of("PENDIENTE", "APROBADO", "RECHAZADO", "TODOS")) {
-            when(adminService.listarSolicitudes(eq(estado), eq(0), eq(10)))
+        for (String estado : List.of(
+                "PENDIENTE", "APROBADO", "RECHAZADO", "TODOS", "pendiente", "aprobado", "rechazado", "todos"
+        )) {
+            EstadoSolicitud filtro = "TODOS".equalsIgnoreCase(estado)
+                    ? null
+                    : EstadoSolicitud.valueOf(estado.toUpperCase(Locale.ROOT));
+            when(adminService.listarSolicitudes(eq(filtro), eq(0), eq(10)))
                     .thenReturn(new PaginaSolicitudesDTO(List.of(), 0, 10, 0, 0));
             mockMvc.perform(get("/admin/solicitudes")
                             .param("estado", estado)
@@ -375,6 +389,23 @@ class AdminControllerTest {
     @Test
     void estadoInvalidoDevuelve400() throws Exception {
         mockMvc.perform(get("/admin/solicitudes")
+                        .param("estado", "OTRO")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/admin/lancheros")
+                        .param("estado", "OTRO")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void estadoDeViajesInvalidoDevuelve400() throws Exception {
+        mockMvc.perform(get("/admin/viajes")
+                        .param("estado", "FINALIZADO")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/admin/viajes")
                         .param("estado", "OTRO")
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isBadRequest());
@@ -476,7 +507,7 @@ class AdminControllerTest {
 
     @Test
     void listadoLancherosExponeAmbosEstadosPorSeparado() throws Exception {
-        when(adminWorkflowService.listarLancheros("APROBADO", 0, 10)).thenReturn(new PaginaLancherosDTO(
+        when(adminWorkflowService.listarLancheros(EstadoSolicitud.APROBADO, 0, 10)).thenReturn(new PaginaLancherosDTO(
                 List.of(new LancheroAdminDTO(
                         12L, "Ana Pérez", OffsetDateTime.parse("2026-10-25T10:30:00Z"), "APROBADO", "ACTIVO"
                 )),
@@ -484,12 +515,25 @@ class AdminControllerTest {
         ));
 
         mockMvc.perform(get("/admin/lancheros")
-                        .param("estado", "APROBADO")
+                        .param("estado", "aPrObAdO")
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].estadoSolicitud").value("APROBADO"))
                 .andExpect(jsonPath("$.content[0].estadoViaje").value("ACTIVO"));
-        verify(adminWorkflowService).listarLancheros("APROBADO", 0, 10);
+        verify(adminWorkflowService).listarLancheros(EstadoSolicitud.APROBADO, 0, 10);
+    }
+
+    @Test
+    void filtroTodosEnLancherosConsultaSinEstado() throws Exception {
+        when(adminWorkflowService.listarLancheros(null, 0, 10))
+                .thenReturn(new PaginaLancherosDTO(List.of(), 0, 10, 0, 0));
+
+        mockMvc.perform(get("/admin/lancheros")
+                        .param("estado", "TODOS")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isOk());
+
+        verify(adminWorkflowService).listarLancheros(null, 0, 10);
     }
 
     @Test

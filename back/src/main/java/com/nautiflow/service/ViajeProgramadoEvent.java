@@ -1,5 +1,7 @@
 package com.nautiflow.service;
 
+import java.time.OffsetDateTime;
+
 public record ViajeProgramadoEvent(
         Long idViaje,
         Long idLanchero,
@@ -7,7 +9,7 @@ public record ViajeProgramadoEvent(
         String nombreLanchero,
         String zonaOrigen,
         String zonaDestino,
-        String fechaHoraInicio,
+        OffsetDateTime fechaHoraInicio,
         Integer cantidadPasajeros,
         String turistaNombreCompleto,
         String turistaWhatsapp

@@ -10,6 +10,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Properties;
+import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -180,7 +181,7 @@ class GmailRegistroNotificacionServiceTest {
                 "María Pérez",
                 "Zona <Norte>",
                 "Zona Sur",
-                "2026-11-02T12:53:31-05:00",
+                OffsetDateTime.parse("2026-11-02T22:22:22.637859Z"),
                 2,
                 "Ana Pérez",
                 "+5491123456789"
@@ -193,7 +194,9 @@ class GmailRegistroNotificacionServiceTest {
         assertTrue(html.contains("María Pérez"));
         assertTrue(html.contains("Zona &lt;Norte&gt;"));
         assertTrue(html.contains("Zona Sur"));
-        assertTrue(html.contains("2026-11-02T12:53:31-05:00"));
+        assertTrue(html.contains("2/11/2026 5:22pm"));
+        assertTrue(contenidoPlano(mensaje).contains("Fecha y hora de inicio: 2/11/2026 5:22pm"));
+        assertFalse(html.contains("2026-11-02T22:22:22.637859Z"));
         assertTrue(html.contains("2"));
         assertTrue(html.contains("Ana Pérez"));
         assertTrue(html.contains("+5491123456789"));
@@ -207,7 +210,8 @@ class GmailRegistroNotificacionServiceTest {
 
         assertDoesNotThrow(() -> service.notificarViajeProgramado(new ViajeProgramadoEvent(
                 25L, 12L, "lanchero@example.com", "María Pérez", "Origen", "Destino",
-                "2026-11-02T12:53:31-05:00", 2, "Ana Pérez", "+5491123456789"
+                OffsetDateTime.parse("2026-11-02T22:22:22.637859Z"),
+                2, "Ana Pérez", "+5491123456789"
         )));
     }
 
