@@ -3,12 +3,14 @@ package com.nautiflow.controller;
 import com.nautiflow.dto.LoginRequest;
 import com.nautiflow.dto.LoginResponse;
 import com.nautiflow.service.AdminAuthService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Autenticación", description = "Inicio de sesión como administrador.")
 public class LoginController {
     private final AdminAuthService adminAuthService;
 

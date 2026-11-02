@@ -4,6 +4,7 @@ import com.nautiflow.dto.CrearResenaRequest;
 import com.nautiflow.dto.ResenaCreadaDTO;
 import com.nautiflow.dto.ResenaViajeDTO;
 import com.nautiflow.service.ResenaService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Reseñas públicas", description = "Consulta de reservas y registro público de reseñas mediante token.")
 public class ResenaController {
     private final ResenaService resenaService;
 

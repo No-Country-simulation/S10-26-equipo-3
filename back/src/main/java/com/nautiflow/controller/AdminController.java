@@ -18,6 +18,7 @@ import com.nautiflow.service.AdminService;
 import com.nautiflow.service.AdminWorkflowService;
 import com.nautiflow.service.ResenaService;
 import com.nautiflow.service.ViajeWorkflowService;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -59,11 +60,13 @@ public class AdminController {
     }
 
     @GetMapping("/dashboard")
+    @Operation(tags = "Dashboard")
     public AdminDashboardDTO dashboard() {
         return adminService.obtenerDashboard();
     }
 
     @GetMapping("/solicitudes")
+    @Operation(tags = "Solicitudes")
     public PaginaSolicitudesDTO solicitudes(
             @RequestParam(required = false) String estado,
             @RequestParam(defaultValue = "0") int page,
@@ -80,16 +83,19 @@ public class AdminController {
     }
 
     @GetMapping("/solicitudes/{id}")
+    @Operation(tags = "Solicitudes")
     public SolicitudDetalleDTO detalle(@PathVariable Long id) {
         return adminService.obtenerDetalle(id);
     }
 
     @PatchMapping("/solicitudes/{id}/aprobar")
+    @Operation(tags = "Solicitudes")
     public DecisionSolicitudDTO aprobar(@PathVariable Long id) {
         return adminWorkflowService.aprobarSolicitud(id);
     }
 
     @PatchMapping("/solicitudes/{id}/rechazar")
+    @Operation(tags = "Solicitudes")
     public RechazoSolicitudDTO rechazar(
             @PathVariable Long id,
             @Valid @RequestBody RechazarSolicitudRequest solicitud
@@ -98,6 +104,7 @@ public class AdminController {
     }
 
     @GetMapping("/lancheros")
+    @Operation(tags = "Lancheros")
     public PaginaLancherosDTO lancheros(
             @RequestParam(required = false) String estado,
             @RequestParam(defaultValue = "0") int page,
@@ -114,6 +121,7 @@ public class AdminController {
     }
 
     @PatchMapping("/lancheros/{id}/estado-viaje")
+    @Operation(tags = "Lancheros")
     public LancheroAdminDTO actualizarEstadoOperativoLanchero(
             @PathVariable Long id,
             @Valid @RequestBody EstadoOperativoRequest solicitud
@@ -122,11 +130,13 @@ public class AdminController {
     }
 
     @PostMapping("/viajes")
+    @Operation(tags = "Viajes")
     public ResponseEntity<ViajeAdminDTO> crearViaje(@Valid @RequestBody CrearViajeRequest solicitud) {
         return ResponseEntity.status(HttpStatus.CREATED).body(viajeWorkflowService.crearEIniciar(solicitud));
     }
 
     @GetMapping("/viajes")
+    @Operation(tags = "Viajes")
     public PaginaViajesDTO viajesEnCurso(
             @RequestParam(defaultValue = "EN_VIAJE") String estado,
             @RequestParam(defaultValue = "0") int page,
@@ -139,11 +149,13 @@ public class AdminController {
     }
 
     @PatchMapping("/viajes/{id}/finalizar")
+    @Operation(tags = "Viajes")
     public ViajeFinalizadoDTO finalizarViaje(@PathVariable Long id) {
         return viajeWorkflowService.finalizar(id);
     }
 
     @GetMapping("/resenas")
+    @Operation(tags = "Reseñas")
     public PaginaResenasDTO resenas(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size

@@ -6,10 +6,30 @@ info:
     Contrato de los endpoints públicos y administrativos de NautiFlow.
     Los campos date-time representan instantes en UTC, serializados en ISO-8601 con sufijo Z
     y precisión de microsegundos. Los campos date representan fechas calendario en formato YYYY-MM-DD.
+tags:
+  - name: Lanchero
+    description: Registro de un lanchero, su embarcación y sus documentos.
+  - name: Autenticación
+    description: Inicio de sesión como administrador.
+  - name: Dashboard
+    description: Indicadores principales del administrador.
+  - name: Solicitudes
+    description: Consulta y decisión de solicitudes de registro.
+  - name: Lancheros
+    description: Administración de lancheros y su estado operativo.
+  - name: Viajes
+    description: Creación, consulta y finalización de viajes.
+  - name: Reseñas
+    description: Consulta administrativa de reseñas.
+  - name: Reseñas públicas
+    description: Consulta de reservas y registro público de reseñas mediante token.
+  - name: Zonas
+    description: Consulta de zonas disponibles.
 paths:
   /zonas:
     get:
       operationId: listarZonas
+      tags: [Zonas]
       summary: Listar zonas disponibles para el registro
       security: []
       responses:
@@ -29,6 +49,7 @@ paths:
   /login:
     post:
       operationId: iniciarSesionAdministrador
+      tags: [Autenticación]
       summary: Iniciar sesión como administrador
       description: Endpoint público. Devuelve un JWT de tipo Bearer con vigencia de 12 horas.
       security: []
@@ -40,7 +61,7 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
             example:
               email: admin@nautiflow.com
-              password: reemplazar-por-clave-local
+              password: "Admin123*"
       responses:
         "200":
           description: Sesión iniciada.
@@ -59,6 +80,7 @@ paths:
   /lancheros/registrar:
     post:
       operationId: registrarLanchero
+      tags: [Lanchero]
       summary: Registrar un lanchero, su embarcación y sus documentos
       description: >-
         Endpoint público. Enviar `solicitud` como texto que contiene el JSON
@@ -179,6 +201,7 @@ paths:
   /admin/dashboard:
     get:
       operationId: obtenerDashboardAdministrador
+      tags: [Dashboard]
       summary: Consultar los indicadores del dashboard
       security:
         - bearerAuth: []
@@ -196,6 +219,7 @@ paths:
   /admin/solicitudes:
     get:
       operationId: listarSolicitudes
+      tags: [Solicitudes]
       summary: Listar solicitudes de registro
       description: Ordena por fecha de registro descendente y, en empate, por ID descendente.
       security:
@@ -222,6 +246,7 @@ paths:
       - $ref: "#/components/parameters/IdLanchero"
     get:
       operationId: obtenerDetalleSolicitud
+      tags: [Solicitudes]
       summary: Consultar el detalle de una solicitud
       description: Incluye URLs prefirmadas de documentos de R2; nunca devuelve las claves internas de los objetos.
       security:
@@ -244,6 +269,7 @@ paths:
       - $ref: "#/components/parameters/IdLanchero"
     patch:
       operationId: aprobarSolicitud
+      tags: [Solicitudes]
       summary: Aprobar una solicitud pendiente
       description: Guarda la decisión y la fecha, activa automáticamente al lanchero y envía una notificación al correo registrado.
       security:
@@ -270,6 +296,7 @@ paths:
       - $ref: "#/components/parameters/IdLanchero"
     patch:
       operationId: rechazarSolicitud
+      tags: [Solicitudes]
       summary: Rechazar una solicitud pendiente
       description: Guarda el motivo y la fecha, y envía el motivo al correo registrado. No modifica el estado operativo.
       security:
@@ -304,6 +331,7 @@ paths:
   /admin/lancheros:
     get:
       operationId: listarLancheros
+      tags: [Lancheros]
       summary: Listar lancheros
       description: Ordena por fecha de registro descendente y, en empate, por ID descendente.
       security:
@@ -330,6 +358,7 @@ paths:
       - $ref: "#/components/parameters/IdLanchero"
     patch:
       operationId: establecerEstadoOperativoLanchero
+      tags: [Lancheros]
       summary: Establecer el estado operativo de un lanchero aprobado
       description: >-
         Recibe el estado deseado ACTIVO o INACTIVO. La operación es idempotente:
@@ -369,6 +398,7 @@ paths:
   /admin/viajes:
     post:
       operationId: crearViaje
+      tags: [Viajes]
       summary: Crear e iniciar un viaje
       description: >-
         Requiere que la lancha pertenezca a un lanchero aprobado y ACTIVO,
@@ -410,6 +440,7 @@ paths:
           description: La lancha no está aprobada y activa o el lanchero ya tiene un viaje sin finalizar.
     get:
       operationId: listarViajesEnCurso
+      tags: [Viajes]
       summary: Listar viajes en curso
       description: El endpoint solo admite estado EN_VIAJE; pagina viajes sin fecha de fin.
       security:
@@ -448,6 +479,7 @@ paths:
           minimum: 1
     patch:
       operationId: finalizarViaje
+      tags: [Viajes]
       summary: Finalizar un viaje
       description: Guarda la hora de fin, genera un token de reseña y actualiza el estado operativo del lanchero.
       security:
@@ -470,6 +502,7 @@ paths:
   /admin/resenas:
     get:
       operationId: listarResenas
+      tags: [Reseñas]
       summary: Listar reseñas
       description: Ordena por fecha descendente y, en empate, por ID descendente.
       security:
@@ -502,6 +535,7 @@ paths:
         description: Token aleatorio asociado únicamente a la reserva finalizada.
     get:
       operationId: consultarReservaParaResena
+      tags: [Reseñas públicas]
       summary: Consultar los datos guardados de la reserva
       description: >-
         Público. El token identifica la reserva; el nombre se obtiene del viaje
@@ -518,6 +552,7 @@ paths:
           description: Enlace inexistente o viaje aún no finalizado.
     post:
       operationId: crearResenaDeReserva
+      tags: [Reseñas públicas]
       summary: Crear una reseña para la reserva identificada por el token
       description: >-
         Público. El token es la única referencia y autorización del viaje.
