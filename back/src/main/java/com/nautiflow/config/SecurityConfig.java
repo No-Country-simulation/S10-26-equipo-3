@@ -1,27 +1,41 @@
 package com.nautiflow.config;
 
+import com.nautiflow.service.JwtTokenService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenService jwtTokenService)
+            throws Exception {
 
         return http
                 .csrf(csrf -> csrf.disable())
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, exception) ->
+                                response.sendError(401, "No autenticado"))
+                )
 
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/lancheros/registrar"
+                                "/lancheros/registrar",
+                                "/login"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/zonas").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/resena/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/resena/**").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
 
                         .requestMatchers(
                                 "/swagger-ui.html",
@@ -32,6 +46,10 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(
+                        new JwtAuthenticationFilter(jwtTokenService),
+                        UsernamePasswordAuthenticationFilter.class
+                )
 
                 .build();
     }
@@ -39,5 +57,12 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    UserDetailsService userDetailsService() {
+        return username -> {
+            throw new UsernameNotFoundException("Usuario no encontrado.");
+        };
     }
 }
