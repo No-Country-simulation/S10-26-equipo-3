@@ -2,25 +2,250 @@
   "info": {
     "_postman_id": "c1b4764e-7abd-4af3-b465-9e52378f9a6a",
     "name": "NautiFlow API",
-    "description": "Colección para probar los endpoints actuales de NautiFlow. Configura baseUrl, adminEmail y adminPassword; ejecuta Login antes de los endpoints protegidos. Los endpoints de reseñas son públicos y el endpoint de finalización guarda tokenResena en una variable para continuar el flujo.",
+    "description": "Colección alineada con los controladores y DTOs actuales. Usa el entorno NautiFlow - Local. Ejecuta Login administrador antes de las rutas protegidas. Las solicitudes con efectos (registro, decisiones, viajes y reseñas) modifican datos.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{adminToken}}",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
     { "key": "adminEmail", "value": "", "type": "string" },
     { "key": "adminPassword", "value": "", "type": "string" },
     { "key": "adminToken", "value": "", "type": "string" },
-    { "key": "idSolicitud", "value": "12", "type": "string" },
-    { "key": "idLanchero", "value": "12", "type": "string" },
-    { "key": "idLancha", "value": "34", "type": "string" },
+    { "key": "userToken", "value": "", "type": "string" },
+    { "key": "idSolicitud", "value": "1", "type": "string" },
+    { "key": "idSolicitudProcesada", "value": "1", "type": "string" },
+    { "key": "idLanchero", "value": "1", "type": "string" },
+    { "key": "idLancha", "value": "1", "type": "string" },
+    { "key": "idLanchaNoDisponible", "value": "1", "type": "string" },
     { "key": "idZonaOrigen", "value": "1", "type": "string" },
     { "key": "idZonaDestino", "value": "2", "type": "string" },
-    { "key": "idViaje", "value": "25", "type": "string" },
-    { "key": "tokenResena", "value": "", "type": "string" },
+    { "key": "idZonaInexistente", "value": "999999999", "type": "string" },
+    { "key": "idViaje", "value": "1", "type": "string" },
+    { "key": "idViajeFinalizado", "value": "1", "type": "string" },
+    { "key": "tokenResena", "value": "token-ficticio-que-debe-reemplazarse", "type": "string" },
+    { "key": "tokenResenaExistente", "value": "token-ficticio-ya-resenado", "type": "string" },
     { "key": "page", "value": "0", "type": "string" },
-    { "key": "size", "value": "10", "type": "string" }
+    { "key": "size", "value": "10", "type": "string" },
+    { "key": "estadoSolicitud", "value": "PENDIENTE", "type": "string" },
+    { "key": "estadoLanchero", "value": "APROBADO", "type": "string" },
+    { "key": "registroEmail", "value": "", "type": "string" },
+    { "key": "registroPassword", "value": "", "type": "string" },
+    { "key": "comentario501", "value": "", "type": "string" },
+    { "key": "expiredToken", "value": "", "type": "string" }
   ],
   "item": [
+    {
+      "name": "Registro y zonas",
+      "item": [
+        {
+          "name": "Listar zonas disponibles",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/zonas",
+              "host": ["{{baseUrl}}"],
+              "path": ["zonas"]
+            },
+            "description": "Público. Devuelve los IDs y nombres usados para configurar solicitud.zonasIds."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('GET /zonas responde 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Cada zona expone id y nombre', function () {",
+                  "  pm.expect(body).to.be.an('array');",
+                  "  body.forEach(function (zona) { pm.expect(zona).to.have.keys('id', 'nombre'); });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar lanchero - válido (multipart)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "solicitud",
+                  "value": "{\n  \"nombreCompleto\": \"Ana Pérez\",\n  \"whatsapp\": \"+573212684025\",\n  \"correo\": \"{{registroEmail}}\",\n  \"contrasena\": \"{{registroPassword}}\",\n  \"nombreEmbarcacion\": \"Brisa de prueba\",\n  \"capacidadPasajeros\": 8,\n  \"zonasIds\": [{{idZonaOrigen}}, {{idZonaDestino}}]\n}",
+                  "type": "text",
+                  "contentType": "text/plain"
+                },
+                { "key": "licencia", "type": "file", "src": "" },
+                { "key": "seguro", "type": "file", "src": "" },
+                { "key": "antecedentes", "type": "file", "src": "" },
+                { "key": "fotos", "type": "file", "src": "", "disabled": true }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lancheros/registrar",
+              "host": ["{{baseUrl}}"],
+              "path": ["lancheros", "registrar"]
+            },
+            "description": "Público. Selecciona los tres archivos requeridos y configura registroEmail/registroPassword en el entorno. fotos es opcional; habilita esa fila para adjuntar imágenes. No agregues manualmente Content-Type: Postman debe generar el boundary."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registro válido responde 201 Created', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Respuesta conserva únicamente el contrato de registro', function () {",
+                  "  pm.expect(body).to.have.keys('idLanchero', 'idLancha', 'estado', 'mensaje');",
+                  "  pm.expect(body.estado).to.eql('PENDIENTE');",
+                  "  pm.expect(body.idLanchero).to.be.a('number');",
+                  "  pm.expect(body.idLancha).to.be.a('number');",
+                  "});",
+                  "pm.collectionVariables.set('idLanchero', String(body.idLanchero));",
+                  "pm.collectionVariables.set('idSolicitud', String(body.idLanchero));",
+                  "pm.collectionVariables.set('idLancha', String(body.idLancha));",
+                  "pm.environment.set('idLanchero', String(body.idLanchero));",
+                  "pm.environment.set('idSolicitud', String(body.idLanchero));",
+                  "pm.environment.set('idLancha', String(body.idLancha));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registro - JSON mal formado",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "solicitud", "value": "{", "type": "text", "contentType": "text/plain" },
+                { "key": "licencia", "type": "file", "src": "" },
+                { "key": "seguro", "type": "file", "src": "" },
+                { "key": "antecedentes", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lancheros/registrar",
+              "host": ["{{baseUrl}}"],
+              "path": ["lancheros", "registrar"]
+            },
+            "description": "Escenario negativo. Adjunta los archivos requeridos; el JSON intencionalmente inválido debe producir 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON de registro mal formado responde 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error tiene formato uniforme', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql(400);",
+                  "  pm.expect(body.path).to.eql('/lancheros/registrar');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registro - campos vacíos y zona inválida",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "solicitud",
+                  "value": "{\n  \"nombreCompleto\": \"\",\n  \"whatsapp\": \"\",\n  \"correo\": \"\",\n  \"contrasena\": \"\",\n  \"nombreEmbarcacion\": \"\",\n  \"capacidadPasajeros\": 0,\n  \"zonasIds\": [0]\n}",
+                  "type": "text",
+                  "contentType": "text/plain"
+                },
+                { "key": "licencia", "type": "file", "src": "" },
+                { "key": "seguro", "type": "file", "src": "" },
+                { "key": "antecedentes", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lancheros/registrar",
+              "host": ["{{baseUrl}}"],
+              "path": ["lancheros", "registrar"]
+            },
+            "description": "Escenario negativo para validaciones del JSON de solicitud; debe responder 400. Adjunta los archivos obligatorios."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Datos inválidos de registro responden 400, no 401', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta identifica un error de cliente', function () { pm.expect(pm.response.json().status).to.eql(400); });"
+                ]
+              }
+            }
+          ]
+        }
+        ,
+        {
+          "name": "Registro - archivo demasiado grande",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "solicitud",
+                  "value": "{\n  \"nombreCompleto\": \"Ana Pérez\",\n  \"whatsapp\": \"+573212684025\",\n  \"correo\": \"{{registroEmail}}\",\n  \"contrasena\": \"{{registroPassword}}\",\n  \"nombreEmbarcacion\": \"Brisa de prueba\",\n  \"capacidadPasajeros\": 8,\n  \"zonasIds\": [{{idZonaOrigen}}, {{idZonaDestino}}]\n}",
+                  "type": "text",
+                  "contentType": "text/plain"
+                },
+                { "key": "licencia", "type": "file", "src": "" },
+                { "key": "seguro", "type": "file", "src": "" },
+                { "key": "antecedentes", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/lancheros/registrar",
+              "host": ["{{baseUrl}}"],
+              "path": ["lancheros", "registrar"]
+            },
+            "description": "Adjunta en licencia un archivo mayor que el límite configurado del servidor. No fuerces Content-Type; Postman debe generar el boundary."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Archivo que supera el límite responde 413', function () { pm.response.to.have.status(413); });",
+                  "pm.test('Error identifica 413', function () { pm.expect(pm.response.json().status).to.eql(413); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "Autenticación",
       "item": [
@@ -28,6 +253,7 @@
           "name": "Login administrador",
           "request": {
             "method": "POST",
+            "auth": { "type": "noauth" },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
@@ -39,7 +265,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["login"]
             },
-            "description": "Público. Completa adminEmail y adminPassword en las variables de la colección. Guarda el JWT recibido como adminToken."
+            "description": "Configura adminEmail/adminPassword con credenciales autorizadas. En una respuesta 200 guarda response.token en adminToken."
           },
           "event": [
             {
@@ -47,10 +273,105 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Login responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Login exitoso responde 200', function () { pm.response.to.have.status(200); });",
                   "const body = pm.response.json();",
-                  "if (body.token) pm.collectionVariables.set('adminToken', body.token);",
-                  "pm.test('La respuesta contiene un token', function () { pm.expect(body.token).to.be.a('string').and.not.empty; });"
+                  "pm.test('Respuesta tiene token, tipo y mensaje', function () {",
+                  "  pm.expect(body).to.have.all.keys('token', 'tipo', 'mensaje');",
+                  "  pm.expect(body.token).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.tipo).to.eql('Bearer');",
+                  "});",
+                  "pm.collectionVariables.set('adminToken', body.token);",
+                  "pm.environment.set('adminToken', body.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - credenciales incorrectas",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"contraseña-incorrecta-de-prueba\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Credenciales incorrectas responden 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Error no expone información interna', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql(401);",
+                  "  pm.expect(body.message).not.to.include('password');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - campos obligatorios vacíos",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"\",\n  \"password\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Campos vacíos responden 400 y no 401', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta de validación tiene formato uniforme', function () { pm.expect(pm.response.json().status).to.eql(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - JSON mal formado",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON mal formado responde 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error de formato usa status 400', function () { pm.expect(pm.response.json().status).to.eql(400); });"
                 ]
               }
             }
@@ -59,105 +380,512 @@
       ]
     },
     {
-      "name": "Administración",
+      "name": "Administración - solicitudes",
       "item": [
         {
-          "name": "Dashboard",
+          "name": "Dashboard administrativo",
           "request": {
             "method": "GET",
-            "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
             "url": { "raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"] }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Dashboard ADMIN responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Dashboard devuelve los indicadores actuales', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.all.keys('solicitudesPendientes', 'lanchasVerificadas', 'viajesActivos');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Listar solicitudes",
+          "name": "Listar solicitudes por estado",
           "request": {
             "method": "GET",
-            "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
             "url": {
-              "raw": "{{baseUrl}}/admin/solicitudes?estado=PENDIENTE&page={{page}}&size={{size}}",
+              "raw": "{{baseUrl}}/admin/solicitudes?estado={{estadoSolicitud}}&page={{page}}&size={{size}}",
               "host": ["{{baseUrl}}"],
               "path": ["admin", "solicitudes"],
               "query": [
-                { "key": "estado", "value": "PENDIENTE" },
+                { "key": "estado", "value": "{{estadoSolicitud}}" },
                 { "key": "page", "value": "{{page}}" },
                 { "key": "size", "value": "{{size}}" }
               ]
             },
-            "description": "Prueba con estado=PENDIENTE, APROBADO, RECHAZADO o TODOS."
-          }
+            "description": "Parámetro estado: PENDIENTE, APROBADO, RECHAZADO o TODOS; page empieza en 0 y size admite 1-100."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listado de solicitudes responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta paginada', function () { pm.expect(pm.response.json()).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar solicitudes - estado inválido",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/solicitudes?estado=ESTADO_INVALIDO&page={{page}}&size={{size}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "solicitudes"],
+              "query": [
+                { "key": "estado", "value": "ESTADO_INVALIDO" },
+                { "key": "page", "value": "{{page}}" },
+                { "key": "size", "value": "{{size}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado de filtro inválido responde 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Respuesta señala 400', function () { pm.expect(pm.response.json().status).to.eql(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar solicitudes - page no numérico",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/solicitudes?page=no-es-numero&size={{size}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "solicitudes"],
+              "query": [
+                { "key": "page", "value": "no-es-numero" },
+                { "key": "size", "value": "{{size}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Parámetro page mal formado responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Detalle de solicitud",
           "request": {
             "method": "GET",
-            "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
-            "url": { "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}", "host": ["{{baseUrl}}"], "path": ["admin", "solicitudes", "{{idSolicitud}}"] }
-          }
+            "url": {
+              "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "solicitudes", "{{idSolicitud}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Detalle de solicitud responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Detalle contiene datos de la solicitud', function () { pm.expect(pm.response.json()).to.have.property('nombreCompleto'); });"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Aprobar solicitud",
+          "name": "Detalle de solicitud - ID inexistente",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/solicitudes/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "solicitudes", "999999999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solicitud inexistente responde 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aprobar solicitud pendiente",
           "request": {
             "method": "PATCH",
-            "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
-            "url": { "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}/aprobar", "host": ["{{baseUrl}}"], "path": ["admin", "solicitudes", "{{idSolicitud}}", "aprobar"] }
+            "url": {
+              "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}/aprobar",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "solicitudes", "{{idSolicitud}}", "aprobar"]
+            },
+            "description": "Modifica la solicitud y puede enviar correo. Úsala solo con una solicitud pendiente."
           },
-          "description": "Solo acepta solicitudes en estado PENDIENTE. El envío del correo depende de la configuración SMTP."
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Aprobación exitosa responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('La respuesta informa el estado aprobado', function () { pm.expect(pm.response.json().estado).to.eql('APROBADO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aprobar solicitud ya procesada - conflicto",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitudProcesada}}/aprobar",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "solicitudes", "{{idSolicitudProcesada}}", "aprobar"]
+            },
+            "description": "Escenario de conflicto. Configura idSolicitudProcesada con una solicitud que ya fue aprobada o rechazada."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solicitud previamente procesada responde 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Rechazar solicitud",
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
-            "body": { "mode": "raw", "raw": "{\n  \"motivo\": \"Documento ilegible\"\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}/rechazar", "host": ["{{baseUrl}}"], "path": ["admin", "solicitudes", "{{idSolicitud}}", "rechazar"] }
-          }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Documento ilegible\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}/rechazar",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "solicitudes", "{{idSolicitud}}", "rechazar"]
+            },
+            "description": "Requiere una solicitud pendiente. El DTO requiere motivo no vacío, hasta 500 caracteres."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Rechazo exitoso responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta incluye el motivo guardado', function () { pm.expect(pm.response.json().motivo).to.eql('Documento ilegible'); });"
+                ]
+              }
+            }
+          ]
         },
+        {
+          "name": "Rechazar solicitud - motivo vacío",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"  \"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/solicitudes/{{idSolicitud}}/rechazar",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "solicitudes", "{{idSolicitud}}", "rechazar"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Motivo vacío responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Administración - lancheros",
+      "item": [
         {
           "name": "Listar lancheros",
           "request": {
             "method": "GET",
-            "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
             "url": {
-              "raw": "{{baseUrl}}/admin/lancheros?estado=APROBADO&page={{page}}&size={{size}}",
+              "raw": "{{baseUrl}}/admin/lancheros?estado={{estadoLanchero}}&page={{page}}&size={{size}}",
               "host": ["{{baseUrl}}"],
               "path": ["admin", "lancheros"],
               "query": [
-                { "key": "estado", "value": "APROBADO" },
+                { "key": "estado", "value": "{{estadoLanchero}}" },
                 { "key": "page", "value": "{{page}}" },
                 { "key": "size", "value": "{{size}}" }
               ]
             },
-            "description": "El filtro estado se aplica a estadoSolicitud. Valores: PENDIENTE, APROBADO, RECHAZADO o TODOS."
-          }
+            "description": "El filtro estado refiere a estadoSolicitud: PENDIENTE, APROBADO, RECHAZADO o TODOS."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listado de lancheros responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta paginada', function () { pm.expect(pm.response.json()).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages'); });"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Establecer estado operativo del lanchero",
+          "name": "Establecer lanchero ACTIVO",
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estadoViaje\": \"ACTIVO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/lancheros/{{idLanchero}}/estado-viaje",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lancheros", "{{idLanchero}}", "estado-viaje"]
+            },
+            "description": "Establece ACTIVO; no alterna el estado. Solo aplica a lancheros aprobados que no estén EN_VIAJE."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado ACTIVO establecido responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta indica estado operativo ACTIVO', function () { pm.expect(pm.response.json().estadoViaje).to.eql('ACTIVO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Establecer lanchero INACTIVO",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"estadoViaje\": \"INACTIVO\"\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "url": { "raw": "{{baseUrl}}/admin/lancheros/{{idLanchero}}/activar", "host": ["{{baseUrl}}"], "path": ["admin", "lancheros", "{{idLanchero}}", "activar"] }
+            "url": {
+              "raw": "{{baseUrl}}/admin/lancheros/{{idLanchero}}/estado-viaje",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lancheros", "{{idLanchero}}", "estado-viaje"]
+            },
+            "description": "Establece INACTIVO; no alterna el estado. Solo aplica a lancheros aprobados que no estén EN_VIAJE."
           },
-          "description": "Envía estadoViaje=ACTIVO o INACTIVO para establecer el estado deseado. Repetir la petición no alterna el estado."
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado INACTIVO establecido responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta indica estado operativo INACTIVO', function () { pm.expect(pm.response.json().estadoViaje).to.eql('INACTIVO'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Establecer estado operativo - valor inválido",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estadoViaje\": \"EN_VIAJE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/lancheros/{{idLanchero}}/estado-viaje",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lancheros", "{{idLanchero}}", "estado-viaje"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado fuera de los valores admitidos responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Establecer estado operativo - lanchero inexistente",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estadoViaje\": \"ACTIVO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/lancheros/999999999/estado-viaje",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "lancheros", "999999999", "estado-viaje"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lanchero inexistente responde 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Administración - viajes",
+      "item": [
+        {
+          "name": "Crear e iniciar viaje",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLancha\": {{idLancha}},\n  \"idZonaOrigen\": {{idZonaOrigen}},\n  \"idZonaDestino\": {{idZonaDestino}},\n  \"cantidadPasajeros\": 2,\n  \"turistaNombreCompleto\": \"Pasajero de prueba\",\n  \"turistaWhatsapp\": \"5491123456789\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/viajes",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "viajes"]
+            },
+            "description": "DTO: idLancha, idZonaOrigen, idZonaDestino, cantidadPasajeros, turistaNombreCompleto y turistaWhatsapp. Inicia el viaje realmente; prepara una lancha aprobada y activa con capacidad y zonas adecuadas. La respuesta incluye el WhatsApp del turista. El correo con los detalles se envía al lanchero solo tras confirmarse la transacción."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Crear viaje responde 201 Created', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Respuesta contiene los datos del viaje', function () {",
+                  "  pm.expect(body).to.have.all.keys('id', 'idLancha', 'idLanchero', 'lancheroNombreCompleto', 'zonaOrigen', 'zonaDestino', 'fechaHoraInicio', 'fechaHoraFin', 'cantidadPasajeros', 'turistaNombreCompleto', 'turistaWhatsapp');",
+                  "  pm.expect(body.turistaWhatsapp).to.be.a('string').and.eql('5491123456789');",
+                  "  pm.expect(body.fechaHoraFin).to.eql(null);",
+                  "});",
+                  "pm.collectionVariables.set('idViaje', String(body.id));"
+                  ,"pm.environment.set('idViaje', String(body.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear viaje - campos obligatorios ausentes",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{baseUrl}}/admin/viajes",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "viajes"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Campos requeridos ausentes responden 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear viaje - lancha no disponible (conflicto)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLancha\": {{idLanchaNoDisponible}},\n  \"idZonaOrigen\": {{idZonaOrigen}},\n  \"idZonaDestino\": {{idZonaDestino}},\n  \"cantidadPasajeros\": 2,\n  \"turistaNombreCompleto\": \"Pasajero de prueba\",\n  \"turistaWhatsapp\": \"5491123456789\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/viajes",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "viajes"]
+            },
+            "description": "Configura idLanchaNoDisponible como lancha existente pero INACTIVA, no aprobada o con viaje sin finalizar. Si la lancha no existe, el resultado correcto será 404 en lugar de 409."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lancha existente no disponible produce 409 Conflict', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Listar viajes en curso",
           "request": {
             "method": "GET",
-            "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
             "url": {
               "raw": "{{baseUrl}}/admin/viajes?estado=EN_VIAJE&page={{page}}&size={{size}}",
               "host": ["{{baseUrl}}"],
@@ -168,14 +896,134 @@
                 { "key": "size", "value": "{{size}}" }
               ]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Viajes en curso responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta paginada', function () { pm.expect(pm.response.json()).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages'); });",
+                  "pm.test('Cada viaje incluye WhatsApp del turista como texto', function () { pm.response.json().content.forEach(function (viaje) { pm.expect(viaje).to.have.property('turistaWhatsapp'); pm.expect(viaje.turistaWhatsapp).to.be.a('string'); }); });"
+                ]
+              }
+            }
+          ]
         },
+        {
+          "name": "Listar viajes - estado inválido",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/viajes?estado=PROGRAMADO&page={{page}}&size={{size}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "viajes"],
+              "query": [
+                { "key": "estado", "value": "PROGRAMADO" },
+                { "key": "page", "value": "{{page}}" },
+                { "key": "size", "value": "{{size}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado distinto de EN_VIAJE responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finalizar viaje",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/admin/viajes/{{idViaje}}/finalizar",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "viajes", "{{idViaje}}", "finalizar"]
+            },
+            "description": "Finaliza un viaje en curso y entrega el token de reseña para continuar el flujo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Finalización responde 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Respuesta contiene token y datos reales del pasajero', function () {",
+                  "  pm.expect(body).to.have.all.keys('id', 'fechaHoraFin', 'tokenResena', 'nombreUsuario', 'whatsappUsuario', 'mensajeResena');",
+                  "  pm.expect(body.tokenResena).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.collectionVariables.set('idViajeFinalizado', String(body.id));",
+                  "pm.collectionVariables.set('tokenResena', body.tokenResena);",
+                  "pm.environment.set('idViajeFinalizado', String(body.id));",
+                  "pm.environment.set('tokenResena', body.tokenResena);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finalizar viaje - ID inexistente",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/admin/viajes/999999999/finalizar",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "viajes", "999999999", "finalizar"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Viaje inexistente responde 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finalizar viaje - ya finalizado (conflicto)",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/admin/viajes/{{idViajeFinalizado}}/finalizar",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "viajes", "{{idViajeFinalizado}}", "finalizar"]
+            },
+            "description": "Ejecuta después de finalizar el mismo viaje. El viaje debe existir y estar ya finalizado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Viaje ya finalizado responde 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Administración - reseñas",
+      "item": [
         {
           "name": "Listar reseñas",
           "request": {
             "method": "GET",
-            "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
             "url": {
               "raw": "{{baseUrl}}/admin/resenas?page={{page}}&size={{size}}",
               "host": ["{{baseUrl}}"],
@@ -185,26 +1033,6 @@
                 { "key": "size", "value": "{{size}}" }
               ]
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Viajes",
-      "item": [
-        {
-          "name": "Crear e iniciar viaje",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"idLancha\": {{idLancha}},\n  \"idZonaOrigen\": {{idZonaOrigen}},\n  \"idZonaDestino\": {{idZonaDestino}},\n  \"cantidadPasajeros\": 2,\n  \"turistaNombreCompleto\": \"Ana Pérez\",\n  \"turistaWhatsapp\": \"5491123456789\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": { "raw": "{{baseUrl}}/admin/viajes", "host": ["{{baseUrl}}"], "path": ["admin", "viajes"] },
-            "description": "Inicia el viaje inmediatamente. Requiere lanchero aprobado y activo, zonas existentes, capacidad disponible y ningún viaje sin finalizar."
           },
           "event": [
             {
@@ -212,40 +1040,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "  const body = pm.response.json();",
-                  "  if (body.id) pm.collectionVariables.set('idViaje', body.id);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Finalizar viaje y generar token de reseña",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
-            "url": { "raw": "{{baseUrl}}/admin/viajes/{{idViaje}}/finalizar", "host": ["{{baseUrl}}"], "path": ["admin", "viajes", "{{idViaje}}", "finalizar"] },
-            "description": "Finaliza el viaje y guarda tokenResena. La respuesta incluye nombreUsuario, whatsappUsuario y mensajeResena. El frontend construye la ruta pública /resena/{token}; esta colección guarda tokenResena automáticamente."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "  const body = pm.response.json();",
-                  "  if (body.tokenResena) pm.collectionVariables.set('tokenResena', body.tokenResena);",
-                  "  pm.test('Finalización devuelve token y datos de reserva', function () {",
-                  "    pm.expect(body.tokenResena).to.be.a('string').and.have.length(64);",
-                  "    pm.expect(body.nombreUsuario).to.be.a('string');",
-                  "    pm.expect(body.whatsappUsuario).to.be.a('string');",
-                  "    pm.expect(body.mensajeResena).to.be.a('string');",
-                  "  });",
-                  "}"
+                  "pm.test('Listado administrativo de reseñas responde 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta paginada', function () { pm.expect(pm.response.json()).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages'); });",
+                  "pm.test('Reseña incluye contexto de turista y viaje', function () { pm.response.json().content.forEach(function (resena) { pm.expect(resena).to.have.property('turistaNombreCompleto'); pm.expect(resena).to.have.property('zonaOrigen'); pm.expect(resena).to.have.property('zonaDestino'); pm.expect(resena).to.have.property('fechaHoraInicio'); pm.expect(resena).to.have.property('fechaHoraFin'); pm.expect(resena).to.have.property('fecha'); }); });"
                 ]
               }
             }
@@ -257,69 +1054,346 @@
       "name": "Reseñas públicas",
       "item": [
         {
-          "name": "Consultar datos de la reserva por token",
+          "name": "Consultar viaje por token de reseña",
           "request": {
             "method": "GET",
-            "header": [],
             "auth": { "type": "noauth" },
-            "url": { "raw": "{{baseUrl}}/resena/{{tokenResena}}", "host": ["{{baseUrl}}"], "path": ["resena", "{{tokenResena}}"] },
-            "description": "Público. Consume el token obtenido al finalizar el viaje. Devuelve nombre y datos del viaje, no el WhatsApp."
-          }
+            "url": {
+              "raw": "{{baseUrl}}/resena/{{tokenResena}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["resena", "{{tokenResena}}"]
+            },
+            "description": "Público. Usa el token real capturado al finalizar un viaje. El token de ejemplo es ficticio."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Token válido devuelve 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta tiene los datos documentados del viaje', function () {",
+                  "  pm.expect(pm.response.json()).to.have.all.keys('idViaje', 'nombreUsuario', 'zonaOrigen', 'zonaDestino', 'fechaHoraInicio', 'fechaHoraFin', 'resenaRegistrada');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar viaje - token ficticio o inexistente",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/resena/token-ficticio-inexistente-1234567890",
+              "host": ["{{baseUrl}}"],
+              "path": ["resena", "token-ficticio-inexistente-1234567890"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Token inexistente conserva 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Crear reseña",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"puntuacion\": 5,\n  \"comentario\": \"Excelente servicio\"\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "url": { "raw": "{{baseUrl}}/resena/{{tokenResena}}", "host": ["{{baseUrl}}"], "path": ["resena", "{{tokenResena}}"] },
-            "description": "Público. Solo envía puntuacion y comentario; el token identifica el viaje. No se puede crear otra reseña para el mismo viaje."
-          }
+            "url": {
+              "raw": "{{baseUrl}}/resena/{{tokenResena}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["resena", "{{tokenResena}}"]
+            },
+            "description": "Público. El token determina el viaje. Solo puntuacion (1-5) y comentario opcional de hasta 500 caracteres."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reseña creada responde 201 Created', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Respuesta coincide con ResenaCreadaDTO', function () {",
+                  "  pm.expect(body).to.have.all.keys('idResena', 'idViaje', 'puntuacion', 'comentario', 'fecha');",
+                  "  pm.expect(body.puntuacion).to.be.within(1, 5);",
+                  "});",
+                  "pm.collectionVariables.set('tokenResenaExistente', pm.collectionVariables.get('tokenResena'));",
+                  "pm.environment.set('tokenResenaExistente', pm.environment.get('tokenResena'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear reseña - puntuación inválida",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"puntuacion\": 6,\n  \"comentario\": \"Puntuación fuera de rango\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/resena/{{tokenResena}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["resena", "{{tokenResena}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Puntuación fuera del rango responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear reseña - comentario mayor a 500 caracteres",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"puntuacion\": 5,\n  \"comentario\": \"{{comentario501}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/resena/{{tokenResena}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["resena", "{{tokenResena}}"]
+            },
+            "description": "El script previo genera comentario501 con exactamente 501 caracteres."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('comentario501', 'a'.repeat(501));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Comentario mayor a 500 caracteres responde 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear reseña - viaje ya reseñado (conflicto)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"puntuacion\": 5,\n  \"comentario\": \"Reseña duplicada de prueba\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/resena/{{tokenResenaExistente}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["resena", "{{tokenResenaExistente}}"]
+            },
+            "description": "Reutiliza el token de un viaje que ya tiene reseña. El POST inicial guarda tokenResena en tokenResenaExistente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Una segunda reseña para el mismo viaje responde 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "Registro público",
+      "name": "Pruebas de seguridad",
       "item": [
         {
-          "name": "Listar zonas disponibles",
+          "name": "Admin sin JWT",
           "request": {
             "method": "GET",
-            "header": [],
             "auth": { "type": "noauth" },
-            "url": { "raw": "{{baseUrl}}/zonas", "host": ["{{baseUrl}}"], "path": ["zonas"] },
-            "description": "Público. Devuelve los IDs y nombres para elegir las zonas que se incluirán en `solicitud.zonasIds`."
-          }
+            "url": { "raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWT ausente responde 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Respuesta uniforme de autenticación', function () { pm.expect(pm.response.json().status).to.eql(401); });"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Registrar lanchero (multipart/form-data)",
+          "name": "Admin con JWT mal formado",
           "request": {
-            "method": "POST",
-            "header": [],
-            "auth": { "type": "noauth" },
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "solicitud",
-                  "value": "{\n  \"nombreCompleto\": \"Ana Pérez\",\n  \"whatsapp\": \"+5491123456789\",\n  \"correo\": \"ana@example.com\",\n  \"contrasena\": \"CambiarClave123\",\n  \"nombreEmbarcacion\": \"La Aurora\",\n  \"capacidadPasajeros\": 8,\n  \"zonasIds\": [1, 3]\n}",
-                  "type": "text",
-                  "contentType": "text/plain"
-                },
-                { "key": "licencia", "type": "file", "src": "" },
-                { "key": "seguro", "type": "file", "src": "" },
-                { "key": "antecedentes", "type": "file", "src": "" },
-                { "key": "fotos", "type": "file", "src": "", "disabled": true }
-              ]
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "token-ficticio-mal-formado", "type": "string" }]
             },
-            "url": { "raw": "{{baseUrl}}/lancheros/registrar", "host": ["{{baseUrl}}"], "path": ["lancheros", "registrar"] },
-            "description": "Público. Selecciona archivos locales para licencia, seguro y antecedentes antes de enviar. `fotos` es opcional; puedes habilitarlo y adjuntar una o más imágenes."
-          }
+            "url": { "raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWT mal formado responde 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin con JWT expirado",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{expiredToken}}", "type": "string" }]
+            },
+            "url": { "raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"] },
+            "description": "Configura expiredToken con un JWT firmado por la misma clave del entorno, cuyo exp ya haya pasado. No se incluye una clave de firma en la colección."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('expiredToken')) throw new Error('Configura expiredToken con un JWT firmado pero expirado del entorno de prueba.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWT expirado responde 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin con firma JWT inválida",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{
+                "key": "token",
+                "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwb3N0bWFuLWZpY3RpdGlvdXNAZXhhbXBsZS50ZXN0Iiwicm9sZSI6IkFETUlOIiwiZXhwIjo0MTAyNDQ0ODAwfQ.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "type": "string"
+              }]
+            },
+            "url": { "raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"] },
+            "description": "JWT de ejemplo con estructura HS256 y firma ficticia de ceros; no contiene credenciales ni una clave secreta."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Firma JWT inválida responde 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin con JWT válido pero rol incorrecto",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }]
+            },
+            "url": { "raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"] },
+            "description": "userToken debe ser un JWT firmado por el backend con un rol diferente de ADMIN. El login disponible solo emite rol ADMIN; este caso requiere un token de prueba no privilegiado emitido por un entorno autorizado."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('userToken')) throw new Error('Configura userToken con un JWT firmado válido cuyo rol no sea ADMIN.');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWT válido sin rol ADMIN responde 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin con JWT de administrador",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/admin/dashboard", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard"] },
+            "description": "Ejecuta Login administrador primero para guardar adminToken."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWT ADMIN válido permite acceder', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

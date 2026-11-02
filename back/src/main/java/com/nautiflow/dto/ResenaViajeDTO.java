@@ -9,6 +9,7 @@ public record ResenaViajeDTO(
         String zonaDestino,
         OffsetDateTime fechaHoraInicio,
         OffsetDateTime fechaHoraFin,
-        boolean resenaRegistrada
+        boolean resenaRegistrada,
+        ResenaTokenDTO resena
 ) {
 }

@@ -1,6 +1,8 @@
 package com.nautiflow.config;
 
 import com.nautiflow.service.JwtTokenService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nautiflow.exception.handler.ApiSecurityErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,14 +18,19 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenService jwtTokenService)
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtTokenService jwtTokenService,
+            ObjectMapper objectMapper
+    )
             throws Exception {
+        ApiSecurityErrorHandler securityErrorHandler = new ApiSecurityErrorHandler(objectMapper);
 
         return http
                 .csrf(csrf -> csrf.disable())
                 .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint((request, response, exception) ->
-                                response.sendError(401, "No autenticado"))
+                        .authenticationEntryPoint(securityErrorHandler)
+                        .accessDeniedHandler(securityErrorHandler)
                 )
 
                 .authorizeHttpRequests(authorize -> authorize
@@ -47,7 +54,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtTokenService),
+                        new JwtAuthenticationFilter(jwtTokenService, securityErrorHandler),
                         UsernamePasswordAuthenticationFilter.class
                 )
 

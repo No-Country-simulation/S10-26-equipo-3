@@ -12,6 +12,7 @@ public record ViajeAdminDTO(
         OffsetDateTime fechaHoraInicio,
         OffsetDateTime fechaHoraFin,
         Integer cantidadPasajeros,
-        String turistaNombreCompleto
+        String turistaNombreCompleto,
+        String turistaWhatsapp
 ) {
 }

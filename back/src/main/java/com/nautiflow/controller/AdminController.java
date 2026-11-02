@@ -113,7 +113,7 @@ public class AdminController {
         return adminWorkflowService.listarLancheros(estadoNormalizado, page, size);
     }
 
-    @PatchMapping("/lancheros/{id}/activar")
+    @PatchMapping("/lancheros/{id}/estado-viaje")
     public LancheroAdminDTO actualizarEstadoOperativoLanchero(
             @PathVariable Long id,
             @Valid @RequestBody EstadoOperativoRequest solicitud

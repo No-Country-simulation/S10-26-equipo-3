@@ -1,6 +1,7 @@
 package com.nautiflow.model;
 
 import jakarta.persistence.*;
+import com.nautiflow.time.FechaHoraUtc;
 
 import java.time.OffsetDateTime;
 
@@ -26,7 +27,7 @@ public class Documento {
     private String tipoContenido;
 
     @Column(nullable = false)
-    private OffsetDateTime fecha = OffsetDateTime.now();
+    private OffsetDateTime fecha = FechaHoraUtc.ahora();
 
     public Long getIdDocumento() { return idDocumento; }
     public void setIdDocumento(Long idDocumento) { this.idDocumento = idDocumento; }

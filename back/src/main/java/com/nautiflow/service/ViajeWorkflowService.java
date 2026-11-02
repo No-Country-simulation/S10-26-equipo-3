@@ -3,6 +3,7 @@ package com.nautiflow.service;
 import com.nautiflow.dto.CrearViajeRequest;
 import com.nautiflow.dto.PaginaViajesDTO;
 import com.nautiflow.dto.ViajeAdminDTO;
+import com.nautiflow.dto.ViajeEnCursoDTO;
 import com.nautiflow.dto.ViajeFinalizadoDTO;
 import com.nautiflow.model.Lanchero;
 import com.nautiflow.model.Lancha;
@@ -12,16 +13,18 @@ import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
 import com.nautiflow.repository.ViajeRepository;
 import com.nautiflow.repository.ZonaRepository;
+import com.nautiflow.time.FechaHoraUtc;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
-import java.time.OffsetDateTime;
+import java.time.Clock;
 import java.util.HexFormat;
 
 @Service
@@ -32,17 +35,23 @@ public class ViajeWorkflowService {
     private final LanchaRepository lanchaRepository;
     private final ViajeRepository viajeRepository;
     private final ZonaRepository zonaRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
     public ViajeWorkflowService(
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
             ViajeRepository viajeRepository,
-            ZonaRepository zonaRepository
+            ZonaRepository zonaRepository,
+            ApplicationEventPublisher eventPublisher,
+            Clock clock
     ) {
         this.lancheroRepository = lancheroRepository;
         this.lanchaRepository = lanchaRepository;
         this.viajeRepository = viajeRepository;
         this.zonaRepository = zonaRepository;
+        this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     @Transactional
@@ -66,7 +75,7 @@ public class ViajeWorkflowService {
         viaje.setLancha(lancha);
         viaje.setZonaOrigen(origen);
         viaje.setZonaDestino(destino);
-        viaje.setFechaHoraInicio(OffsetDateTime.now());
+        viaje.setFechaHoraInicio(FechaHoraUtc.ahora(clock));
         viaje.setCantidadPasajeros(solicitud.cantidadPasajeros());
         viaje.setTuristaNombreCompleto(solicitud.turistaNombreCompleto().strip());
         viaje.setTuristaWhatsapp(solicitud.turistaWhatsapp().strip());
@@ -74,6 +83,18 @@ public class ViajeWorkflowService {
 
         lanchero.setEstadoViaje("EN_VIAJE");
         lancheroRepository.save(lanchero);
+        eventPublisher.publishEvent(new ViajeProgramadoEvent(
+                viaje.getIdViaje(),
+                lanchero.getIdLanchero(),
+                lanchero.getCorreo(),
+                lanchero.getNombreCompleto(),
+                origen.getNombre(),
+                destino.getNombre(),
+                viaje.getFechaHoraInicio().toString(),
+                viaje.getCantidadPasajeros(),
+                viaje.getTuristaNombreCompleto(),
+                viaje.getTuristaWhatsapp()
+        ));
         return toDTO(viaje);
     }
 
@@ -82,12 +103,12 @@ public class ViajeWorkflowService {
         PaginacionValidator.validar(page, size);
         Sort sort = Sort.by(Sort.Direction.DESC, "fechaHoraInicio")
                 .and(Sort.by(Sort.Direction.DESC, "idViaje"));
-        Page<ViajeAdminDTO> resultados = viajeRepository
+        Page<ViajeEnCursoDTO> resultados = viajeRepository
                 .findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
                         "EN_VIAJE",
                         PageRequest.of(page, size, sort)
                 )
-                .map(this::toDTO);
+                .map(this::toViajeEnCursoDTO);
         return new PaginaViajesDTO(
                 resultados.getContent(),
                 resultados.getNumber(),
@@ -109,7 +130,7 @@ public class ViajeWorkflowService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El viaje no está en curso.");
         }
 
-        viaje.setFechaHoraFin(OffsetDateTime.now());
+        viaje.setFechaHoraFin(FechaHoraUtc.ahora(clock));
         viaje.setTokenResena(generarTokenResena());
         String mensajeResena = "Hola " + viaje.getTuristaNombreCompleto()
                 + ", esperamos que hayas disfrutado tu viaje. Nos gustaría conocer tu experiencia. "
@@ -168,8 +189,24 @@ public class ViajeWorkflowService {
     }
 
     private ViajeAdminDTO toDTO(Viaje viaje) {
-        Lanchero lanchero = viaje.getLancha().getLanchero();
         return new ViajeAdminDTO(
+                viaje.getIdViaje(),
+                viaje.getLancha().getIdLancha(),
+                viaje.getLancha().getLanchero().getIdLanchero(),
+                viaje.getLancha().getLanchero().getNombreCompleto(),
+                viaje.getZonaOrigen().getNombre(),
+                viaje.getZonaDestino().getNombre(),
+                viaje.getFechaHoraInicio(),
+                viaje.getFechaHoraFin(),
+                viaje.getCantidadPasajeros(),
+                viaje.getTuristaNombreCompleto(),
+                viaje.getTuristaWhatsapp()
+        );
+    }
+
+    private ViajeEnCursoDTO toViajeEnCursoDTO(Viaje viaje) {
+        Lanchero lanchero = viaje.getLancha().getLanchero();
+        return new ViajeEnCursoDTO(
                 viaje.getIdViaje(),
                 viaje.getLancha().getIdLancha(),
                 lanchero.getIdLanchero(),
@@ -179,7 +216,8 @@ public class ViajeWorkflowService {
                 viaje.getFechaHoraInicio(),
                 viaje.getFechaHoraFin(),
                 viaje.getCantidadPasajeros(),
-                viaje.getTuristaNombreCompleto()
+                viaje.getTuristaNombreCompleto(),
+                viaje.getTuristaWhatsapp()
         );
     }
 }

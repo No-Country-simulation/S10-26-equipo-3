@@ -1,8 +1,10 @@
 package com.nautiflow.controller;
 
 import com.nautiflow.config.SecurityConfig;
+import com.nautiflow.config.JacksonConfig;
 import com.nautiflow.dto.AdminDashboardDTO;
 import com.nautiflow.dto.DecisionSolicitudDTO;
+import com.nautiflow.dto.ViajeAdminDTO;
 import com.nautiflow.dto.LancheroAdminDTO;
 import com.nautiflow.dto.LoginRequest;
 import com.nautiflow.dto.LoginResponse;
@@ -10,10 +12,14 @@ import com.nautiflow.dto.PaginaLancherosDTO;
 import com.nautiflow.dto.PaginaSolicitudesDTO;
 import com.nautiflow.dto.PaginaViajesDTO;
 import com.nautiflow.dto.RechazoSolicitudDTO;
+import com.nautiflow.dto.PaginaResenasDTO;
+import com.nautiflow.dto.ResenaAdminDTO;
 import com.nautiflow.dto.ResenaCreadaDTO;
+import com.nautiflow.dto.ResenaTokenDTO;
 import com.nautiflow.dto.ResenaViajeDTO;
 import com.nautiflow.dto.SolicitudDetalleDTO;
 import com.nautiflow.dto.SolicitudResumenDTO;
+import com.nautiflow.dto.ViajeEnCursoDTO;
 import com.nautiflow.dto.ZonaDTO;
 import com.nautiflow.service.AdminAuthService;
 import com.nautiflow.service.AdminAuthService.CredencialesInvalidasException;
@@ -34,8 +40,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Date;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -52,7 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         AdminController.class, LoginController.class, ResenaController.class, ZonaController.class
 },
         properties = "nautiflow.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")
-@Import({SecurityConfig.class, JwtTokenService.class})
+@Import({SecurityConfig.class, JacksonConfig.class, JwtTokenService.class})
 class AdminControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -110,6 +118,46 @@ class AdminControllerTest {
     }
 
     @Test
+    void camposDeLoginVaciosDevuelven400ConFormatoApi() throws Exception {
+        mockMvc.perform(post("/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"\",\"password\":\"Admin123*\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.path").value("/login"))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+
+        mockMvc.perform(post("/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"admin@nautiflow.com\",\"password\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/login"));
+    }
+
+    @Test
+    void jsonMalFormadoEnLoginDevuelve400() throws Exception {
+        mockMvc.perform(post("/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/login"));
+    }
+
+    @Test
+    void tipoDeContenidoNoSoportadoDevuelve415() throws Exception {
+        mockMvc.perform(post("/login")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("email=admin&password=secret"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415))
+                .andExpect(jsonPath("$.path").value("/login"));
+    }
+
+    @Test
     void loginIncorrectoDevuelve401() throws Exception {
         when(adminAuthService.login(any(LoginRequest.class))).thenThrow(new CredencialesInvalidasException());
 
@@ -118,19 +166,56 @@ class AdminControllerTest {
                         .content("""
                                 {"email":"admin@nautiflow.com","password":"incorrecta"}
                                 """))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.path").value("/login"));
     }
 
     @Test
     void dashboardSinTokenDevuelve401() throws Exception {
         mockMvc.perform(get("/admin/dashboard"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.path").value("/admin/dashboard"));
     }
 
     @Test
     void tokenInvalidoDevuelve401() throws Exception {
         mockMvc.perform(get("/admin/dashboard").header("Authorization", "Bearer invalido"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void tokenExpiradoYFirmaInvalidaDevuelven401() throws Exception {
+        String expired = Jwts.builder()
+                .subject("admin@nautiflow.com")
+                .claim("role", "ADMIN")
+                .expiration(Date.from(Instant.now().minusSeconds(60)))
+                .signWith(Keys.hmacShaKeyFor(Decoders.BASE64.decode(
+                        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+                )))
+                .compact();
+        String invalidSignature = Jwts.builder()
+                .subject("admin@nautiflow.com")
+                .claim("role", "ADMIN")
+                .signWith(Keys.hmacShaKeyFor("abcdef0123456789abcdef0123456789".getBytes()))
+                .compact();
+
+        for (String token : List.of(expired, invalidSignature)) {
+            mockMvc.perform(get("/admin/dashboard").header("Authorization", "Bearer " + token))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.status").value(401))
+                    .andExpect(jsonPath("$.error").value("Unauthorized"));
+        }
+    }
+
+    @Test
+    void tokenMalFormadoEnEndpointPublicoTambienDevuelve401() throws Exception {
+        mockMvc.perform(get("/zonas").header("Authorization", "Bearer no-es-jwt"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.path").value("/zonas"));
     }
 
     @Test
@@ -144,7 +229,10 @@ class AdminControllerTest {
                 .compact();
 
         mockMvc.perform(get("/admin/dashboard").header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.path").value("/admin/dashboard"));
     }
 
     @Test
@@ -156,6 +244,20 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.solicitudesPendientes").value(12))
                 .andExpect(jsonPath("$.lanchasVerificadas").value(28))
                 .andExpect(jsonPath("$.viajesActivos").value(4));
+    }
+
+    @Test
+    void errorInesperadoDevuelve500SinExponerDetallesInternos() throws Exception {
+        when(adminService.obtenerDashboard()).thenThrow(new IllegalStateException("database password leaked"));
+
+        mockMvc.perform(get("/admin/dashboard").header("Authorization", bearerToken()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.message").value("Ocurrió un error interno al procesar la solicitud."))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("database password")
+                )))
+                .andExpect(jsonPath("$.path").value("/admin/dashboard"));
     }
 
     @Test
@@ -200,6 +302,21 @@ class AdminControllerTest {
     }
 
     @Test
+    void parametrosDeConsultaEIdsDeRutaMalFormadosDevuelven400() throws Exception {
+        mockMvc.perform(get("/admin/solicitudes")
+                        .param("page", "no-es-numero")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/admin/solicitudes"));
+
+        mockMvc.perform(get("/admin/solicitudes/no-es-numero")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
     void detalleExistenteDevuelveDatosSinClaveR2() throws Exception {
         when(adminService.obtenerDetalle(12L)).thenReturn(new SolicitudDetalleDTO(
                 12L, "Ana Pérez", "ana@example.com", "5491123456789",
@@ -224,7 +341,10 @@ class AdminControllerTest {
                         org.springframework.http.HttpStatus.NOT_FOUND));
 
         mockMvc.perform(get("/admin/solicitudes/999").header("Authorization", bearerToken()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.path").value("/admin/solicitudes/999"));
     }
 
     @Test
@@ -252,11 +372,27 @@ class AdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.motivo").value("Documento ilegible"));
 
+        when(adminWorkflowService.rechazarSolicitud(12L, null))
+                .thenReturn(new RechazoSolicitudDTO(12L, "RECHAZADO", null));
         mockMvc.perform(patch("/admin/solicitudes/12/rechazar")
                         .header("Authorization", bearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"motivo\":\"  \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.motivo").doesNotExist());
+
+        mockMvc.perform(patch("/admin/solicitudes/12/rechazar")
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"" + "a".repeat(501) + "\"}"))
                 .andExpect(status().isBadRequest());
+
+        mockMvc.perform(patch("/admin/solicitudes/12/rechazar")
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.motivo").doesNotExist());
     }
 
     @Test
@@ -284,29 +420,60 @@ class AdminControllerTest {
                         12L, "Ana Pérez", OffsetDateTime.parse("2026-10-25T10:30:00Z"), "APROBADO", "INACTIVO"
                 ));
 
-        mockMvc.perform(patch("/admin/lancheros/12/activar")
+        mockMvc.perform(patch("/admin/lancheros/12/estado-viaje")
                         .header("Authorization", bearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"estadoViaje\":\"INACTIVO\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estadoViaje").value("INACTIVO"));
 
-        mockMvc.perform(patch("/admin/lancheros/12/activar")
+        mockMvc.perform(patch("/admin/lancheros/12/estado-viaje")
                         .header("Authorization", bearerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"estadoViaje\":\"EN_VIAJE\"}"))
                 .andExpect(status().isBadRequest());
+
+        mockMvc.perform(patch("/admin/lancheros/12/activar")
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estadoViaje\":\"INACTIVO\"}"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
     void consultarViajesUsaElFiltroOperativoYEstaProtegido() throws Exception {
-        when(viajeWorkflowService.listarEnCurso(0, 10))
-                .thenReturn(new PaginaViajesDTO(List.of(), 0, 10, 0, 0));
+        when(viajeWorkflowService.listarEnCurso(0, 10)).thenReturn(new PaginaViajesDTO(
+                List.of(new ViajeEnCursoDTO(
+                        25L,
+                        34L,
+                        12L,
+                        "María Pérez",
+                        "Zona Norte",
+                        "Zona Sur",
+                        OffsetDateTime.parse("2026-11-02T03:37:41.082632Z"),
+                        null,
+                        2,
+                        "Ana Pérez",
+                        "+573001234567"
+                )),
+                0,
+                10,
+                1,
+                1
+        ));
 
         mockMvc.perform(get("/admin/viajes")
                         .param("estado", "EN_VIAJE")
                         .header("Authorization", bearerToken()))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].turistaWhatsapp").value("+573001234567"))
+                .andExpect(jsonPath("$.content[0].turistaWhatsapp").isString())
+                .andExpect(jsonPath("$.content[0].turistaNombreCompleto").value("Ana Pérez"))
+                .andExpect(jsonPath("$.content[0].idLancha").value(34))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1));
         mockMvc.perform(get("/admin/viajes").param("estado", "PROGRAMADO")
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isBadRequest());
@@ -340,6 +507,48 @@ class AdminControllerTest {
     }
 
     @Test
+    void listadoDeResenasIncluyeElContextoDelViajeSinPerderLaFechaDeResena() throws Exception {
+        when(resenaService.listar(0, 10)).thenReturn(new PaginaResenasDTO(
+                List.of(new ResenaAdminDTO(
+                        45L,
+                        25L,
+                        5,
+                        "Excelente servicio",
+                        12L,
+                        "María Pérez",
+                        OffsetDateTime.parse("2026-11-02T11:05:00Z"),
+                        "Ana Pérez",
+                        "Zona Norte",
+                        "Zona Sur",
+                        OffsetDateTime.parse("2026-11-02T10:00:00Z"),
+                        OffsetDateTime.parse("2026-11-02T11:00:00Z")
+                )),
+                0,
+                10,
+                1,
+                1
+        ));
+
+        mockMvc.perform(get("/admin/resenas")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].idResena").value(45))
+                .andExpect(jsonPath("$.content[0].idViaje").value(25))
+                .andExpect(jsonPath("$.content[0].turistaNombreCompleto").value("Ana Pérez"))
+                .andExpect(jsonPath("$.content[0].zonaOrigen").value("Zona Norte"))
+                .andExpect(jsonPath("$.content[0].zonaDestino").value("Zona Sur"))
+                .andExpect(jsonPath("$.content[0].fecha").value("2026-11-02T11:05:00.000000Z"))
+                .andExpect(jsonPath("$.content[0].fechaHoraInicio").value("2026-11-02T10:00:00.000000Z"))
+                .andExpect(jsonPath("$.content[0].fechaHoraFin").value("2026-11-02T11:00:00.000000Z"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1));
+    }
+
+    @Test
     void crearResenaUtilizaTokenDeViajeYValidaPuntuacion() throws Exception {
         when(resenaService.crear(any(), eq("token-de-prueba")))
                 .thenReturn(new ResenaCreadaDTO(45L, 25L, 5, "Excelente", OffsetDateTime.now()));
@@ -357,20 +566,170 @@ class AdminControllerTest {
                             .content("{\"puntuacion\":" + puntuacionInvalida + "}"))
                     .andExpect(status().isBadRequest());
         }
+
+        mockMvc.perform(post("/resena/token-de-prueba")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"puntuacion\":5,\"comentario\":\"" + "a".repeat(501) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/resena/token-de-prueba"));
+    }
+
+    @Test
+    void camposObligatoriosAusentesEnViajeDevuelven400() throws Exception {
+        mockMvc.perform(post("/admin/viajes")
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/admin/viajes"));
+    }
+
+    @Test
+    void aprobarYRechazarSolicitudProcesadaDevuelven409Estructurado() throws Exception {
+        when(adminWorkflowService.aprobarSolicitud(12L))
+                .thenThrow(new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.CONFLICT,
+                        "La solicitud ya fue decidida."
+                ));
+        when(adminWorkflowService.rechazarSolicitud(12L, "Motivo"))
+                .thenThrow(new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.CONFLICT,
+                        "La solicitud ya fue decidida."
+                ));
+
+        mockMvc.perform(patch("/admin/solicitudes/12/aprobar")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("La solicitud ya fue decidida."));
+
+        mockMvc.perform(patch("/admin/solicitudes/12/rechazar")
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"Motivo\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("La solicitud ya fue decidida."));
+    }
+
+    @Test
+    void aprobarYRechazarSolicitudInexistenteDevuelven404Estructurado() throws Exception {
+        when(adminWorkflowService.aprobarSolicitud(999L))
+                .thenThrow(new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND,
+                        "Lanchero no encontrado."
+                ));
+        when(adminWorkflowService.rechazarSolicitud(999L, "Motivo"))
+                .thenThrow(new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND,
+                        "Lanchero no encontrado."
+                ));
+
+        mockMvc.perform(patch("/admin/solicitudes/999/aprobar")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"));
+
+        mockMvc.perform(patch("/admin/solicitudes/999/rechazar")
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"Motivo\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"));
     }
 
     @Test
     void consultaReservaPorTokenEsPublicaYUsaDatosPersistidos() throws Exception {
         when(resenaService.obtenerViaje("token-de-prueba")).thenReturn(new ResenaViajeDTO(
                 25L, "Pasajero reservado", "Origen", "Destino",
-                OffsetDateTime.now(), OffsetDateTime.now(), false
+                OffsetDateTime.now(), OffsetDateTime.now(), false, null
         ));
 
         mockMvc.perform(get("/resena/token-de-prueba"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombreUsuario").value("Pasajero reservado"))
                 .andExpect(jsonPath("$.zonaOrigen").value("Origen"))
+                .andExpect(jsonPath("$.resenaRegistrada").value(false))
+                .andExpect(jsonPath("$.resena").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.turistaWhatsapp").doesNotExist());
+    }
+
+    @Test
+    void consultaReservaPorTokenIncluyeResenaExistente() throws Exception {
+        OffsetDateTime inicio = OffsetDateTime.parse("2026-11-02T18:16:19.230457Z");
+        OffsetDateTime fin = OffsetDateTime.parse("2026-11-02T18:22:18.068711Z");
+        OffsetDateTime fechaResena = OffsetDateTime.parse("2026-11-02T18:22:22.682942Z");
+        ResenaTokenDTO resena = new ResenaTokenDTO(
+                2L, 5, "Excelente servicio", 3L, "María Pérez", fechaResena
+        );
+        when(resenaService.obtenerViaje("token-con-resena")).thenReturn(new ResenaViajeDTO(
+                3L, "Pasajero de prueba", "Zona Norte", "Zona Sur", inicio, fin, true, resena
+        ));
+
+        mockMvc.perform(get("/resena/token-con-resena"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resenaRegistrada").value(true))
+                .andExpect(jsonPath("$.resena.idResena").value(2))
+                .andExpect(jsonPath("$.resena.puntuacion").value(5))
+                .andExpect(jsonPath("$.resena.comentario").value("Excelente servicio"))
+                .andExpect(jsonPath("$.resena.idLanchero").value(3))
+                .andExpect(jsonPath("$.resena.nombreLanchero").value("María Pérez"))
+                .andExpect(jsonPath("$.resena.fecha").value("2026-11-02T18:22:22.682942Z"))
+                .andExpect(jsonPath("$.resena.idViaje").doesNotExist())
+                .andExpect(jsonPath("$.resena.turistaNombreCompleto").doesNotExist())
+                .andExpect(jsonPath("$.resena.zonaOrigen").doesNotExist())
+                .andExpect(jsonPath("$.resena.zonaDestino").doesNotExist())
+                .andExpect(jsonPath("$.resena.fechaHoraInicio").doesNotExist())
+                .andExpect(jsonPath("$.resena.fechaHoraFin").doesNotExist())
+                .andExpect(jsonPath("$.idViaje").value(3))
+                .andExpect(jsonPath("$.zonaOrigen").value("Zona Norte"))
+                .andExpect(jsonPath("$.zonaDestino").value("Zona Sur"))
+                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T18:16:19.230457Z"))
+                .andExpect(jsonPath("$.fechaHoraFin").value("2026-11-02T18:22:18.068711Z"));
+    }
+
+    @Test
+    void crearViajeDevuelveWhatsappComoTextoYConservaFechaHora() throws Exception {
+        OffsetDateTime inicio = OffsetDateTime.parse("2026-11-02T12:53:31.8975973-05:00");
+        when(viajeWorkflowService.crearEIniciar(any())).thenReturn(new ViajeAdminDTO(
+                2L,
+                3L,
+                3L,
+                "María Pérez",
+                "Zona Norte",
+                "Zona Sur",
+                inicio,
+                null,
+                2,
+                "Pasajero de prueba",
+                "+5491123456789"
+        ));
+
+        mockMvc.perform(post("/admin/viajes")
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "idLancha": 3,
+                                  "idZonaOrigen": 1,
+                                  "idZonaDestino": 2,
+                                  "cantidadPasajeros": 2,
+                                  "turistaNombreCompleto": "Pasajero de prueba",
+                                  "turistaWhatsapp": "+5491123456789"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.turistaWhatsapp").value("+5491123456789"))
+                .andExpect(jsonPath("$.turistaWhatsapp").isString())
+                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T17:53:31.897597Z"))
+                .andExpect(jsonPath("$.turistaNombreCompleto").value("Pasajero de prueba"))
+                .andExpect(jsonPath("$.fechaHoraFin").value(org.hamcrest.Matchers.nullValue()));
     }
 
     private String bearerToken() {

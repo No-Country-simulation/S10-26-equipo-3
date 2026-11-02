@@ -6,6 +6,7 @@ import com.nautiflow.dto.SolicitudDetalleDTO;
 import com.nautiflow.dto.SolicitudResumenDTO;
 import com.nautiflow.model.Documento;
 import com.nautiflow.model.Lanchero;
+import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
 import org.springframework.data.domain.Page;
@@ -18,20 +19,24 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Comparator;
 import java.util.List;
+import java.time.ZoneOffset;
 
 @Service
 public class AdminService {
     private final LancheroRepository lancheroRepository;
     private final LanchaRepository lanchaRepository;
+    private final DocumentoRepository documentoRepository;
     private final ArchivoLancheroStorage archivoStorage;
 
     public AdminService(
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
+            DocumentoRepository documentoRepository,
             ArchivoLancheroStorage archivoStorage
     ) {
         this.lancheroRepository = lancheroRepository;
         this.lanchaRepository = lanchaRepository;
+        this.documentoRepository = documentoRepository;
         this.archivoStorage = archivoStorage;
     }
 
@@ -58,7 +63,7 @@ public class AdminService {
                 .map(lanchero -> new SolicitudResumenDTO(
                         lanchero.getIdLanchero(),
                         lanchero.getNombreCompleto(),
-                        lanchero.getFechaRegistro().toLocalDate(),
+                        lanchero.getFechaRegistro().withOffsetSameInstant(ZoneOffset.UTC).toLocalDate(),
                         lanchero.getEstadoSolicitud()
                 ))
                 .toList();
@@ -89,13 +94,16 @@ public class AdminService {
                                 .toList()
                 );
 
-        List<SolicitudDetalleDTO.DocumentoDTO> documentos = lanchero.getDocumentos().stream()
-                .sorted(Comparator.comparing(Documento::getTipoDocumento))
-                .map(documento -> new SolicitudDetalleDTO.DocumentoDTO(
-                        documento.getTipoDocumento(),
-                        archivoStorage.generarUrlPrefirmada(documento.getClaveArchivo())
-                ))
-                .toList();
+        List<SolicitudDetalleDTO.DocumentoDTO> documentos =
+                documentoRepository.findByLanchero_IdLancheroOrderByIdDocumentoAsc(lanchero.getIdLanchero()).stream()
+                        .sorted(Comparator
+                                .comparing((Documento documento) -> !"FOTO_LANCHA".equals(documento.getTipoDocumento()))
+                                .thenComparing(Documento::getTipoDocumento))
+                        .map(documento -> new SolicitudDetalleDTO.DocumentoDTO(
+                                documento.getTipoDocumento(),
+                                archivoStorage.generarUrlPrefirmada(documento.getClaveArchivo())
+                        ))
+                        .toList();
 
         return new SolicitudDetalleDTO(
                 lanchero.getIdLanchero(),

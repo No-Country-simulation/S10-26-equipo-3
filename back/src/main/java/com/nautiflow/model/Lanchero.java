@@ -1,6 +1,7 @@
 package com.nautiflow.model;
 
 import jakarta.persistence.*;
+import com.nautiflow.time.FechaHoraUtc;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public class Lanchero {
     private String estadoSolicitud = "PENDIENTE";
 
     @Column(name = "fecha_registro", nullable = false)
-    private OffsetDateTime fechaRegistro = OffsetDateTime.now();
+    private OffsetDateTime fechaRegistro = FechaHoraUtc.ahora();
 
     @Column(name = "fecha_decision")
     private OffsetDateTime fechaDecision;

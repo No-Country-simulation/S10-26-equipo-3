@@ -9,6 +9,11 @@ public record ResenaAdminDTO(
         String comentario,
         Long idLanchero,
         String nombreLanchero,
-        OffsetDateTime fecha
+        OffsetDateTime fecha,
+        String turistaNombreCompleto,
+        String zonaOrigen,
+        String zonaDestino,
+        OffsetDateTime fechaHoraInicio,
+        OffsetDateTime fechaHoraFin
 ) {
 }

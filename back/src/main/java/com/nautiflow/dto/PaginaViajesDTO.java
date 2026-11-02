@@ -3,7 +3,7 @@ package com.nautiflow.dto;
 import java.util.List;
 
 public record PaginaViajesDTO(
-        List<ViajeAdminDTO> content,
+        List<ViajeEnCursoDTO> content,
         int page,
         int size,
         long totalElements,

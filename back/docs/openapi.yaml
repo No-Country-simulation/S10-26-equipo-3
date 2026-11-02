@@ -2,7 +2,10 @@ openapi: 3.1.0
 info:
   title: NautiFlow API
   version: 1.0.0
-  description: Contrato de los endpoints públicos y administrativos de NautiFlow.
+  description: >-
+    Contrato de los endpoints públicos y administrativos de NautiFlow.
+    Los campos date-time representan instantes en UTC, serializados en ISO-8601 con sufijo Z
+    y precisión de microsegundos. Los campos date representan fechas calendario en formato YYYY-MM-DD.
 paths:
   /zonas:
     get:
@@ -322,7 +325,7 @@ paths:
           $ref: "#/components/responses/NoAutenticado"
         "403":
           $ref: "#/components/responses/SinPermiso"
-  /admin/lancheros/{id}/activar:
+  /admin/lancheros/{id}/estado-viaje:
     parameters:
       - $ref: "#/components/parameters/IdLanchero"
     patch:
@@ -371,6 +374,8 @@ paths:
         Requiere que la lancha pertenezca a un lanchero aprobado y ACTIVO,
         que no tenga otro viaje en curso, que las zonas existan y que los
         pasajeros no superen la capacidad. El inicio usa la hora actual.
+        Después de confirmar la transacción se envía al lanchero un correo
+        con los detalles del viaje; un fallo de correo no cancela el viaje.
       security:
         - bearerAuth: []
       requestBody:
@@ -833,8 +838,6 @@ components:
           minimum: 1
         turistaNombreCompleto:
           type: string
-          minLength: 1
-          maxLength: 201
         turistaWhatsapp:
           type: string
           minLength: 1
@@ -846,7 +849,7 @@ components:
         content:
           type: array
           items:
-            $ref: "#/components/schemas/ViajeAdmin"
+            $ref: "#/components/schemas/ViajeEnCurso"
         page:
           type: integer
         size:
@@ -868,6 +871,7 @@ components:
         - fechaHoraInicio
         - cantidadPasajeros
         - turistaNombreCompleto
+        - turistaWhatsapp
       properties:
         id:
           type: integer
@@ -893,6 +897,49 @@ components:
         cantidadPasajeros:
           type: integer
         turistaNombreCompleto:
+          type: string
+        turistaWhatsapp:
+          type: string
+    ViajeEnCurso:
+      type: object
+      required:
+        - id
+        - idLancha
+        - idLanchero
+        - lancheroNombreCompleto
+        - zonaOrigen
+        - zonaDestino
+        - fechaHoraInicio
+        - cantidadPasajeros
+        - turistaNombreCompleto
+        - turistaWhatsapp
+      properties:
+        id:
+          type: integer
+          format: int64
+        idLancha:
+          type: integer
+          format: int64
+        idLanchero:
+          type: integer
+          format: int64
+        lancheroNombreCompleto:
+          type: string
+        zonaOrigen:
+          type: string
+        zonaDestino:
+          type: string
+        fechaHoraInicio:
+          type: string
+          format: date-time
+        fechaHoraFin:
+          type: [string, "null"]
+          format: date-time
+        cantidadPasajeros:
+          type: integer
+        turistaNombreCompleto:
+          type: string
+        turistaWhatsapp:
           type: string
     ViajeFinalizado:
       type: object
@@ -933,7 +980,18 @@ components:
           type: integer
     ResenaAdmin:
       type: object
-      required: [idResena, idViaje, puntuacion, idLanchero, nombreLanchero, fecha]
+      required:
+        - idResena
+        - idViaje
+        - puntuacion
+        - idLanchero
+        - nombreLanchero
+        - fecha
+        - turistaNombreCompleto
+        - zonaOrigen
+        - zonaDestino
+        - fechaHoraInicio
+        - fechaHoraFin
       properties:
         idResena:
           type: integer
@@ -955,6 +1013,18 @@ components:
           type: string
         fecha:
           type: string
+          format: date-time
+        turistaNombreCompleto:
+          type: string
+        zonaOrigen:
+          type: string
+        zonaDestino:
+          type: string
+        fechaHoraInicio:
+          type: string
+          format: date-time
+        fechaHoraFin:
+          type: [string, "null"]
           format: date-time
     LancheroRegistro:
       type: object

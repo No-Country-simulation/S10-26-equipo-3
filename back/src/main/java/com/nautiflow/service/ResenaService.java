@@ -37,6 +37,7 @@ public class ResenaService {
         if (viaje.getFechaHoraFin() == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Enlace de reseña no válido.");
         }
+        var resena = resenaRepository.findByViaje_IdViaje(viaje.getIdViaje());
         return new ResenaViajeDTO(
                 viaje.getIdViaje(),
                 viaje.getTuristaNombreCompleto(),
@@ -44,7 +45,8 @@ public class ResenaService {
                 viaje.getZonaDestino().getNombre(),
                 viaje.getFechaHoraInicio(),
                 viaje.getFechaHoraFin(),
-                resenaRepository.existsByViaje_IdViaje(viaje.getIdViaje())
+                resena.isPresent(),
+                resena.map(this::toResenaTokenDTO).orElse(null)
         );
     }
 
@@ -72,9 +74,11 @@ public class ResenaService {
         notificacionService.notificarResena(
                 lanchero.getIdLanchero(),
                 lanchero.getCorreo(),
-                resena.getIdResena(),
-                viaje.getIdViaje(),
-                resena.getEstrellas()
+                viaje.getTuristaNombreCompleto(),
+                resena.getEstrellas(),
+                viaje.getZonaOrigen().getNombre(),
+                viaje.getZonaDestino().getNombre(),
+                resena.getComentario()
         );
         return new ResenaCreadaDTO(
                 resena.getIdResena(),
@@ -104,24 +108,44 @@ public class ResenaService {
                 size,
                 Sort.by(Sort.Direction.DESC, "fecha").and(Sort.by(Sort.Direction.DESC, "idResena"))
         ));
-        Page<ResenaAdminDTO> contenido = resultados.map(resena -> {
-            Lanchero lanchero = resena.getViaje().getLancha().getLanchero();
-            return new ResenaAdminDTO(
-                    resena.getIdResena(),
-                    resena.getViaje().getIdViaje(),
-                    resena.getEstrellas(),
-                    resena.getComentario(),
-                    lanchero.getIdLanchero(),
-                    lanchero.getNombreCompleto(),
-                    resena.getFecha()
-            );
-        });
+        Page<ResenaAdminDTO> contenido = resultados.map(registro ->
+                toResenaAdminDTO(registro, registro.getViaje()));
         return new PaginaResenasDTO(
                 contenido.getContent(),
                 contenido.getNumber(),
                 contenido.getSize(),
                 contenido.getTotalElements(),
                 contenido.getTotalPages()
+        );
+    }
+
+    private ResenaAdminDTO toResenaAdminDTO(Resena resena, Viaje viaje) {
+        Lanchero lanchero = viaje.getLancha().getLanchero();
+        return new ResenaAdminDTO(
+                resena.getIdResena(),
+                viaje.getIdViaje(),
+                resena.getEstrellas(),
+                resena.getComentario(),
+                lanchero.getIdLanchero(),
+                lanchero.getNombreCompleto(),
+                resena.getFecha(),
+                viaje.getTuristaNombreCompleto(),
+                viaje.getZonaOrigen().getNombre(),
+                viaje.getZonaDestino().getNombre(),
+                viaje.getFechaHoraInicio(),
+                viaje.getFechaHoraFin()
+        );
+    }
+
+    private ResenaTokenDTO toResenaTokenDTO(Resena resena) {
+        Lanchero lanchero = resena.getViaje().getLancha().getLanchero();
+        return new ResenaTokenDTO(
+                resena.getIdResena(),
+                resena.getEstrellas(),
+                resena.getComentario(),
+                lanchero.getIdLanchero(),
+                lanchero.getNombreCompleto(),
+                resena.getFecha()
         );
     }
 }

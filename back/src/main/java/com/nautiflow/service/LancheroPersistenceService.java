@@ -69,9 +69,7 @@ public class LancheroPersistenceService {
                 .collect(Collectors.toMap(Zona::getIdZona, zona -> zona));
         List<Zona> zonas = zonasIds.stream().map(zonasPorId::get).toList();
 
-        if (lancheroRepository.existsByCorreo(solicitud.correo())) {
-                throw new ConflictoRegistroException("Ya existe un lanchero con ese correo electrónico.");
-        }
+        validarCorreoDisponible(solicitud.correo());
 
         String nombreCompleto = solicitud.nombreCompleto().strip();
         if (nombreCompleto.length() > 201) {
@@ -109,6 +107,12 @@ public class LancheroPersistenceService {
                 lanchero.getEstadoSolicitud(),
                 "Solicitud de registro recibida correctamente."
         );
+    }
+
+    public void validarCorreoDisponible(String correo) {
+        if (lancheroRepository.existsByCorreo(correo.strip())) {
+            throw new ConflictoRegistroException("Ya existe un lanchero con ese correo electrónico.");
+        }
     }
 
     private void guardarDocumento(Lanchero lanchero, String tipo, String clave, String tipoContenido) {

@@ -20,6 +20,6 @@ public interface LancheroRepository extends JpaRepository<Lanchero, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select l from Lanchero l where l.idLanchero = :id")
     java.util.Optional<Lanchero> findLockedById(@Param("id") Long id);
-    @EntityGraph(attributePaths = {"lancha", "lancha.zonas", "documentos"})
+    @EntityGraph(attributePaths = {"lancha", "lancha.zonas"})
     java.util.Optional<Lanchero> findByIdLanchero(Long idLanchero);
 }

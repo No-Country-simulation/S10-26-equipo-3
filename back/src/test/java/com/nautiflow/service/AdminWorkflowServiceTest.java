@@ -18,11 +18,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.time.Clock;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,13 +38,17 @@ class AdminWorkflowServiceTest {
     @Mock private ViajeRepository viajeRepository;
     @Mock private ZonaRepository zonaRepository;
     @Mock private RegistroNotificacionService notificacionService;
+    @Mock private ApplicationEventPublisher eventPublisher;
     private AdminWorkflowService service;
     private ViajeWorkflowService viajeService;
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
-        service = new AdminWorkflowService(lancheroRepository, notificacionService);
-        viajeService = new ViajeWorkflowService(lancheroRepository, lanchaRepository, viajeRepository, zonaRepository);
+        Clock clock = Clock.systemUTC();
+        service = new AdminWorkflowService(lancheroRepository, notificacionService, clock);
+        viajeService = new ViajeWorkflowService(
+                lancheroRepository, lanchaRepository, viajeRepository, zonaRepository, eventPublisher, clock
+        );
     }
 
     @Test
@@ -77,37 +83,89 @@ class AdminWorkflowServiceTest {
     }
 
     @Test
-    void noPermiteDecidirUnaSolicitudYaProcesada() {
+    void aprobarSoloPermiteSolicitudesPendientesYNoModificaSolicitudesDecididas() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoSolicitud("APROBADO");
         when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> service.rechazarSolicitud(12L, "Documento ilegible")
-        );
+        for (String estado : List.of("APROBADO", "RECHAZADO")) {
+            lanchero.setEstadoSolicitud(estado);
+            lanchero.setMotivoRechazo("Motivo existente");
 
-        assertEquals(409, exception.getStatusCode().value());
+            ResponseStatusException exception = assertThrows(
+                    ResponseStatusException.class,
+                    () -> service.aprobarSolicitud(12L)
+            );
+
+            assertEquals(409, exception.getStatusCode().value());
+            assertEquals(estado, lanchero.getEstadoSolicitud());
+            assertEquals("Motivo existente", lanchero.getMotivoRechazo());
+        }
+
+        verify(lancheroRepository, never()).saveAndFlush(any(Lanchero.class));
         verifyNoInteractions(notificacionService);
     }
 
     @Test
-    void solicitudInexistenteDevuelve404() {
+    void rechazarSoloPermiteSolicitudesPendientesYNoModificaSolicitudesDecididas() {
+        Lanchero lanchero = pendiente();
+        when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
+
+        for (String estado : List.of("RECHAZADO", "APROBADO")) {
+            lanchero.setEstadoSolicitud(estado);
+            lanchero.setMotivoRechazo("Motivo existente");
+
+            ResponseStatusException exception = assertThrows(
+                    ResponseStatusException.class,
+                    () -> service.rechazarSolicitud(12L, "Nuevo motivo")
+            );
+
+            assertEquals(409, exception.getStatusCode().value());
+            assertEquals(estado, lanchero.getEstadoSolicitud());
+            assertEquals("Motivo existente", lanchero.getMotivoRechazo());
+        }
+
+        verify(lancheroRepository, never()).saveAndFlush(any(Lanchero.class));
+        verifyNoInteractions(notificacionService);
+    }
+
+    @Test
+    void aprobarYRechazarSolicitudInexistenteDevuelven404() {
         when(lancheroRepository.findLockedById(404L)).thenReturn(Optional.empty());
 
         assertEquals(404, assertThrows(
                 ResponseStatusException.class,
                 () -> service.aprobarSolicitud(404L)
         ).getStatusCode().value());
+        assertEquals(404, assertThrows(
+                ResponseStatusException.class,
+                () -> service.rechazarSolicitud(404L, "Documento ilegible")
+        ).getStatusCode().value());
+
+        verify(lancheroRepository, never()).saveAndFlush(any(Lanchero.class));
         verifyNoInteractions(notificacionService);
     }
 
     @Test
-    void motivoDeRechazoVacioNoSeAcepta() {
+    void motivoDeRechazoEsOpcionalYSeNormalizaAVacioNulo() {
+        Lanchero lanchero = pendiente();
+        when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
+
+        var resultado = service.rechazarSolicitud(12L, "  ");
+
+        assertEquals("RECHAZADO", resultado.estado());
+        assertNull(resultado.motivo());
+        assertNull(lanchero.getMotivoRechazo());
+        verify(lancheroRepository).saveAndFlush(lanchero);
+        verify(notificacionService).enviarDecisionRechazada(12L, "Ana Pérez", "ana@example.com", null);
+    }
+
+    @Test
+    void motivoDeRechazoMayorA500CaracteresDevuelve400SinModificarLaSolicitud() {
         assertEquals(400, assertThrows(
                 ResponseStatusException.class,
-                () -> service.rechazarSolicitud(12L, " ")
+                () -> service.rechazarSolicitud(12L, "a".repeat(501))
         ).getStatusCode().value());
+
         verifyNoInteractions(lancheroRepository, notificacionService);
     }
 
@@ -209,11 +267,24 @@ class AdminWorkflowServiceTest {
         );
 
         assertEquals(25L, resultado.id());
+        assertEquals("5491123456789", resultado.turistaWhatsapp());
         assertEquals("EN_VIAJE", lanchero.getEstadoViaje());
         assertEquals("APROBADO", lanchero.getEstadoSolicitud());
         ArgumentCaptor<Viaje> captor = ArgumentCaptor.forClass(Viaje.class);
         verify(viajeRepository).saveAndFlush(captor.capture());
         assertNotNull(captor.getValue().getFechaHoraInicio());
+        verify(eventPublisher).publishEvent(new ViajeProgramadoEvent(
+                25L,
+                12L,
+                "ana@example.com",
+                "Ana Pérez",
+                "Primera Sección",
+                "Segunda Sección",
+                captor.getValue().getFechaHoraInicio().toString(),
+                4,
+                "Turista",
+                "5491123456789"
+        ));
     }
 
     @Test
@@ -234,6 +305,38 @@ class AdminWorkflowServiceTest {
                 )
         ).getStatusCode().value());
         verify(viajeRepository, never()).saveAndFlush(any());
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void noNotificaSiFallaLaPersistenciaDelEstadoDelLanchero() {
+        Lanchero lanchero = pendiente();
+        lanchero.setEstadoSolicitud("APROBADO");
+        lanchero.setEstadoViaje("ACTIVO");
+        Lancha lancha = new Lancha();
+        lancha.setLanchero(lanchero);
+        lancha.setCapacidad(8);
+        Zona origen = zona(2L, "Origen");
+        Zona destino = zona(3L, "Destino");
+        lancha.setZonas(new HashSet<>(List.of(origen, destino)));
+        when(lanchaRepository.findLancheroIdByIdLancha(34L)).thenReturn(Optional.of(12L));
+        when(lanchaRepository.findById(34L)).thenReturn(Optional.of(lancha));
+        when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
+        when(zonaRepository.findById(2L)).thenReturn(Optional.of(origen));
+        when(zonaRepository.findById(3L)).thenReturn(Optional.of(destino));
+        when(viajeRepository.saveAndFlush(any(Viaje.class))).thenAnswer(invocation -> {
+            Viaje viaje = invocation.getArgument(0);
+            viaje.setIdViaje(25L);
+            return viaje;
+        });
+        doThrow(new IllegalStateException("database failure"))
+                .when(lancheroRepository).save(lanchero);
+
+        assertThrows(IllegalStateException.class, () -> viajeService.crearEIniciar(
+                new CrearViajeRequest(34L, 2L, 3L, 2, "Turista", "5491123456789")
+        ));
+
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
@@ -267,12 +370,44 @@ class AdminWorkflowServiceTest {
     }
 
     @Test
-    void listaViajesFiltrandoPorEstadoOperativoDelLanchero() {
+    void listaViajesIncluyeWhatsappDelTuristaYConservaPaginacion() {
+        Lanchero lanchero = pendiente();
+        lanchero.setEstadoViaje("EN_VIAJE");
+        Lancha lancha = new Lancha();
+        lancha.setIdLancha(34L);
+        lancha.setLanchero(lanchero);
+        Zona origen = zona(2L, "Primera Sección");
+        Zona destino = zona(3L, "Segunda Sección");
+        Viaje viaje = new Viaje();
+        viaje.setIdViaje(25L);
+        viaje.setLancha(lancha);
+        viaje.setZonaOrigen(origen);
+        viaje.setZonaDestino(destino);
+        viaje.setFechaHoraInicio(java.time.OffsetDateTime.parse("2026-11-02T03:37:41.082632Z"));
+        viaje.setCantidadPasajeros(2);
+        viaje.setTuristaNombreCompleto("Ana Pérez");
+        viaje.setTuristaWhatsapp("+573001234567");
         when(viajeRepository.findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
                 eq("EN_VIAJE"), any(Pageable.class)
-        )).thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
+        )).thenReturn(new PageImpl<>(List.of(viaje), PageRequest.of(0, 2), 3));
 
-        assertEquals(0, viajeService.listarEnCurso(0, 10).totalElements());
+        var resultado = viajeService.listarEnCurso(0, 2);
+
+        assertEquals(0, resultado.page());
+        assertEquals(2, resultado.size());
+        assertEquals(3, resultado.totalElements());
+        assertEquals(2, resultado.totalPages());
+        var viajeDTO = resultado.content().getFirst();
+        assertEquals(25L, viajeDTO.id());
+        assertEquals(34L, viajeDTO.idLancha());
+        assertEquals(12L, viajeDTO.idLanchero());
+        assertEquals("Ana Pérez", viajeDTO.turistaNombreCompleto());
+        assertEquals("+573001234567", viajeDTO.turistaWhatsapp());
+        assertInstanceOf(String.class, viajeDTO.turistaWhatsapp());
+        assertEquals("Primera Sección", viajeDTO.zonaOrigen());
+        assertEquals("Segunda Sección", viajeDTO.zonaDestino());
+        assertEquals(2, viajeDTO.cantidadPasajeros());
+
         verify(viajeRepository).findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
                 eq("EN_VIAJE"), any(Pageable.class)
         );

@@ -1,6 +1,7 @@
 package com.nautiflow.model;
 
 import jakarta.persistence.*;
+import com.nautiflow.time.FechaHoraUtc;
 
 import java.time.OffsetDateTime;
 
@@ -23,7 +24,7 @@ public class Resena {
     private String comentario;
 
     @Column(nullable = false)
-    private OffsetDateTime fecha = OffsetDateTime.now();
+    private OffsetDateTime fecha = FechaHoraUtc.ahora();
 
     public Long getIdResena() { return idResena; }
     public void setIdResena(Long idResena) { this.idResena = idResena; }

@@ -13,7 +13,13 @@ public interface ResenaRepository extends JpaRepository<Resena, Long> {
     Optional<Resena> findByViaje_IdViaje(Long idViaje);
     boolean existsByViaje_IdViaje(Long idViaje);
 
-    @EntityGraph(attributePaths = {"viaje", "viaje.lancha", "viaje.lancha.lanchero"})
+    @EntityGraph(attributePaths = {
+            "viaje",
+            "viaje.lancha",
+            "viaje.lancha.lanchero",
+            "viaje.zonaOrigen",
+            "viaje.zonaDestino"
+    })
     @Query("select r from Resena r")
     Page<Resena> findAllWithLanchero(Pageable pageable);
 }

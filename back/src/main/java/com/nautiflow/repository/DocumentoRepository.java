@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface DocumentoRepository extends JpaRepository<Documento, Long> {
     List<Documento> findByLanchero_IdLanchero(Long idLanchero);
+    List<Documento> findByLanchero_IdLancheroOrderByIdDocumentoAsc(Long idLanchero);
 }

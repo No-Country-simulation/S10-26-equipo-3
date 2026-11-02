@@ -43,6 +43,8 @@ public class LancheroService {
             throw new SolicitudInvalidaException("Se permiten como máximo 5 fotos.");
         }
 
+        persistenceService.validarCorreoDisponible(solicitud.correo());
+
         List<String> rutas = new ArrayList<>();
         RegistroLancheroResponse respuesta;
         String etapa = "validación y subida de documentos";

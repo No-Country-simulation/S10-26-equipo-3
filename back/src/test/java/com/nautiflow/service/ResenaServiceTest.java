@@ -13,9 +13,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,7 +52,9 @@ class ResenaServiceTest {
         ArgumentCaptor<Resena> captor = ArgumentCaptor.forClass(Resena.class);
         verify(resenaRepository).saveAndFlush(captor.capture());
         assertEquals(5, captor.getValue().getEstrellas());
-        verify(notificacionService).notificarResena(12L, "ana@example.com", 45L, 25L, 5);
+        verify(notificacionService).notificarResena(
+                12L, "ana@example.com", "Ana Pérez", 5, "Zona origen", "Zona destino", "Excelente"
+        );
     }
 
     @Test
@@ -66,7 +71,9 @@ class ResenaServiceTest {
 
         assertEquals(1, resultado.puntuacion());
         assertNull(resultado.comentario());
-        verify(notificacionService).notificarResena(12L, "ana@example.com", 46L, 25L, 1);
+        verify(notificacionService).notificarResena(
+                12L, "ana@example.com", "Ana Pérez", 1, "Zona origen", "Zona destino", null
+        );
     }
 
     @Test
@@ -104,7 +111,7 @@ class ResenaServiceTest {
         viaje.setZonaOrigen(zona(1L, "Origen"));
         viaje.setZonaDestino(zona(2L, "Destino"));
         when(viajeRepository.findByTokenResena("token-unico")).thenReturn(Optional.of(viaje));
-        when(resenaRepository.existsByViaje_IdViaje(25L)).thenReturn(false);
+        when(resenaRepository.findByViaje_IdViaje(25L)).thenReturn(Optional.empty());
 
         var resultado = service.obtenerViaje("token-unico");
 
@@ -113,6 +120,76 @@ class ResenaServiceTest {
         assertEquals("Origen", resultado.zonaOrigen());
         assertEquals("Destino", resultado.zonaDestino());
         assertFalse(resultado.resenaRegistrada());
+        assertNull(resultado.resena());
+    }
+
+    @Test
+    void consultarTokenIncluyeLosDatosCompletosDeLaResenaExistente() {
+        Viaje viaje = viajeTerminado();
+        OffsetDateTime inicio = OffsetDateTime.parse("2026-11-02T10:00:00Z");
+        OffsetDateTime fin = OffsetDateTime.parse("2026-11-02T11:00:00Z");
+        OffsetDateTime fechaResena = OffsetDateTime.parse("2026-11-02T11:05:00Z");
+        viaje.setFechaHoraInicio(inicio);
+        viaje.setFechaHoraFin(fin);
+        viaje.getLancha().getLanchero().setNombreCompleto("María Pérez");
+
+        Resena resena = new Resena();
+        resena.setIdResena(45L);
+        resena.setViaje(viaje);
+        resena.setEstrellas(5);
+        resena.setComentario("Excelente servicio");
+        resena.setFecha(fechaResena);
+        when(viajeRepository.findByTokenResena("token-unico")).thenReturn(Optional.of(viaje));
+        when(resenaRepository.findByViaje_IdViaje(25L)).thenReturn(Optional.of(resena));
+
+        var resultado = service.obtenerViaje("token-unico");
+
+        assertTrue(resultado.resenaRegistrada());
+        assertEquals(45L, resultado.resena().idResena());
+        assertEquals(5, resultado.resena().puntuacion());
+        assertEquals("Excelente servicio", resultado.resena().comentario());
+        assertEquals(12L, resultado.resena().idLanchero());
+        assertEquals("María Pérez", resultado.resena().nombreLanchero());
+        assertEquals(fechaResena, resultado.resena().fecha());
+    }
+
+    @Test
+    void listaResenasConContextoDeViajeYConservaPaginacion() {
+        Viaje viaje = viajeTerminado();
+        OffsetDateTime inicio = OffsetDateTime.parse("2026-11-02T10:00:00Z");
+        OffsetDateTime fin = OffsetDateTime.parse("2026-11-02T11:00:00Z");
+        viaje.setFechaHoraInicio(inicio);
+        viaje.setFechaHoraFin(fin);
+        Resena resena = new Resena();
+        resena.setIdResena(45L);
+        resena.setViaje(viaje);
+        resena.setEstrellas(5);
+        resena.setComentario("Excelente servicio");
+        OffsetDateTime fechaResena = OffsetDateTime.parse("2026-11-02T11:05:00Z");
+        resena.setFecha(fechaResena);
+
+        when(resenaRepository.findAllWithLanchero(any())).thenReturn(
+                new PageImpl<>(List.of(resena), PageRequest.of(0, 10), 11)
+        );
+
+        var resultado = service.listar(0, 10);
+
+        var dto = resultado.content().getFirst();
+        assertEquals(0, resultado.page());
+        assertEquals(10, resultado.size());
+        assertEquals(11, resultado.totalElements());
+        assertEquals(2, resultado.totalPages());
+        assertEquals(45L, dto.idResena());
+        assertEquals(25L, dto.idViaje());
+        assertEquals(5, dto.puntuacion());
+        assertEquals("Excelente servicio", dto.comentario());
+        assertEquals(12L, dto.idLanchero());
+        assertEquals("Ana Pérez", dto.turistaNombreCompleto());
+        assertEquals("Zona origen", dto.zonaOrigen());
+        assertEquals("Zona destino", dto.zonaDestino());
+        assertEquals(fechaResena, dto.fecha());
+        assertEquals(inicio, dto.fechaHoraInicio());
+        assertEquals(fin, dto.fechaHoraFin());
     }
 
     @Test
@@ -137,6 +214,8 @@ class ResenaServiceTest {
         viaje.setFechaHoraFin(OffsetDateTime.now());
         viaje.setTuristaNombreCompleto("Ana Pérez");
         viaje.setTuristaWhatsapp("5491123456789");
+        viaje.setZonaOrigen(zona(1L, "Zona origen"));
+        viaje.setZonaDestino(zona(2L, "Zona destino"));
         viaje.setLancha(lancha);
         return viaje;
     }

@@ -7,6 +7,7 @@ import com.nautiflow.dto.PaginaLancherosDTO;
 import com.nautiflow.dto.RechazoSolicitudDTO;
 import com.nautiflow.model.Lanchero;
 import com.nautiflow.repository.LancheroRepository;
+import com.nautiflow.time.FechaHoraUtc;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -16,20 +17,23 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.OffsetDateTime;
+import java.time.Clock;
 import java.util.List;
 
 @Service
 public class AdminWorkflowService {
     private final LancheroRepository lancheroRepository;
     private final RegistroNotificacionService notificacionService;
+    private final Clock clock;
 
     public AdminWorkflowService(
             LancheroRepository lancheroRepository,
-            RegistroNotificacionService notificacionService
+            RegistroNotificacionService notificacionService,
+            Clock clock
     ) {
         this.lancheroRepository = lancheroRepository;
         this.notificacionService = notificacionService;
+        this.clock = clock;
     }
 
     @Transactional
@@ -38,7 +42,7 @@ public class AdminWorkflowService {
         validarPendiente(lanchero);
         lanchero.setEstadoSolicitud("APROBADO");
         lanchero.setEstadoViaje("ACTIVO");
-        lanchero.setFechaDecision(OffsetDateTime.now());
+        lanchero.setFechaDecision(FechaHoraUtc.ahora(clock));
         lancheroRepository.saveAndFlush(lanchero);
         notificacionService.enviarDecisionAprobada(
                 lanchero.getIdLanchero(), lanchero.getNombreCompleto(), lanchero.getCorreo()
@@ -48,15 +52,16 @@ public class AdminWorkflowService {
 
     @Transactional
     public RechazoSolicitudDTO rechazarSolicitud(Long id, String motivo) {
-        if (!StringUtils.hasText(motivo) || motivo.strip().length() > 500) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El motivo de rechazo es obligatorio.");
+        if (motivo != null && motivo.length() > 500) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El motivo no puede superar 500 caracteres.");
         }
 
+        String motivoNormalizado = StringUtils.hasText(motivo) ? motivo.strip() : null;
         Lanchero lanchero = obtenerLancheroParaActualizar(id);
         validarPendiente(lanchero);
         lanchero.setEstadoSolicitud("RECHAZADO");
-        lanchero.setMotivoRechazo(motivo.strip());
-        lanchero.setFechaDecision(OffsetDateTime.now());
+        lanchero.setMotivoRechazo(motivoNormalizado);
+        lanchero.setFechaDecision(FechaHoraUtc.ahora(clock));
         lancheroRepository.saveAndFlush(lanchero);
         notificacionService.enviarDecisionRechazada(
                 lanchero.getIdLanchero(),

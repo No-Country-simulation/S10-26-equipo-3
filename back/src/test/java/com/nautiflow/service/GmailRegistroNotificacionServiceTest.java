@@ -6,13 +6,12 @@ import jakarta.mail.Multipart;
 import jakarta.mail.Part;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -51,7 +50,7 @@ class GmailRegistroNotificacionServiceTest {
 
                         ¡Esperamos verte pronto formando parte de NautiFlow! 🚤💙
 
-                        Equipo NautiFlow
+                        El equipo de NautiFlow
                         """,
                 contenidoPlano(mensaje)
         );
@@ -64,7 +63,18 @@ class GmailRegistroNotificacionServiceTest {
         assertTrue(contenidoHtml(mensaje).contains("🚤💙"));
         assertTrue(contenidoPlano(mensaje).contains("\n\n"));
         assertTrue(contenidoHtml(mensaje).contains("<p>"));
+        assertIdentidadVisualCompartida(mensaje, "Actualización sobre tus documentos");
         assertFalse(contenidoPlano(mensaje).contains("estado operativo"));
+    }
+
+    @Test
+    void rechazoSinMotivoUsaUnTextoAlternativoEnLaNotificacion() throws Exception {
+        service.enviarDecisionRechazada(12L, "Ana Pérez", "ana@example.com", null);
+
+        var mensaje = capturarMimeMensaje();
+
+        assertTrue(contenidoPlano(mensaje).contains("📄 Motivo: No especificado"));
+        assertTrue(contenidoHtml(mensaje).contains("<strong>Motivo:</strong> No especificado"));
     }
 
     @Test
@@ -84,7 +94,7 @@ class GmailRegistroNotificacionServiceTest {
 
                         Estamos felices de que formes parte de esta comunidad. ¡Que este sea el comienzo de muchas buenas experiencias juntos!
 
-                        Equipo NautiFlow
+                        El equipo de NautiFlow
                         """,
                 contenidoPlano(mensaje)
         );
@@ -94,20 +104,111 @@ class GmailRegistroNotificacionServiceTest {
                 "¡Nos alegra mucho darte la bienvenida al equipo de NautiFlow! 🚤💙"
         ));
         assertTrue(contenidoPlano(mensaje).contains("\n\n"));
-        assertTrue(contenidoHtml(mensaje).contains("<strong>Equipo NautiFlow</strong>"));
+        assertTrue(contenidoHtml(mensaje).contains("El equipo de NautiFlow"));
+        assertIdentidadVisualCompartida(mensaje, "¡Tus documentos fueron aprobados!");
         assertFalse(contenidoPlano(mensaje).contains("estado operativo"));
     }
 
     @Test
-    void notificacionDeResenaIncluyePuntuacionEIdentificadores() {
-        service.notificarResena(12L, "ana@example.com", 45L, 25L, 5);
+    void confirmacionDeRegistroUsaElDisenoCompartidoYConservaElDestinatario() throws Exception {
+        service.enviarConfirmacionPorCorreo(12L, "ana@example.com");
 
-        var mensaje = capturarMensajeSimple();
-        assertArrayEquals(new String[]{"ana@example.com"}, mensaje.getTo());
-        assertNotNull(mensaje.getText());
-        assertTrue(mensaje.getText().contains("5 estrellas"));
-        assertTrue(mensaje.getText().contains("viaje 25"));
-        assertTrue(mensaje.getText().contains("reseña 45"));
+        MimeMessage mensaje = capturarMimeMensaje();
+        assertEquals("ana@example.com", mensaje.getRecipients(Message.RecipientType.TO)[0].toString());
+        assertEquals("Solicitud de registro recibida - NautiFlow", mensaje.getSubject());
+        assertTrue(contenidoPlano(mensaje).contains("su estado es PENDIENTE"));
+        assertTrue(contenidoHtml(mensaje).contains("Recibimos correctamente tus datos y documentos."));
+        assertIdentidadVisualCompartida(mensaje, "¡Solicitud recibida!");
+    }
+
+    @Test
+    void notificacionDeResenaConComentarioEsNeutralYConservaElTexto() throws Exception {
+        String comentario = "No fue lo esperado.\n  La salida se retrasó <30 min>.";
+        service.notificarResena(
+                12L, "ana@example.com", "Ana Pérez", 2, "Zona Norte", "Zona Sur", comentario
+        );
+
+        MimeMessage mensaje = capturarMimeMensaje();
+        String plano = contenidoPlano(mensaje);
+        assertEquals("ana@example.com", mensaje.getRecipients(Message.RecipientType.TO)[0].toString());
+        assertEquals("¡Nueva reseña en NautiFlow!", mensaje.getSubject());
+        assertTrue(plano.contains("⭐ ¡Nueva reseña en NautiFlow!"));
+        assertTrue(plano.contains("Ana Pérez"));
+        assertTrue(plano.contains("2 estrellas"));
+        assertTrue(plano.contains("Zona Norte"));
+        assertTrue(plano.contains("Zona Sur"));
+        assertTrue(plano.contains("Comentario del pasajero:\n\n" + comentario));
+        assertFalse(plano.toLowerCase().contains("felicidades"));
+        assertFalse(plano.toLowerCase().contains("gracias por compartir"));
+        assertFalse(plano.contains("idViaje"));
+        assertFalse(plano.contains("idReseña"));
+        String html = contenidoHtml(mensaje);
+        assertTrue(html.contains("Ana Pérez"));
+        assertTrue(html.contains("2 estrellas"));
+        assertTrue(html.contains("Zona Norte"));
+        assertTrue(html.contains("Zona Sur"));
+        assertTrue(html.contains("Comentario del pasajero:"));
+        assertTrue(html.contains("No fue lo esperado.\n  La salida se retrasó &lt;30 min&gt;."));
+        assertFalse(html.toLowerCase().contains("felicidades"));
+        assertFalse(html.toLowerCase().contains("gracias por compartir"));
+        assertIdentidadVisualCompartida(mensaje, "¡Nueva reseña en NautiFlow!");
+    }
+
+    @Test
+    void notificacionDeResenaSinComentarioOmiteLaSeccionYConservaPuntuacion() throws Exception {
+        service.notificarResena(
+                12L, "ana@example.com", "Ana Pérez", 5, "Zona Norte", "Zona Sur", "  "
+        );
+
+        MimeMessage mensaje = capturarMimeMensaje();
+        String plano = contenidoPlano(mensaje);
+        String html = contenidoHtml(mensaje);
+        assertEquals("ana@example.com", mensaje.getRecipients(Message.RecipientType.TO)[0].toString());
+        assertTrue(plano.contains("Ana Pérez ha calificado con 5 estrellas"));
+        assertFalse(plano.contains("Comentario del pasajero"));
+        assertFalse(html.contains("Comentario del pasajero"));
+        assertFalse(plano.toLowerCase().contains("felicidades"));
+        assertFalse(plano.toLowerCase().contains("agradecemos"));
+    }
+
+    @Test
+    void nuevoViajeSeEnvíaAlCorreoDelLancheroConDetallesEnHtml() throws Exception {
+        service.notificarViajeProgramado(new ViajeProgramadoEvent(
+                25L,
+                12L,
+                "lanchero@example.com",
+                "María Pérez",
+                "Zona <Norte>",
+                "Zona Sur",
+                "2026-11-02T12:53:31-05:00",
+                2,
+                "Ana Pérez",
+                "+5491123456789"
+        ));
+
+        MimeMessage mensaje = capturarMimeMensaje();
+        assertEquals("lanchero@example.com", mensaje.getRecipients(Message.RecipientType.TO)[0].toString());
+        assertEquals("¡Tienes un nuevo viaje programado en NautiFlow!", mensaje.getSubject());
+        String html = contenidoHtml(mensaje);
+        assertTrue(html.contains("María Pérez"));
+        assertTrue(html.contains("Zona &lt;Norte&gt;"));
+        assertTrue(html.contains("Zona Sur"));
+        assertTrue(html.contains("2026-11-02T12:53:31-05:00"));
+        assertTrue(html.contains("2"));
+        assertTrue(html.contains("Ana Pérez"));
+        assertTrue(html.contains("+5491123456789"));
+        assertIdentidadVisualCompartida(mensaje, "¡Nuevo viaje programado!");
+    }
+
+    @Test
+    void falloAlEnviarCorreoDeNuevoViajeSeRegistraSinPropagarse() {
+        doThrow(new org.springframework.mail.MailSendException("smtp failure"))
+                .when(mailSender).send(any(MimeMessage.class));
+
+        assertDoesNotThrow(() -> service.notificarViajeProgramado(new ViajeProgramadoEvent(
+                25L, 12L, "lanchero@example.com", "María Pérez", "Origen", "Destino",
+                "2026-11-02T12:53:31-05:00", 2, "Ana Pérez", "+5491123456789"
+        )));
     }
 
     @Test
@@ -121,16 +222,22 @@ class GmailRegistroNotificacionServiceTest {
         ).getStatusCode().value());
     }
 
-    private SimpleMailMessage capturarMensajeSimple() {
-        var captor = org.mockito.ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender).send(captor.capture());
-        return captor.getValue();
-    }
-
     private MimeMessage capturarMimeMensaje() {
         var captor = org.mockito.ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
         return captor.getValue();
+    }
+
+    private void assertIdentidadVisualCompartida(MimeMessage mensaje, String titulo) throws Exception {
+        String html = contenidoHtml(mensaje);
+        assertTrue(html.contains("NAUTIFLOW"));
+        assertTrue(html.contains(titulo));
+        assertTrue(html.contains("background-color:#f1f5f9"));
+        assertTrue(html.contains("background-color:#ffffff"));
+        assertTrue(html.contains("background-color:#f8fafc"));
+        assertTrue(html.contains("border-radius:16px"));
+        assertTrue(html.contains("El equipo de NautiFlow"));
+        assertTrue(html.contains("name=\"viewport\""));
     }
 
     private String contenidoPlano(MimeMessage mensaje) throws Exception {
