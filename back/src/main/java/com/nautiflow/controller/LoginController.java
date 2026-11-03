@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@Tag(name = "Autenticación", description = "Inicio de sesión como administrador.")
+@Tag(name = "Autenticación")
 public class LoginController {
     private final AdminAuthService adminAuthService;
 

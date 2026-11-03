@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@Tag(name = "Zonas", description = "Consulta de zonas disponibles.")
+@Tag(name = "Zonas")
 public class ZonaController {
     private final ZonaService zonaService;
 

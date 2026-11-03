@@ -85,7 +85,7 @@
               "formdata": [
                 {
                   "key": "solicitud",
-                  "value": "{\n  \"nombreCompleto\": \"Ana Pérez\",\n  \"whatsapp\": \"+573212684025\",\n  \"correo\": \"{{registroEmail}}\",\n  \"contrasena\": \"{{registroPassword}}\",\n  \"nombreEmbarcacion\": \"Brisa de prueba\",\n  \"capacidadPasajeros\": 8,\n  \"zonasIds\": [{{idZonaOrigen}}, {{idZonaDestino}}]\n}",
+                  "value": "{\n  \"nombreCompleto\": \"María Pérez\",\n  \"whatsapp\": \"+573000000000\",\n  \"correo\": \"ejemplo@gmail.com\",\n  \"nombreEmbarcacion\": \"Brisa Marina\",\n  \"capacidadPasajeros\": 8,\n  \"zonasIds\": [1, 3]\n}",
                   "type": "text",
                   "contentType": "text/plain"
                 },

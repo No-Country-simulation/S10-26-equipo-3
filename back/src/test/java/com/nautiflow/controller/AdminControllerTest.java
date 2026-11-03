@@ -44,6 +44,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -51,6 +52,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -264,6 +268,55 @@ class AdminControllerTest {
         verify(viajeWorkflowService).buscarDisponibles(
                 4, "1", "2", java.time.LocalTime.of(23, 0)
         );
+    }
+
+    @Test
+    void buscarDisponiblesAceptaElContratoCamelCaseDePostman() throws Exception {
+        when(viajeWorkflowService.buscarDisponibles(4, "1", "3", java.time.LocalTime.of(23, 0)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/lancheros/disponibles")
+                        .header("Authorization", bearerToken())
+                        .param("capacidad", "4")
+                        .param("zonaOrigen", "1")
+                        .param("zonaDestino", "3")
+                        .param("hora", "23:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        verify(viajeWorkflowService).buscarDisponibles(
+                4, "1", "3", java.time.LocalTime.of(23, 0)
+        );
+    }
+
+    @Test
+    void openApiPublicadoDocumentaSoloLosCuatroParametrosPublicos() throws Exception {
+        String documento = mockMvc.perform(get("/openapi.yaml"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        int inicio = documento.indexOf("  /admin/lancheros/disponibles:");
+        int fin = documento.indexOf("  /admin/lancheros/{id}/estado-viaje:", inicio);
+        assertTrue(inicio >= 0 && fin > inicio);
+
+        String operacion = documento.substring(inicio, fin);
+        List<String> parametros = operacion.lines()
+                .map(String::strip)
+                .filter(line -> line.startsWith("- name:"))
+                .map(line -> line.substring("- name:".length()).strip())
+                .toList();
+        assertEquals(List.of("capacidad", "zonaOrigen", "zonaDestino", "hora"), parametros);
+        assertFalse(operacion.contains("zona_origen"));
+        assertFalse(operacion.contains("zona_destino"));
+        assertTrue(documento.contains("description: No autenticado."));
+        assertTrue(documento.contains("description: Sin permiso."));
+        String definicionesParametros = operacion.substring(
+                operacion.indexOf("      parameters:"), operacion.indexOf("      responses:")
+        );
+        assertFalse(definicionesParametros.contains("description:"));
+        assertEquals(3, definicionesParametros.split("type: integer", -1).length - 1);
+        assertTrue(definicionesParametros.contains("type: string"));
+        assertTrue(definicionesParametros.contains("pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'"));
+        assertTrue(definicionesParametros.contains("example: \"23:00\""));
     }
 
     @Test

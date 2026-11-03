@@ -54,9 +54,7 @@ public class ViajeAdminController {
     @GetMapping("/viajes/seguimiento")
     @Operation(
             tags = "Viajes",
-            summary = "Consultar el historial y estado operativo de los viajes",
-            description = "Incluye viajes en curso y finalizados; la última ubicación confirmada se deriva "
-                    + "del destino del viaje finalizado más reciente de cada embarcación."
+            summary = "Consultar el historial y estado operativo de los viajes"
     )
     public PaginaSeguimientoViajesDTO seguimientoViajes(
             @RequestParam(defaultValue = "0") int page,

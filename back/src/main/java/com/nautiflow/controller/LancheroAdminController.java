@@ -8,6 +8,8 @@ import com.nautiflow.service.AdminWorkflowService;
 import com.nautiflow.service.ViajeWorkflowService;
 import com.nautiflow.util.EstadoSolicitudFiltro;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,17 +62,21 @@ public class LancheroAdminController {
     @GetMapping("/lancheros/disponibles")
     @Operation(
             tags = "Lancheros",
-            summary = "Buscar embarcaciones operativas para una ruta y hora",
-            description = "Solo incluye lancheros aprobados y activos sin un viaje incompatible en curso. "
-                    + "La fecha es la actual según el Clock configurado; no se registran reservas futuras ni duraciones."
+            summary = "Buscar embarcaciones operativas para una ruta y hora"
     )
     public List<LanchaDisponibleDTO> lanchasDisponibles(
-            @RequestParam(required = false) Integer capacidad,
+            @Parameter(schema = @Schema(type = "integer", example = "4"))
+            @RequestParam(name = "capacidad", required = false) Integer capacidad,
+            @Parameter(schema = @Schema(type = "integer", example = "1"))
             @RequestParam(name = "zonaOrigen", required = false) String zonaOrigen,
+            @Parameter(schema = @Schema(type = "integer", example = "3"))
             @RequestParam(name = "zonaDestino", required = false) String zonaDestino,
+            @Parameter(hidden = true)
             @RequestParam(name = "zona_origen", required = false) String zonaOrigenId,
+            @Parameter(hidden = true)
             @RequestParam(name = "zona_destino", required = false) String zonaDestinoId,
-            @RequestParam String hora
+            @Parameter(schema = @Schema(type = "string", pattern = "^([01][0-9]|2[0-3]):[0-5][0-9]$", example = "23:00"))
+            @RequestParam(name = "hora") String hora
     ) {
         LocalTime horaSeleccionada;
         try {

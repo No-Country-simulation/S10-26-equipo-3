@@ -2,29 +2,16 @@ openapi: 3.1.0
 info:
   title: NautiFlow API
   version: 1.0.0
-  description: >-
-    Contrato de los endpoints públicos y administrativos de NautiFlow.
-    Los campos date-time representan instantes en UTC, serializados en ISO-8601 con sufijo Z
-    y precisión de microsegundos. Los campos date representan fechas calendario en formato YYYY-MM-DD.
 tags:
   - name: Autenticación
-    description: Inicio de sesión como administrador.
   - name: Lanchero
-    description: Registro de un lanchero, su embarcación y sus documentos.
   - name: Dashboard
-    description: Indicadores principales del administrador.
   - name: Solicitudes
-    description: Consulta y decisión de solicitudes de registro.
   - name: Lancheros
-    description: Administración de lancheros y su estado operativo.
   - name: Viajes
-    description: Creación, consulta y finalización de viajes.
   - name: Reseñas
-    description: Consulta administrativa de reseñas.
   - name: Reseñas públicas
-    description: Consulta de reservas y registro público de reseñas mediante token.
   - name: Zonas
-    description: Consulta de zonas disponibles.
 paths:
   /zonas:
     get:
@@ -34,7 +21,7 @@ paths:
       security: []
       responses:
         "200":
-          description: Zonas existentes ordenadas por nombre.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
@@ -51,7 +38,6 @@ paths:
       operationId: iniciarSesionAdministrador
       tags: [Autenticación]
       summary: Iniciar sesión como administrador
-      description: Endpoint público. Devuelve un JWT de tipo Bearer con vigencia de 12 horas.
       security: []
       requestBody:
         required: true
@@ -64,29 +50,24 @@ paths:
               password: "Admin123*"
       responses:
         "200":
-          description: Sesión iniciada.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/LoginResponse"
         "400":
-          description: Falta email o password.
+          description: "Solicitud inv\u00e1lida."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Credenciales inválidas.
+          description: No autenticado.
   /lancheros/registrar:
     post:
       operationId: registrarLanchero
       tags: [Lanchero]
       summary: Registrar un lanchero, su embarcación y sus documentos
-      description: >-
-        Endpoint público. Enviar `solicitud` como texto que contiene el JSON
-        serializado junto con licencia, seguro y antecedentes. `zonasIds` es
-        opcional dentro del JSON; debe contener IDs existentes y sin duplicados.
-        Se pueden adjuntar hasta cinco fotos.
       security: []
       requestBody:
         required: true
@@ -102,24 +83,19 @@ paths:
               properties:
                 solicitud:
                   type: string
-                  description: JSON serializado con los datos del registro, incluyendo opcionalmente zonasIds.
-                  example: '{"nombreCompleto":"María Pérez","whatsapp":"+573212684025","correo":"maria@example.com","contrasena":"UnaClaveSegura123","nombreEmbarcacion":"Brisa Marina","capacidadPasajeros":8,"zonasIds":[1,3]}'
+                  example: '{"nombreCompleto":"María Pérez","whatsapp":"+573000000000","correo":"ejemplo@gmail.com","nombreEmbarcacion":"Brisa Marina","capacidadPasajeros":8,"zonasIds":[1,3]}'
                 licencia:
                   type: string
                   format: binary
-                  description: Documento obligatorio de licencia.
                 seguro:
                   type: string
                   format: binary
-                  description: Documento obligatorio de seguro.
                 antecedentes:
                   type: string
                   format: binary
-                  description: Documento obligatorio de antecedentes.
                 fotos:
                   type: array
                   maxItems: 5
-                  description: Fotos opcionales de la embarcación (máximo cinco).
                   items:
                     type: string
                     format: binary
@@ -134,7 +110,7 @@ paths:
                 contentType: image/*
       responses:
         "201":
-          description: Registro recibido; el lanchero queda en estado PENDIENTE.
+          description: Recurso creado correctamente.
           content:
             application/json:
               schema:
@@ -145,53 +121,43 @@ paths:
                 estado: PENDIENTE
                 mensaje: Solicitud de registro recibida correctamente.
         "400":
-          description: >-
-            JSON `solicitud` inválido, campos que no pasan validación, parte
-            requerida ausente, archivo vacío/inválido, más de cinco fotos o
-            nombre sin nombre y apellido. El error devuelve un objeto
-            `{"mensaje":"..."}`.
+          description: "Solicitud inv\u00e1lida."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "413":
-          description: >-
-            Archivo mayor al límite. Por defecto: 15 MiB por documento y
-            10 MiB por foto; los límites de almacenamiento son configurables.
-            La solicitud completa también está limitada por la configuración
-            multipart del servidor. El error devuelve `{"mensaje":"..."}`.
+          description: Contenido demasiado grande.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: >-
-            Correo ya registrado o conflicto con una restricción de integridad;
-            el error devuelve `{"mensaje":"..."}`.
+          description: Conflicto.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "415":
-          description: Tipo de contenido de la solicitud no soportado por el endpoint multipart.
+          description: Tipo de contenido no soportado.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "500":
-          description: Error interno al guardar archivos u otro error inesperado.
+          description: Error interno del servidor.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "502":
-          description: Fallo al comunicarse con Cloudflare R2.
+          description: Error al comunicarse con un servicio externo.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "503":
-          description: Configuración requerida de Cloudflare R2 incompleta.
+          description: Servicio temporalmente no disponible.
           content:
             application/json:
               schema:
@@ -205,21 +171,22 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: Cantidad de solicitudes pendientes, lanchas aprobadas y viajes activos.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminDashboard"
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
   /admin/solicitudes:
     get:
       operationId: listarSolicitudes
       tags: [Solicitudes]
       summary: Listar solicitudes de registro
-      description: Ordena por fecha de registro descendente y, en empate, por ID descendente.
       security:
         - bearerAuth: []
       parameters:
@@ -228,16 +195,18 @@ paths:
         - $ref: "#/components/parameters/Size"
       responses:
         "200":
-          description: Página de solicitudes.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginaSolicitudes"
         "400":
-          description: Estado o parámetros de paginación inválidos.
+          description: "Solicitud inv\u00e1lida."
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
   /admin/solicitudes/{id}:
     parameters:
@@ -246,22 +215,23 @@ paths:
       operationId: obtenerDetalleSolicitud
       tags: [Solicitudes]
       summary: Consultar el detalle de una solicitud
-      description: Incluye URLs prefirmadas de documentos de R2; nunca devuelve las claves internas de los objetos.
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Detalle de la solicitud.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SolicitudDetalle"
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
         "404":
-          description: Solicitud inexistente.
+          description: Recurso no encontrado.
   /admin/solicitudes/{id}/aprobar:
     parameters:
       - $ref: "#/components/parameters/IdLanchero"
@@ -269,26 +239,27 @@ paths:
       operationId: aprobarSolicitud
       tags: [Solicitudes]
       summary: Aprobar una solicitud pendiente
-      description: Guarda la decisión y la fecha, activa automáticamente al lanchero y envía una notificación al correo registrado.
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Solicitud aprobada.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DecisionSolicitud"
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
         "404":
-          description: Lanchero inexistente.
+          description: Recurso no encontrado.
         "409":
-          description: La solicitud ya fue decidida.
+          description: Conflicto.
         "503":
-          description: No fue posible enviar la notificación; la transacción se revierte.
+          description: Servicio temporalmente no disponible.
   /admin/solicitudes/{id}/rechazar:
     parameters:
       - $ref: "#/components/parameters/IdLanchero"
@@ -296,7 +267,6 @@ paths:
       operationId: rechazarSolicitud
       tags: [Solicitudes]
       summary: Rechazar una solicitud pendiente
-      description: Guarda el motivo y la fecha, y envía el motivo al correo registrado. No modifica el estado operativo.
       security:
         - bearerAuth: []
       requestBody:
@@ -309,29 +279,30 @@ paths:
               motivo: La licencia adjunta no es legible.
       responses:
         "200":
-          description: Solicitud rechazada.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RechazoSolicitud"
         "400":
-          description: Motivo vacío, ausente o de más de 500 caracteres.
+          description: "Solicitud inv\u00e1lida."
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
         "404":
-          description: Lanchero inexistente.
+          description: Recurso no encontrado.
         "409":
-          description: La solicitud ya fue decidida.
+          description: Conflicto.
         "503":
-          description: No fue posible enviar la notificación; la transacción se revierte.
+          description: Servicio temporalmente no disponible.
   /admin/lancheros:
     get:
       operationId: listarLancheros
       tags: [Lancheros]
       summary: Listar lancheros
-      description: Ordena por fecha de registro descendente y, en empate, por ID descendente.
       security:
         - bearerAuth: []
       parameters:
@@ -340,32 +311,24 @@ paths:
         - $ref: "#/components/parameters/Size"
       responses:
         "200":
-          description: Página de lancheros con estados de solicitud y operativos separados.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginaLancheros"
         "400":
-          description: Estado o parámetros de paginación inválidos.
+          description: "Solicitud inv\u00e1lida."
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
   /admin/lancheros/disponibles:
     get:
       operationId: buscarLanchasDisponibles
       tags: [Lancheros]
       summary: Buscar embarcaciones activas para una ruta y hora
-      description: >-
-        La hora usa formato HH:mm y se combina con la fecha actual en
-        America/Bogota, usando el Clock inyectado. Solo se incluyen lancheros aprobados
-        y activos, con capacidad suficiente y las zonas solicitadas. Se excluyen
-        viajes que abarcan el instante consultado y retornos vacíos en estado
-        ACTIVO. El sistema no registra reservas futuras ni duraciones de viaje:
-        el resultado no confirma disponibilidad futura y debe verificarse con el
-        lanchero por WhatsApp. Para confirmarla se requeriría persistir reservas
-        con inicio y fin confirmados explícitamente e integrarlas a la asignación;
-        no se calculan duraciones estimadas.
       security:
         - bearerAuth: []
       parameters:
@@ -375,50 +338,33 @@ paths:
           schema:
             type: integer
             minimum: 1
-          example: 5
+          example: 4
         - name: zonaOrigen
           in: query
           required: false
-          schema:
-            type: string
-            maxLength: 100
-          example: DELTA
-        - name: zonaDestino
-          in: query
-          required: false
-          schema:
-            type: string
-            maxLength: 100
-          example: PRIMERA_SECCION
-        - name: zona_origen
-          in: query
-          required: false
-          description: ID de zona; forma snake_case compatible con clientes existentes. No combinar con zonaOrigen.
           schema:
             type: integer
             format: int64
             minimum: 1
           example: 1
-        - name: zona_destino
+        - name: zonaDestino
           in: query
           required: false
-          description: ID de zona; forma snake_case compatible con clientes existentes. No combinar con zonaDestino.
           schema:
             type: integer
             format: int64
             minimum: 1
-          example: 2
+          example: 3
         - name: hora
           in: query
           required: true
-          description: Hora del viaje; no se envía fecha. Se construye con la fecha actual de America/Bogota.
           schema:
             type: string
             pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
-          example: "14:00"
+          example: "23:00"
       responses:
         "200":
-          description: Embarcaciones candidatas según los estados y viajes conocidos.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
@@ -434,13 +380,15 @@ paths:
                   estadoOperativo: ACTIVO
                   whatsappLanchero: "+573001234567"
         "400":
-          description: Hora o capacidad inválida, hora pasada, zonas iguales, o parámetros duplicados para una zona.
+          description: "Solicitud inv\u00e1lida."
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
         "404":
-          description: La zona solicitada por nombre o ID no existe.
+          description: Recurso no encontrado.
   /admin/lancheros/{id}/estado-viaje:
     parameters:
       - $ref: "#/components/parameters/IdLanchero"
@@ -448,10 +396,6 @@ paths:
       operationId: establecerEstadoOperativoLanchero
       tags: [Lancheros]
       summary: Establecer el estado operativo de un lanchero aprobado
-      description: >-
-        Recibe el estado deseado ACTIVO o INACTIVO. La operación es idempotente:
-        repetir el mismo estado no lo alterna. No permite cambiar el estado
-        mientras el lanchero está EN_VIAJE. La aprobación permanece sin cambios.
       security:
         - bearerAuth: []
       requestBody:
@@ -470,30 +414,26 @@ paths:
               estadoViaje: INACTIVO
       responses:
         "200":
-          description: Estado operativo establecido; devuelve el lanchero actualizado.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/LancheroAdmin"
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
         "404":
-          description: Lanchero inexistente.
+          description: Recurso no encontrado.
         "409":
-          description: La solicitud no está aprobada, el lanchero está EN_VIAJE o su estado operativo no es válido.
+          description: Conflicto.
   /admin/viajes:
     post:
       operationId: crearViaje
       tags: [Viajes]
       summary: Crear e iniciar un viaje
-      description: >-
-        Requiere que la lancha pertenezca a un lanchero aprobado y ACTIVO,
-        que no tenga otro viaje en curso, que las zonas existan y que los
-        pasajeros no superen la capacidad. El inicio usa la hora actual.
-        Después de confirmar la transacción se envía al lanchero un correo
-        con los detalles del viaje; un fallo de correo no cancela el viaje.
       security:
         - bearerAuth: []
       requestBody:
@@ -511,26 +451,27 @@ paths:
               turistaWhatsapp: "+573001234567"
       responses:
         "201":
-          description: Viaje creado e iniciado.
+          description: Recurso creado correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ViajeAdmin"
         "400":
-          description: Campos ausentes o inválidos, pasajeros por encima de la capacidad o zona de origen igual a la de destino.
+          description: "Solicitud inv\u00e1lida."
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
         "404":
-          description: Lancha o zona inexistente.
+          description: Recurso no encontrado.
         "409":
-          description: La lancha no está aprobada y activa o el lanchero ya tiene un viaje sin finalizar.
+          description: Conflicto.
     get:
       operationId: listarViajesEnCurso
       tags: [Viajes]
       summary: Listar viajes en curso
-      description: El endpoint solo admite estado EN_VIAJE; pagina viajes sin fecha de fin.
       security:
         - bearerAuth: []
       parameters:
@@ -545,16 +486,18 @@ paths:
         - $ref: "#/components/parameters/Size"
       responses:
         "200":
-          description: Página de viajes en curso.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginaViajes"
         "400":
-          description: Estado o parámetros de paginación inválidos.
+          description: "Solicitud inv\u00e1lida."
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
   /admin/viajes/{id}/finalizar:
     parameters:
@@ -569,34 +512,30 @@ paths:
       operationId: finalizarViaje
       tags: [Viajes]
       summary: Finalizar un viaje
-      description: Guarda la hora de fin, genera un token de reseña y actualiza el estado operativo del lanchero.
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Viaje finalizado; devuelve los datos para enviar al turista el enlace de reseña.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ViajeFinalizado"
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
         "404":
-          description: Viaje o lanchero inexistente.
+          description: Recurso no encontrado.
         "409":
-          description: El viaje no está en curso.
+          description: Conflicto.
   /admin/viajes/seguimiento:
     get:
       operationId: listarSeguimientoViajes
       tags: [Viajes]
       summary: Consultar viajes actuales e históricos con ubicación confirmada
-      description: >-
-        Página el historial completo en orden descendente. El estado se deriva
-        de fechaHoraFin (EN_VIAJE si es null; FINALIZADO en otro caso). La última
-        ubicación confirmada es el destino del viaje finalizado más reciente de
-        la embarcación; un viaje en curso no se considera llegado al destino.
       security:
         - bearerAuth: []
       parameters:
@@ -604,23 +543,24 @@ paths:
         - $ref: "#/components/parameters/Size"
       responses:
         "200":
-          description: Página de seguimiento con viajes activos y finalizados.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginaSeguimientoViajes"
         "400":
-          description: Parámetros de paginación inválidos.
+          description: "Solicitud inv\u00e1lida."
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
   /admin/resenas:
     get:
       operationId: listarResenas
       tags: [Reseñas]
       summary: Listar reseñas
-      description: Ordena por fecha descendente y, en empate, por ID descendente.
       security:
         - bearerAuth: []
       parameters:
@@ -628,16 +568,18 @@ paths:
         - $ref: "#/components/parameters/Size"
       responses:
         "200":
-          description: Página de reseñas con datos mínimos del lanchero calificado.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginaResenas"
         "400":
-          description: Parámetros de paginación inválidos.
+          description: "Solicitud inv\u00e1lida."
         "401":
+          description: No autenticado.
           $ref: "#/components/responses/NoAutenticado"
         "403":
+          description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
   /resena/{token}:
     parameters:
@@ -648,31 +590,24 @@ paths:
           type: string
           minLength: 64
           maxLength: 64
-        description: Token aleatorio asociado únicamente a la reserva finalizada.
     get:
       operationId: consultarReservaParaResena
       tags: [Reseñas públicas]
       summary: Consultar los datos guardados de la reserva
-      description: >-
-        Público. El token identifica la reserva; el nombre se obtiene del viaje
-        guardado. No se devuelve el WhatsApp del pasajero.
       security: []
       responses:
         "200":
-          description: Información pública de la reserva y estado de la reseña.
+          description: Solicitud procesada correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReservaResena"
         "404":
-          description: Enlace inexistente o viaje aún no finalizado.
+          description: Recurso no encontrado.
     post:
       operationId: crearResenaDeReserva
       tags: [Reseñas públicas]
       summary: Crear una reseña para la reserva identificada por el token
-      description: >-
-        Público. El token es la única referencia y autorización del viaje.
-        No se aceptan el nombre, WhatsApp ni ID de viaje desde el formulario.
       security: []
       requestBody:
         required: true
@@ -692,19 +627,19 @@ paths:
                   maxLength: 500
       responses:
         "201":
-          description: Reseña creada.
+          description: Recurso creado correctamente.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ResenaCreada"
         "400":
-          description: Puntuación o comentario inválidos.
+          description: "Solicitud inv\u00e1lida."
         "404":
-          description: Enlace inexistente o viaje aún no finalizado.
+          description: Recurso no encontrado.
         "409":
-          description: El viaje ya tiene una reseña.
+          description: Conflicto.
         "503":
-          description: No fue posible completar una notificación obligatoria.
+          description: Servicio temporalmente no disponible.
 components:
   securitySchemes:
     bearerAuth:
@@ -724,7 +659,6 @@ components:
       name: page
       in: query
       required: false
-      description: Índice de página basado en cero.
       schema:
         type: integer
         minimum: 0
@@ -733,7 +667,6 @@ components:
       name: size
       in: query
       required: false
-      description: Elementos por página.
       schema:
         type: integer
         minimum: 1
@@ -743,15 +676,14 @@ components:
       name: estado
       in: query
       required: false
-      description: Estado de la solicitud; TODOS o ausente incluye todos los estados.
       schema:
         type: string
         enum: [PENDIENTE, APROBADO, RECHAZADO, TODOS]
   responses:
     NoAutenticado:
-      description: JWT ausente, inválido o expirado.
+      description: No autenticado.
     SinPermiso:
-      description: El usuario autenticado no tiene rol administrador.
+      description: Sin permiso.
   schemas:
     Zona:
       type: object
@@ -781,7 +713,6 @@ components:
       properties:
         token:
           type: string
-          description: JWT con vigencia de 12 horas.
         tipo:
           type: string
           enum: [Bearer]
@@ -891,7 +822,6 @@ components:
         url:
           type: string
           format: uri
-          description: URL prefirmada temporal de acceso al documento.
     DecisionSolicitud:
       type: object
       required: [id, estado, mensaje]
@@ -1253,46 +1183,34 @@ components:
         nombreCompleto:
           type: string
           maxLength: 201
-          description: >-
-            No puede estar vacío. Tras quitar espacios externos, debe incluir
-            nombre y apellido separados por espacio(s); cada parte resultante
-            debe tener como máximo 100 caracteres.
           example: Ana Pérez
         whatsapp:
           type: string
           pattern: '^\+?[0-9 ()-]{8,20}$'
-          description: >-
-            No puede estar vacío. De 8 a 20 caracteres permitidos por el patrón:
-            dígitos, espacios, paréntesis y guiones; puede comenzar con `+`.
           example: "+5491123456789"
         correo:
           type: string
           format: email
           maxLength: 100
-          description: No puede estar vacío y debe ser único entre lancheros.
           example: ana@example.com
         contrasena:
           type: string
           format: password
           minLength: 8
           maxLength: 72
-          description: No puede estar vacía; no hay otras reglas de composición en el DTO.
           example: ClaveSegura123
         nombreEmbarcacion:
           type: string
           maxLength: 100
-          description: No puede estar vacío.
           example: La Aurora
         capacidadPasajeros:
           type: integer
           format: int32
           exclusiveMinimum: 0
-          description: Valor obligatorio mayor que cero.
           example: 8
         zonasIds:
           type: array
           uniqueItems: true
-          description: IDs existentes y sin duplicados; opcional. Si se omite, la lancha queda sin zonas asociadas.
           items:
             type: integer
             format: int64

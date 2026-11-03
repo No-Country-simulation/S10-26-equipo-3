@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@Tag(name = "Reseñas públicas", description = "Consulta de reservas y registro público de reseñas mediante token.")
+@Tag(name = "Reseñas públicas")
 public class ResenaController {
     private final ResenaService resenaService;
 

@@ -21,7 +21,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/lancheros")
-@Tag(name = "Lanchero", description = "Registro de un lanchero, su embarcación y sus documentos.")
+@Tag(name = "Lanchero")
 public class LancheroController {
     private static final Logger LOGGER = LoggerFactory.getLogger(LancheroController.class);
 
