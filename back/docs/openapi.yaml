@@ -124,8 +124,6 @@ paths:
                     type: string
                     format: binary
             encoding:
-              solicitud:
-                contentType: text/plain
               licencia:
                 contentType: application/pdf, image/jpeg, image/png, image/webp
               seguro:
