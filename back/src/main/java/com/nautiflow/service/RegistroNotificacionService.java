@@ -1,9 +1,14 @@
 package com.nautiflow.service;
 
 public interface RegistroNotificacionService {
-    void enviarConfirmacionPorCorreo(Long idLanchero, String correo);
+    String prepararPayloadConfirmacion(String correo);
+
+    void enviarConfirmacionPorCorreo(Long idLanchero, String payloadJson, String claveIdempotencia);
+
     void enviarDecisionAprobada(Long idLanchero, String nombreCompleto, String correo);
+
     void enviarDecisionRechazada(Long idLanchero, String nombreCompleto, String correo, String motivoPersistido);
+
     void notificarResena(
             Long idLanchero,
             String correo,
@@ -13,5 +18,6 @@ public interface RegistroNotificacionService {
             String zonaDestino,
             String comentario
     );
+
     void notificarViajeProgramado(ViajeProgramadoEvent viaje);
 }

@@ -1,6 +1,8 @@
 package com.nautiflow.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,9 +19,7 @@ import java.net.http.HttpResponse;
 import java.net.URI;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 @Component
 public class ResendEmailClient {
@@ -72,15 +72,19 @@ public class ResendEmailClient {
     }
 
     public void enviar(CorreoTransaccional correo, String claveIdempotencia) {
+        enviar(crearCuerpoJson(correo), claveIdempotencia);
+    }
+
+    public String crearCuerpoJson(CorreoTransaccional correo) {
         validarConfiguracion();
 
-        Map<String, Object> payload = Map.of(
-                "from", remitente,
-                "to", List.of(correo.destinatario()),
-                "subject", correo.asunto(),
-                "text", correo.texto(),
-                "html", correo.html()
-        );
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("from", remitente);
+        ArrayNode destinatarios = payload.putArray("to");
+        destinatarios.add(correo.destinatario());
+        payload.put("subject", correo.asunto());
+        payload.put("text", correo.texto());
+        payload.put("html", correo.html());
         final String body;
         try {
             body = objectMapper.writeValueAsString(payload);
@@ -95,6 +99,12 @@ public class ResendEmailClient {
                     null
             );
         }
+
+        return body;
+    }
+
+    public void enviar(String body, String claveIdempotencia) {
+        validarApiKey();
 
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(endpoint)
                 .timeout(requestTimeout)
@@ -130,9 +140,17 @@ public class ResendEmailClient {
     }
 
     private void validarConfiguracion() {
-        if (apiKey == null || apiKey.isBlank() || remitente == null || remitente.isBlank()) {
+        if (remitente == null || remitente.isBlank()) {
             throw error(ResendEmailException.Category.CONFIGURATION,
-                    "Falta configurar RESEND_API_KEY o RESEND_FROM.", null);
+                    "Falta configurar RESEND_FROM.", null);
+        }
+        validarApiKey();
+    }
+
+    private void validarApiKey() {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw error(ResendEmailException.Category.CONFIGURATION,
+                    "Falta configurar RESEND_API_KEY.", null);
         }
     }
 

@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ResendRegistroNotificacionServiceTest {
     private final ResendEmailClient resendEmailClient = mock(ResendEmailClient.class);
@@ -17,12 +18,13 @@ class ResendRegistroNotificacionServiceTest {
             new ResendRegistroNotificacionService(resendEmailClient);
 
     @Test
-    void mantieneElContenidoActualDeLaConfirmacionYUnaClaveEstableDeReintento() {
-        service.enviarConfirmacionPorCorreo(12L, "usuario@example.com");
+    void mantieneElContenidoActualYEnviaElSnapshotConClaveDelOutbox() {
+        when(resendEmailClient.crearCuerpoJson(any(CorreoTransaccional.class))).thenReturn("payload");
+        String payload = service.prepararPayloadConfirmacion("usuario@example.com");
 
         org.mockito.ArgumentCaptor<CorreoTransaccional> captor =
                 org.mockito.ArgumentCaptor.forClass(CorreoTransaccional.class);
-        verify(resendEmailClient).enviar(captor.capture(), org.mockito.ArgumentMatchers.eq("registro-lanchero-12"));
+        verify(resendEmailClient).crearCuerpoJson(captor.capture());
         CorreoTransaccional correo = captor.getValue();
 
         assertEquals("usuario@example.com", correo.destinatario());
@@ -31,6 +33,9 @@ class ResendRegistroNotificacionServiceTest {
         assertTrue(correo.texto().contains("su estado es PENDIENTE"));
         assertTrue(correo.html().contains("<strong>PENDIENTE</strong>"));
         assertTrue(correo.html().contains("NAUTIFLOW"));
+
+        service.enviarConfirmacionPorCorreo(12L, payload, "registro-confirmacion:render:7");
+        verify(resendEmailClient).enviar("payload", "registro-confirmacion:render:7");
     }
 
     @Test
@@ -39,11 +44,11 @@ class ResendRegistroNotificacionServiceTest {
                 ResendEmailException.Category.TIMEOUT, 0, true, "request timed out",
                 new java.net.http.HttpTimeoutException("timed out"), null, null
         );
-        doThrow(original).when(resendEmailClient).enviar(any(CorreoTransaccional.class), any(String.class));
+        doThrow(original).when(resendEmailClient).enviar(any(String.class), any(String.class));
 
         ResendEmailException recibida = assertThrows(
                 ResendEmailException.class,
-                () -> service.enviarConfirmacionPorCorreo(12L, "usuario@example.com")
+                () -> service.enviarConfirmacionPorCorreo(12L, "payload", "registro-confirmacion:render:7")
         );
 
         assertSame(original, recibida);

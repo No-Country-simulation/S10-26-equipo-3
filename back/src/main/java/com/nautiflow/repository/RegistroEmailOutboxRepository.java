@@ -28,7 +28,8 @@ public class RegistroEmailOutboxRepository {
                 lease_hasta = CURRENT_TIMESTAMP + (? * INTERVAL '1 second')
             FROM siguiente
             WHERE outbox.id_outbox = siguiente.id_outbox
-            RETURNING outbox.id_outbox, outbox.id_lanchero, outbox.correo, outbox.intentos
+            RETURNING outbox.id_outbox, outbox.id_lanchero, outbox.correo, outbox.intentos,
+                      outbox.payload_json, outbox.idempotency_key
             """;
 
     private final JdbcTemplate jdbcTemplate;
@@ -63,7 +64,9 @@ public class RegistroEmailOutboxRepository {
                         resultSet.getLong("id_outbox"),
                         resultSet.getLong("id_lanchero"),
                         resultSet.getString("correo"),
-                        resultSet.getInt("intentos")
+                        resultSet.getInt("intentos"),
+                        resultSet.getString("payload_json"),
+                        resultSet.getString("idempotency_key")
                 ),
                 maximoIntentos,
                 segundosLease
@@ -84,9 +87,29 @@ public class RegistroEmailOutboxRepository {
                     enviada_en = CURRENT_TIMESTAMP,
                     lease_hasta = NULL,
                     ultimo_error = NULL,
-                    correo = NULL
+                    correo = NULL,
+                    payload_json = NULL
                 WHERE id_outbox = ?
                 """, id);
+    }
+
+    @Transactional
+    public RegistroEmailOutboxPayload asegurarPayloadYClave(
+            long id,
+            int intentos,
+            String payloadJson,
+            String idempotencyKey
+    ) {
+        return jdbcTemplate.queryForObject("""
+                UPDATE registro_email_outbox
+                SET payload_json = COALESCE(payload_json, ?),
+                    idempotency_key = COALESCE(idempotency_key, ?)
+                WHERE id_outbox = ? AND intentos = ? AND estado = 'PROCESANDO'
+                RETURNING payload_json, idempotency_key
+                """, (resultSet, rowNumber) -> new RegistroEmailOutboxPayload(
+                resultSet.getString("payload_json"),
+                resultSet.getString("idempotency_key")
+        ), payloadJson, idempotencyKey, id, intentos);
     }
 
     @Transactional
@@ -109,12 +132,12 @@ public class RegistroEmailOutboxRepository {
 
     @Transactional
     public void marcarFallida(long id, int intentos, String tipoError) {
-                jdbcTemplate.update("""
-                    UPDATE registro_email_outbox
-                    SET estado = 'FALLIDO',
-                        lease_hasta = NULL,
-                        ultimo_error = ?
-                    WHERE id_outbox = ? AND intentos = ?
-                    """, tipoError, id, intentos);
+        jdbcTemplate.update("""
+                UPDATE registro_email_outbox
+                SET estado = 'FALLIDO',
+                    lease_hasta = NULL,
+                    ultimo_error = ?
+                WHERE id_outbox = ? AND intentos = ?
+                """, tipoError, id, intentos);
     }
 }

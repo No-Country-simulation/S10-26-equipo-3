@@ -1,6 +1,7 @@
 package com.nautiflow.service;
 
 import com.nautiflow.repository.RegistroEmailOutboxRepository;
+import com.nautiflow.repository.RegistroEmailOutboxPayload;
 import com.nautiflow.repository.RegistroEmailOutboxTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,18 +19,24 @@ public class RegistroEmailOutboxWorker {
     private final RegistroEmailOutboxRepository outboxRepository;
     private final RegistroNotificacionService notificacionService;
     private final int maximoIntentos;
+    private final String namespaceEntorno;
 
     public RegistroEmailOutboxWorker(
             RegistroEmailOutboxRepository outboxRepository,
             RegistroNotificacionService notificacionService,
-            @Value("${nautiflow.registration.email.max-attempts:5}") int maximoIntentos
+            @Value("${nautiflow.registration.email.max-attempts:5}") int maximoIntentos,
+            @Value("${nautiflow.mail.idempotency-namespace:local}") String namespaceEntorno
     ) {
         if (maximoIntentos < 1) {
             throw new IllegalArgumentException("El máximo de intentos de correo debe ser positivo.");
         }
+        if (namespaceEntorno == null || !namespaceEntorno.matches("[A-Za-z0-9._-]{1,200}")) {
+            throw new IllegalArgumentException("El namespace de idempotencia debe contener 1-200 caracteres seguros.");
+        }
         this.outboxRepository = outboxRepository;
         this.notificacionService = notificacionService;
         this.maximoIntentos = maximoIntentos;
+        this.namespaceEntorno = namespaceEntorno;
     }
 
     @Scheduled(fixedDelayString = "${nautiflow.registration.email.poll-interval-ms:1000}")
@@ -47,7 +54,18 @@ public class RegistroEmailOutboxWorker {
 
         RegistroEmailOutboxTask tarea = tareaPendiente.get();
         try {
-            notificacionService.enviarConfirmacionPorCorreo(tarea.idLanchero(), tarea.correo());
+            String payloadJson = tarea.payloadJson() == null
+                    ? notificacionService.prepararPayloadConfirmacion(tarea.correo())
+                    : tarea.payloadJson();
+            String claveIdempotencia = tarea.idempotencyKey() == null
+                    ? crearClaveIdempotencia(tarea)
+                    : tarea.idempotencyKey();
+            RegistroEmailOutboxPayload envio = outboxRepository.asegurarPayloadYClave(
+                    tarea.id(), tarea.intento(), payloadJson, claveIdempotencia
+            );
+            notificacionService.enviarConfirmacionPorCorreo(
+                    tarea.idLanchero(), envio.json(), envio.idempotencyKey()
+            );
         } catch (RuntimeException exception) {
             if (exception instanceof ResendEmailException resendException && !resendException.isRetryable()) {
                 registrarFalloPermanente(tarea, resendException);
@@ -62,6 +80,14 @@ public class RegistroEmailOutboxWorker {
 
         outboxRepository.marcarEnviada(tarea.id());
         LOGGER.info("Notificación de registro {} enviada correctamente.", tarea.id());
+    }
+
+    private String crearClaveIdempotencia(RegistroEmailOutboxTask tarea) {
+        if (tarea.intento() > 1) {
+            // Older outbox rows may already have reached Resend with this key before snapshots were persisted.
+            return "registro-lanchero-" + tarea.idLanchero();
+        }
+        return "registro-confirmacion:" + namespaceEntorno + ":" + tarea.id();
     }
 
     private void registrarReintento(

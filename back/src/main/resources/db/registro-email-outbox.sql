@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS registro_email_outbox (
     creada_en TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     enviada_en TIMESTAMP WITH TIME ZONE,
     ultimo_error VARCHAR(100),
+    payload_json TEXT,
+    idempotency_key VARCHAR(255),
     CONSTRAINT fk_registro_email_outbox_lanchero
         FOREIGN KEY (id_lanchero) REFERENCES lanchero (id_lanchero) ON DELETE CASCADE,
     CONSTRAINT ck_registro_email_outbox_estado
@@ -21,6 +23,12 @@ CREATE TABLE IF NOT EXISTS registro_email_outbox (
 
 ALTER TABLE registro_email_outbox
     ADD COLUMN IF NOT EXISTS correo VARCHAR(100);
+
+ALTER TABLE registro_email_outbox
+    ADD COLUMN IF NOT EXISTS payload_json TEXT;
+
+ALTER TABLE registro_email_outbox
+    ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(255);
 
 UPDATE registro_email_outbox AS outbox
 SET correo = lanchero.correo

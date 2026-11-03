@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ResendEmailClientTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AtomicInteger responseStatus = new AtomicInteger(200);
+    private final AtomicInteger requestCount = new AtomicInteger();
     private final AtomicLong responseDelayMillis = new AtomicLong();
     private final AtomicReference<String> responseBody = new AtomicReference<>("{\"id\":\"email-id\"}");
     private final AtomicReference<String> requestBody = new AtomicReference<>();
@@ -39,6 +40,7 @@ class ResendEmailClientTest {
     void startServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/emails", exchange -> {
+            requestCount.incrementAndGet();
             requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             requestMethod.set(exchange.getRequestMethod());
             requestContentType.set(exchange.getRequestHeaders().getFirst("Content-Type"));
@@ -80,6 +82,35 @@ class ResendEmailClientTest {
         assertEquals("Solicitud recibida", payload.path("subject").asText());
         assertEquals("Texto actual", payload.path("text").asText());
         assertEquals("<p>HTML actual</p>", payload.path("html").asText());
+    }
+
+    @Test
+    void serializaElMismoCuerpoEnOrdenDeterminista() {
+        ResendEmailClient client = client();
+        CorreoTransaccional correo = correo();
+
+        String first = client.crearCuerpoJson(correo);
+        String second = client.crearCuerpoJson(correo);
+
+        assertEquals(first, second);
+        assertTrue(first.startsWith("{\"from\":\"NautiFlow <notificaciones@yusdev.world>\",\"to\":["));
+        assertTrue(first.indexOf("\"subject\"") < first.indexOf("\"text\""));
+        assertTrue(first.indexOf("\"text\"") < first.indexOf("\"html\""));
+    }
+
+    @Test
+    void reenviaUnSnapshotConLaMismaClaveSinModificarElCuerpo() {
+        String snapshot = "{\"from\":\"NautiFlow <notificaciones@yusdev.world>\","
+                + "\"to\":[\"destinatario@example.com\"],\"subject\":\"Asunto original\"}";
+        String key = "registro-confirmacion:render:7";
+        ResendEmailClient client = client();
+
+        client.enviar(snapshot, key);
+        client.enviar(snapshot, key);
+
+        assertEquals(2, requestCount.get());
+        assertEquals(snapshot, requestBody.get());
+        assertEquals(key, idempotencyKey.get());
     }
 
     @Test
@@ -172,7 +203,8 @@ class ResendEmailClientTest {
     @Test
     void configuracionAusenteFallaConMensajeSeguro() {
         ResendEmailClient sinConfiguracion = new ResendEmailClient(
-                HttpClient.newHttpClient(), objectMapper, "", "", endpoint(), Duration.ofSeconds(1)
+                HttpClient.newHttpClient(), objectMapper, "", "NautiFlow <notificaciones@example.com>",
+                endpoint(), Duration.ofSeconds(1)
         );
         ResendEmailException exception = assertThrows(
                 ResendEmailException.class,

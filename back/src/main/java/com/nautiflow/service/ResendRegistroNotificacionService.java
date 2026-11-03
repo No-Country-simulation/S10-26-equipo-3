@@ -38,7 +38,7 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
     }
 
     @Override
-    public void enviarConfirmacionPorCorreo(Long idLanchero, String correo) {
+    public String prepararPayloadConfirmacion(String correo) {
         String contenidoHtml = """
                 <p>¡Hola! 👋</p>
                 <p>¡Gracias por sumarte a NautiFlow! Recibimos correctamente tus datos y documentos.</p>
@@ -46,14 +46,19 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
                 <p>Te avisaremos por este medio cuando tengamos novedades.</p>
                 <p>¡Nos alegra que quieras navegar con nosotros! 🚤</p>
                 """;
+        return resendEmailClient.crearCuerpoJson(new CorreoTransaccional(
+                correo,
+                ASUNTO_REGISTRO,
+                TEXTO_REGISTRO,
+                CorreoHtmlTemplate.renderizar("¡Solicitud recibida!", "⚓", contenidoHtml)
+        ));
+    }
+
+    @Override
+    public void enviarConfirmacionPorCorreo(Long idLanchero, String payloadJson, String claveIdempotencia) {
         long inicioEnvio = System.nanoTime();
         try {
-            resendEmailClient.enviar(new CorreoTransaccional(
-                    correo,
-                    ASUNTO_REGISTRO,
-                    TEXTO_REGISTRO,
-                    CorreoHtmlTemplate.renderizar("¡Solicitud recibida!", "⚓", contenidoHtml)
-            ), "registro-lanchero-" + idLanchero);
+            resendEmailClient.enviar(payloadJson, claveIdempotencia);
             logger.info("Correo de confirmación enviado para lanchero {}.", idLanchero);
         } finally {
             logger.info("Tiempo total de envío de confirmación de registro: {} ms", milisegundosDesde(inicioEnvio));
