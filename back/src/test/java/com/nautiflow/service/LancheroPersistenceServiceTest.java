@@ -68,7 +68,7 @@ class LancheroPersistenceServiceTest {
     }
 
     @Test
-    void registraUnaLanchaConVariasZonasYConservaDocumentos() {
+    void registraUnaLanchaYEncolaLaNotificacionDentroDeLaPersistenciaSinLlamarAlProveedor() {
         Zona norte = zona(1L, "Zona Norte");
         Zona centro = zona(3L, "Zona Centro");
         when(zonaRepository.findAllById(List.of(1L, 3L))).thenReturn(List.of(norte, centro));

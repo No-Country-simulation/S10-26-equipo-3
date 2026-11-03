@@ -2,10 +2,8 @@ package com.nautiflow.service;
 
 import com.nautiflow.repository.RegistroEmailOutboxRepository;
 import com.nautiflow.repository.RegistroEmailOutboxTask;
-import org.springframework.mail.MailSendException;
 import org.junit.jupiter.api.Test;
 
-import java.net.SocketTimeoutException;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
@@ -35,28 +33,42 @@ class RegistroEmailOutboxWorkerTest {
                 7L, 12L, "usuario@example.com", 3
         );
         when(repository.reclamarSiguiente(5, 120)).thenReturn(Optional.of(tarea));
-        doThrow(new IllegalStateException("smtp unavailable", new MailSendException(
-                "smtp failure", new SocketTimeoutException("connection timed out")
-        )))
+        doThrow(new ResendEmailException(
+                ResendEmailException.Category.PROVIDER_TEMPORARY,
+                503,
+                true,
+                "provider unavailable",
+                new RuntimeException("cause"),
+                null,
+                null
+        ))
                 .when(notificacionService).enviarConfirmacionPorCorreo(12L, "usuario@example.com");
 
         worker.procesarSiguiente();
 
-        verify(repository).programarReintento(7L, 3, 5, 120, "SMTP_TIMEOUT");
+        verify(repository).programarReintento(7L, 3, 5, 120, "RESEND_PROVIDER_TEMPORARY");
         verify(repository, never()).marcarEnviada(anyLong());
     }
 
     @Test
-    void quintoFalloEsEntregadoAlRepositorioParaMarcarLaTareaComoFallida() {
-        RegistroEmailOutboxTask tarea = new RegistroEmailOutboxTask(
-                7L, 12L, "usuario@example.com", 5
-        );
+    void errorPermanenteMarcaFallidaSinProgramarReintentoNiMarcarEnviada() {
+        RegistroEmailOutboxTask tarea = new RegistroEmailOutboxTask(7L, 12L, "usuario@example.com", 1);
         when(repository.reclamarSiguiente(5, 120)).thenReturn(Optional.of(tarea));
-        doThrow(new IllegalStateException("smtp unavailable"))
+        doThrow(new ResendEmailException(
+                ResendEmailException.Category.AUTHENTICATION,
+                401,
+                false,
+                "authentication rejected",
+                null,
+                null,
+                null
+        ))
                 .when(notificacionService).enviarConfirmacionPorCorreo(12L, "usuario@example.com");
 
         worker.procesarSiguiente();
 
-        verify(repository).programarReintento(7L, 5, 5, 480, "SMTP_OTHER");
+        verify(repository).marcarFallida(7L, 1, "RESEND_AUTHENTICATION");
+        verify(repository, never()).programarReintento(anyLong(), anyInt(), anyInt(), anyLong(), anyString());
+        verify(repository, never()).marcarEnviada(anyLong());
     }
 }

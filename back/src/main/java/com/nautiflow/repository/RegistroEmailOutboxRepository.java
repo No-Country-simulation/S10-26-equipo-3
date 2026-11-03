@@ -106,4 +106,15 @@ public class RegistroEmailOutboxRepository {
                 WHERE id_outbox = ? AND intentos = ?
                 """, maximoIntentos, demoraSegundos, tipoError, id, intentos);
     }
+
+    @Transactional
+    public void marcarFallida(long id, int intentos, String tipoError) {
+                jdbcTemplate.update("""
+                    UPDATE registro_email_outbox
+                    SET estado = 'FALLIDO',
+                        lease_hasta = NULL,
+                        ultimo_error = ?
+                    WHERE id_outbox = ? AND intentos = ?
+                    """, tipoError, id, intentos);
+    }
 }

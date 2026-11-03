@@ -49,7 +49,13 @@ public class RegistroEmailOutboxWorker {
         try {
             notificacionService.enviarConfirmacionPorCorreo(tarea.idLanchero(), tarea.correo());
         } catch (RuntimeException exception) {
-            String categoriaError = RegistroEmailSmtpErrorClassifier.clasificar(exception);
+            if (exception instanceof ResendEmailException resendException && !resendException.isRetryable()) {
+                registrarFalloPermanente(tarea, resendException);
+                return;
+            }
+            String categoriaError = exception instanceof ResendEmailException resendException
+                    ? resendException.getErrorCode()
+                    : "RESEND_UNEXPECTED";
             registrarReintento(tarea, exception, categoriaError);
             return;
         }
@@ -73,17 +79,40 @@ public class RegistroEmailOutboxWorker {
                     categoriaError
             );
             LOGGER.warn(
-                    "Falló el envío de la notificación de registro {}; intento {}/{}; categoría={}; tipos de excepción={}",
+                    "Falló el envío de la notificación de registro {}; intento {}/{}; categoría={}; causas={}",
                     tarea.id(),
                     tarea.intento(),
                     maximoIntentos,
                     categoriaError,
-                    RegistroEmailSmtpErrorClassifier.tiposDeExcepcion(exception)
+                    exception instanceof ResendEmailException resendException
+                            ? resendException.getCauseTypes()
+                            : exception.getClass().getSimpleName()
             );
         } catch (RuntimeException persistenciaException) {
             exception.addSuppressed(persistenciaException);
             LOGGER.error(
                     "No se pudo registrar el reintento de la notificación {}; la tarea quedará recuperable al expirar el lease.",
+                    tarea.id(),
+                    exception
+            );
+        }
+    }
+
+    private void registrarFalloPermanente(RegistroEmailOutboxTask tarea, ResendEmailException exception) {
+        try {
+            outboxRepository.marcarFallida(tarea.id(), tarea.intento(), exception.getErrorCode());
+            LOGGER.error(
+                    "Error permanente al enviar la notificación de registro {}; intento {}/{}; categoría={}, HTTP {}.",
+                    tarea.id(),
+                    tarea.intento(),
+                    maximoIntentos,
+                    exception.getCategory(),
+                    exception.getHttpStatus()
+            );
+        } catch (RuntimeException persistenciaException) {
+            exception.addSuppressed(persistenciaException);
+            LOGGER.error(
+                    "No se pudo marcar como fallida la notificación {}; la tarea quedará recuperable al expirar el lease.",
                     tarea.id(),
                     exception
             );

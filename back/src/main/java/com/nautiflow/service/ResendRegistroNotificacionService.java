@@ -1,29 +1,19 @@
 package com.nautiflow.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeBodyPart;
-import jakarta.mail.internet.MimeMessage;
-import jakarta.mail.internet.MimeMultipart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 @Service
-public class GmailRegistroNotificacionService implements RegistroNotificacionService {
-    private static final Logger logger = LoggerFactory.getLogger(GmailRegistroNotificacionService.class);
+public class ResendRegistroNotificacionService implements RegistroNotificacionService {
+    private static final Logger logger = LoggerFactory.getLogger(ResendRegistroNotificacionService.class);
     private static final String ASUNTO_REGISTRO = "Solicitud de registro recibida - NautiFlow";
     private static final String TEXTO_REGISTRO = """
             ¡Hola! 👋
@@ -41,30 +31,14 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
     private static final DateTimeFormatter FORMATO_FECHA_VIAJE =
             DateTimeFormatter.ofPattern("d/M/uuuu h:mma", Locale.ROOT);
 
-    private final JavaMailSender mailSender;
-    private final String remitente;
-    private final String claveAplicacion;
-    private final boolean configuracionLista;
+    private final ResendEmailClient resendEmailClient;
 
-    public GmailRegistroNotificacionService(
-            JavaMailSender mailSender,
-            @Value("${spring.mail.username:}") String remitente,
-            @Value("${spring.mail.password:}") String claveAplicacion
-    ) {
-        this.mailSender = mailSender;
-        this.remitente = remitente;
-        this.claveAplicacion = claveAplicacion;
-        this.configuracionLista = StringUtils.hasText(remitente) && StringUtils.hasText(claveAplicacion);
+    public ResendRegistroNotificacionService(ResendEmailClient resendEmailClient) {
+        this.resendEmailClient = resendEmailClient;
     }
 
     @Override
     public void enviarConfirmacionPorCorreo(Long idLanchero, String correo) {
-        if (!configuracionLista) {
-            throw new IllegalStateException(
-                    "SMTP no está configurado; no se puede enviar la confirmación de registro."
-            );
-        }
-
         String contenidoHtml = """
                 <p>¡Hola! 👋</p>
                 <p>¡Gracias por sumarte a NautiFlow! Recibimos correctamente tus datos y documentos.</p>
@@ -72,29 +46,17 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
                 <p>Te avisaremos por este medio cuando tengamos novedades.</p>
                 <p>¡Nos alegra que quieras navegar con nosotros! 🚤</p>
                 """;
+        long inicioEnvio = System.nanoTime();
         try {
-            MimeMessage mensaje = crearMensaje(
+            resendEmailClient.enviar(new CorreoTransaccional(
                     correo,
                     ASUNTO_REGISTRO,
                     TEXTO_REGISTRO,
                     CorreoHtmlTemplate.renderizar("¡Solicitud recibida!", "⚓", contenidoHtml)
-            );
-            long inicioEnvioSmtp = System.nanoTime();
-            try {
-                mailSender.send(mensaje);
-            } finally {
-                logger.info("Envío SMTP de confirmación de registro: {} ms",
-                        milisegundosDesde(inicioEnvioSmtp));
-            }
+            ), "registro-lanchero-" + idLanchero);
             logger.info("Correo de confirmación enviado para lanchero {}.", idLanchero);
-        } catch (MailException | MessagingException exception) {
-            logger.error(
-                    "No se pudo enviar el correo de confirmación para lanchero {}. categoría={}, diagnóstico SMTP seguro={}",
-                    idLanchero,
-                    RegistroEmailSmtpErrorClassifier.clasificar(exception),
-                    RegistroEmailSmtpErrorClassifier.diagnostico(exception, remitente, claveAplicacion)
-            );
-            throw new IllegalStateException("No se pudo enviar el correo de confirmación del registro.", exception);
+        } finally {
+            logger.info("Tiempo total de envío de confirmación de registro: {} ms", milisegundosDesde(inicioEnvio));
         }
     }
 
@@ -231,12 +193,6 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
 
     @Override
     public void notificarViajeProgramado(ViajeProgramadoEvent viaje) {
-        if (!configuracionLista) {
-            logger.warn("No se envió el correo del viaje {} al lanchero {}: SMTP no configurado.",
-                    viaje.idViaje(), viaje.idLanchero());
-            return;
-        }
-
         String fechaHoraInicio = formatearFechaHoraViaje(viaje.fechaHoraInicio());
         String asunto = "¡Tienes un nuevo viaje programado en NautiFlow!";
         String texto = """
@@ -284,7 +240,7 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
         );
 
         try {
-            mailSender.send(crearMensaje(
+            resendEmailClient.enviar(new CorreoTransaccional(
                     viaje.correoLanchero(),
                     asunto,
                     texto,
@@ -292,9 +248,9 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
             ));
             logger.info("Correo de nuevo viaje {} enviado al lanchero {}.",
                     viaje.idViaje(), viaje.idLanchero());
-        } catch (MailException | MessagingException exception) {
-            logger.error("No se pudo enviar el correo del viaje {} al lanchero {}.",
-                    viaje.idViaje(), viaje.idLanchero(), exception);
+        } catch (ResendEmailException exception) {
+            logger.error("No se pudo enviar el correo del viaje {}: categoría={}, HTTP {}.",
+                    viaje.idViaje(), exception.getCategory(), exception.getHttpStatus());
         }
     }
 
@@ -312,48 +268,22 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
             String textoPlano,
             String contenidoHtml
     ) {
-        if (!configuracionLista) {
-            logger.error("No se pudo enviar la notificación para lanchero {}: SMTP no configurado.", idLanchero);
-            throw new ResponseStatusException(
-                    HttpStatus.SERVICE_UNAVAILABLE,
-                    "No se pudo enviar la notificación. La operación no fue confirmada."
-            );
-        }
-
         try {
-            mailSender.send(crearMensaje(
+            resendEmailClient.enviar(new CorreoTransaccional(
                     correo,
                     asunto,
                     textoPlano,
                     CorreoHtmlTemplate.renderizar(titulo, emoji, contenidoHtml)
             ));
             logger.info("Notificación enviada para lanchero {}.", idLanchero);
-        } catch (MailException | MessagingException exception) {
-            logger.error("No se pudo enviar la notificación para lanchero {}. Error SMTP: {}.",
-                    idLanchero, exception.getClass().getSimpleName());
+        } catch (ResendEmailException exception) {
+            logger.error("No se pudo enviar la notificación para lanchero {}: categoría={}, HTTP {}.",
+                    idLanchero, exception.getCategory(), exception.getHttpStatus());
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "No se pudo enviar la notificación. La operación no fue confirmada."
+                    "No se pudo enviar la notificación. La operación no fue confirmada.",
+                    exception
             );
         }
-    }
-
-    private MimeMessage crearMensaje(String correo, String asunto, String texto, String contenidoHtml)
-            throws MessagingException {
-        MimeMessage mensaje = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(mensaje, false, StandardCharsets.UTF_8.name());
-        helper.setFrom(remitente);
-        helper.setTo(correo);
-        helper.setSubject(asunto);
-        MimeBodyPart parteTexto = new MimeBodyPart();
-        parteTexto.setText(texto, StandardCharsets.UTF_8.name());
-        MimeBodyPart parteHtml = new MimeBodyPart();
-        parteHtml.setContent(contenidoHtml, "text/html; charset=UTF-8");
-        MimeMultipart alternativas = new MimeMultipart("alternative");
-        alternativas.addBodyPart(parteTexto);
-        alternativas.addBodyPart(parteHtml);
-        mensaje.setContent(alternativas);
-        mensaje.saveChanges();
-        return mensaje;
     }
 }
