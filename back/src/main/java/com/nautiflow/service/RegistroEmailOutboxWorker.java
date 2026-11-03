@@ -49,7 +49,8 @@ public class RegistroEmailOutboxWorker {
         try {
             notificacionService.enviarConfirmacionPorCorreo(tarea.idLanchero(), tarea.correo());
         } catch (RuntimeException exception) {
-            registrarReintento(tarea, exception);
+            String categoriaError = RegistroEmailSmtpErrorClassifier.clasificar(exception);
+            registrarReintento(tarea, exception, categoriaError);
             return;
         }
 
@@ -57,7 +58,11 @@ public class RegistroEmailOutboxWorker {
         LOGGER.info("Notificación de registro {} enviada correctamente.", tarea.id());
     }
 
-    private void registrarReintento(RegistroEmailOutboxTask tarea, RuntimeException exception) {
+    private void registrarReintento(
+            RegistroEmailOutboxTask tarea,
+            RuntimeException exception,
+            String categoriaError
+    ) {
         long demoraSegundos = Math.min(30L << Math.min(tarea.intento() - 1, 7), 3600);
         try {
             outboxRepository.programarReintento(
@@ -65,14 +70,15 @@ public class RegistroEmailOutboxWorker {
                     tarea.intento(),
                     maximoIntentos,
                     demoraSegundos,
-                    exception.getClass().getSimpleName()
+                    categoriaError
             );
             LOGGER.warn(
-                    "Falló el envío de la notificación de registro {}; intento {}/{}; tipo de error={}.",
+                    "Falló el envío de la notificación de registro {}; intento {}/{}; categoría={}; tipos de excepción={}",
                     tarea.id(),
                     tarea.intento(),
                     maximoIntentos,
-                    exception.getClass().getSimpleName()
+                    categoriaError,
+                    RegistroEmailSmtpErrorClassifier.tiposDeExcepcion(exception)
             );
         } catch (RuntimeException persistenciaException) {
             exception.addSuppressed(persistenciaException);

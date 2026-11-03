@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -136,13 +137,16 @@ class GmailRegistroNotificacionServiceTest {
 
     @Test
     void falloSmtpEnConfirmacionSePropagaParaReintentoDelOutbox() {
-        doThrow(new org.springframework.mail.MailSendException("smtp failure"))
+        org.springframework.mail.MailSendException falloSmtp =
+                new org.springframework.mail.MailSendException("smtp failure");
+        doThrow(falloSmtp)
                 .when(mailSender).send(any(MimeMessage.class));
 
-        assertThrows(
+        IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
                 () -> service.enviarConfirmacionPorCorreo(12L, "ana@example.com")
         );
+        assertSame(falloSmtp, exception.getCause());
     }
 
     @Test

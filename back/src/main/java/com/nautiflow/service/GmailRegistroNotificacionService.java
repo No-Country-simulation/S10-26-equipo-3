@@ -43,6 +43,7 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
 
     private final JavaMailSender mailSender;
     private final String remitente;
+    private final String claveAplicacion;
     private final boolean configuracionLista;
 
     public GmailRegistroNotificacionService(
@@ -52,6 +53,7 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
     ) {
         this.mailSender = mailSender;
         this.remitente = remitente;
+        this.claveAplicacion = claveAplicacion;
         this.configuracionLista = StringUtils.hasText(remitente) && StringUtils.hasText(claveAplicacion);
     }
 
@@ -86,8 +88,12 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
             }
             logger.info("Correo de confirmación enviado para lanchero {}.", idLanchero);
         } catch (MailException | MessagingException exception) {
-            logger.error("No se pudo enviar el correo de confirmación para lanchero {}. Error SMTP: {}.",
-                    idLanchero, exception.getClass().getSimpleName());
+            logger.error(
+                    "No se pudo enviar el correo de confirmación para lanchero {}. categoría={}, diagnóstico SMTP seguro={}",
+                    idLanchero,
+                    RegistroEmailSmtpErrorClassifier.clasificar(exception),
+                    RegistroEmailSmtpErrorClassifier.diagnostico(exception, remitente, claveAplicacion)
+            );
             throw new IllegalStateException("No se pudo enviar el correo de confirmación del registro.", exception);
         }
     }

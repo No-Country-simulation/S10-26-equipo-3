@@ -2,8 +2,10 @@ package com.nautiflow.service;
 
 import com.nautiflow.repository.RegistroEmailOutboxRepository;
 import com.nautiflow.repository.RegistroEmailOutboxTask;
+import org.springframework.mail.MailSendException;
 import org.junit.jupiter.api.Test;
 
+import java.net.SocketTimeoutException;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
@@ -33,12 +35,14 @@ class RegistroEmailOutboxWorkerTest {
                 7L, 12L, "usuario@example.com", 3
         );
         when(repository.reclamarSiguiente(5, 120)).thenReturn(Optional.of(tarea));
-        doThrow(new IllegalStateException("smtp unavailable"))
+        doThrow(new IllegalStateException("smtp unavailable", new MailSendException(
+                "smtp failure", new SocketTimeoutException("connection timed out")
+        )))
                 .when(notificacionService).enviarConfirmacionPorCorreo(12L, "usuario@example.com");
 
         worker.procesarSiguiente();
 
-        verify(repository).programarReintento(7L, 3, 5, 120, "IllegalStateException");
+        verify(repository).programarReintento(7L, 3, 5, 120, "SMTP_TIMEOUT");
         verify(repository, never()).marcarEnviada(anyLong());
     }
 
@@ -53,6 +57,6 @@ class RegistroEmailOutboxWorkerTest {
 
         worker.procesarSiguiente();
 
-        verify(repository).programarReintento(7L, 5, 5, 480, "IllegalStateException");
+        verify(repository).programarReintento(7L, 5, 5, 480, "SMTP_OTHER");
     }
 }
