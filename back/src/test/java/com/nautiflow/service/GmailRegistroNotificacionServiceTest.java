@@ -123,6 +123,29 @@ class GmailRegistroNotificacionServiceTest {
     }
 
     @Test
+    void confirmacionSinConfiguracionSmtpFallaParaQueElOutboxPuedaReintentar() {
+        GmailRegistroNotificacionService sinConfiguracion =
+                new GmailRegistroNotificacionService(mailSender, "", "");
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> sinConfiguracion.enviarConfirmacionPorCorreo(12L, "ana@example.com")
+        );
+        verify(mailSender, never()).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void falloSmtpEnConfirmacionSePropagaParaReintentoDelOutbox() {
+        doThrow(new org.springframework.mail.MailSendException("smtp failure"))
+                .when(mailSender).send(any(MimeMessage.class));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.enviarConfirmacionPorCorreo(12L, "ana@example.com")
+        );
+    }
+
+    @Test
     void notificacionDeResenaConComentarioEsNeutralYConservaElTexto() throws Exception {
         String comentario = "No fue lo esperado.\n  La salida se retrasó <30 min>.";
         service.notificarResena(

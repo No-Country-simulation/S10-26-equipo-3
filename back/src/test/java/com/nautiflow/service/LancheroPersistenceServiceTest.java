@@ -9,6 +9,7 @@ import com.nautiflow.model.Zona;
 import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
+import com.nautiflow.repository.RegistroEmailOutboxRepository;
 import com.nautiflow.repository.ZonaRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,7 @@ class LancheroPersistenceServiceTest {
     @Mock private LancheroRepository lancheroRepository;
     @Mock private LanchaRepository lanchaRepository;
     @Mock private DocumentoRepository documentoRepository;
+    @Mock private RegistroEmailOutboxRepository registroEmailOutboxRepository;
     @Mock private ZonaRepository zonaRepository;
     @Mock private PasswordEncoder passwordEncoder;
 
@@ -47,6 +49,7 @@ class LancheroPersistenceServiceTest {
                 lancheroRepository,
                 lanchaRepository,
                 documentoRepository,
+                registroEmailOutboxRepository,
                 zonaRepository,
                 passwordEncoder
         );
@@ -88,6 +91,12 @@ class LancheroPersistenceServiceTest {
         assertEquals(Set.of(norte, centro), lanchaCaptor.getValue().getZonas());
         ArgumentCaptor<Documento> documentoCaptor = ArgumentCaptor.forClass(Documento.class);
         verify(documentoRepository, org.mockito.Mockito.times(3)).save(documentoCaptor.capture());
+        verify(registroEmailOutboxRepository).encolar(12L, "maria@example.com");
+        org.mockito.InOrder ordenPersistencia = org.mockito.Mockito.inOrder(
+                documentoRepository, registroEmailOutboxRepository
+        );
+        ordenPersistencia.verify(documentoRepository, org.mockito.Mockito.times(3)).save(any(Documento.class));
+        ordenPersistencia.verify(registroEmailOutboxRepository).encolar(12L, "maria@example.com");
         assertEquals(
                 List.of("image/webp", "application/pdf", "image/webp"),
                 documentoCaptor.getAllValues().stream().map(Documento::getTipoContenido).toList()

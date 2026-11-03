@@ -58,9 +58,9 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
     @Override
     public void enviarConfirmacionPorCorreo(Long idLanchero, String correo) {
         if (!configuracionLista) {
-            logger.warn("No se envió el correo de confirmación para lanchero {}: configura GMAIL_USERNAME y GMAIL_APP_PASSWORD.",
-                    idLanchero);
-            return;
+            throw new IllegalStateException(
+                    "SMTP no está configurado; no se puede enviar la confirmación de registro."
+            );
         }
 
         String contenidoHtml = """
@@ -71,17 +71,29 @@ public class GmailRegistroNotificacionService implements RegistroNotificacionSer
                 <p>¡Nos alegra que quieras navegar con nosotros! 🚤</p>
                 """;
         try {
-            mailSender.send(crearMensaje(
+            MimeMessage mensaje = crearMensaje(
                     correo,
                     ASUNTO_REGISTRO,
                     TEXTO_REGISTRO,
                     CorreoHtmlTemplate.renderizar("¡Solicitud recibida!", "⚓", contenidoHtml)
-            ));
+            );
+            long inicioEnvioSmtp = System.nanoTime();
+            try {
+                mailSender.send(mensaje);
+            } finally {
+                logger.info("Envío SMTP de confirmación de registro: {} ms",
+                        milisegundosDesde(inicioEnvioSmtp));
+            }
             logger.info("Correo de confirmación enviado para lanchero {}.", idLanchero);
         } catch (MailException | MessagingException exception) {
             logger.error("No se pudo enviar el correo de confirmación para lanchero {}. Error SMTP: {}.",
                     idLanchero, exception.getClass().getSimpleName());
+            throw new IllegalStateException("No se pudo enviar el correo de confirmación del registro.", exception);
         }
+    }
+
+    private long milisegundosDesde(long inicioNano) {
+        return (System.nanoTime() - inicioNano) / 1_000_000;
     }
 
     @Override

@@ -13,9 +13,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.retries.StandardRetryStrategy;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -80,57 +82,72 @@ public class ArchivoLancheroStorage {
     }
 
     public ArchivoAlmacenado guardar(MultipartFile archivo, TipoArchivo tipo) throws IOException {
-        if (archivo == null || archivo.isEmpty()) {
-            throw new SolicitudInvalidaException("Los documentos y fotos enviados no pueden estar vacíos.");
-        }
+        return guardar(archivo, tipo, tipo == null ? "archivo" : tipo.name().toLowerCase());
+    }
 
-        byte[] contenido = archivo.getBytes();
-        String contentType = archivo.getContentType() == null ? "" : archivo.getContentType().toLowerCase();
-        String extension;
-        if (tipo == TipoArchivo.FOTO) {
-            if (!contentType.startsWith("image/")) {
-                throw new SolicitudInvalidaException("Las fotos deben ser archivos de imagen.");
+    public ArchivoAlmacenado guardar(MultipartFile archivo, TipoArchivo tipo, String nombreArchivo)
+            throws IOException {
+        byte[] contenido = null;
+        String contentType = null;
+        String clave = null;
+        long inicioProcesamiento = System.nanoTime();
+        try {
+            if (archivo == null || archivo.isEmpty()) {
+                throw new SolicitudInvalidaException("Los documentos y fotos enviados no pueden estar vacíos.");
             }
-            if (contenido.length > maxFotoBytes) {
-                throw new ArchivoDemasiadoGrandeException(
-                        "Cada foto puede pesar como máximo " + maxFotoBytes / (1024 * 1024) + " MB."
-                );
-            }
-            contenido = imagenWebpConverter.convertir(contenido);
-            if (contenido.length > maxFotoBytes) {
-                throw new ArchivoDemasiadoGrandeException(
-                        "La foto convertida supera el límite de "
-                                + maxFotoBytes / (1024 * 1024) + " MB."
-                );
-            }
-            contentType = "image/webp";
-            extension = ".webp";
-        } else {
-            extension = EXTENSIONES_DOCUMENTO.get(contentType);
-            if (extension == null) {
-                throw new SolicitudInvalidaException("Documento no permitido; envíe PDF, JPEG, PNG o WebP.");
-            }
-            if (contenido.length > maxDocumentoBytes) {
-                throw new ArchivoDemasiadoGrandeException(
-                        "Cada documento puede pesar como máximo " + maxDocumentoBytes / (1024 * 1024) + " MB."
-                );
-            }
-            validarContenidoDocumento(contenido, contentType);
-            if (contentType.startsWith("image/")) {
-                contenido = imagenWebpConverter.convertir(contenido);
-                if (contenido.length > maxDocumentoBytes) {
+            contenido = archivo.getBytes();
+            contentType = archivo.getContentType() == null ? "" : archivo.getContentType().toLowerCase();
+            String extension;
+            if (tipo == TipoArchivo.FOTO) {
+                if (!contentType.startsWith("image/")) {
+                    throw new SolicitudInvalidaException("Las fotos deben ser archivos de imagen.");
+                }
+                if (contenido.length > maxFotoBytes) {
                     throw new ArchivoDemasiadoGrandeException(
-                            "La imagen convertida supera el límite de "
-                                    + maxDocumentoBytes / (1024 * 1024) + " MB."
+                            "Cada foto puede pesar como máximo " + maxFotoBytes / (1024 * 1024) + " MB."
+                    );
+                }
+                contenido = imagenWebpConverter.convertir(contenido);
+                if (contenido.length > maxFotoBytes) {
+                    throw new ArchivoDemasiadoGrandeException(
+                            "La foto convertida supera el límite de "
+                                    + maxFotoBytes / (1024 * 1024) + " MB."
                     );
                 }
                 contentType = "image/webp";
                 extension = ".webp";
+            } else {
+                extension = EXTENSIONES_DOCUMENTO.get(contentType);
+                if (extension == null) {
+                    throw new SolicitudInvalidaException("Documento no permitido; envíe PDF, JPEG, PNG o WebP.");
+                }
+                if (contenido.length > maxDocumentoBytes) {
+                    throw new ArchivoDemasiadoGrandeException(
+                            "Cada documento puede pesar como máximo " + maxDocumentoBytes / (1024 * 1024) + " MB."
+                    );
+                }
+                validarContenidoDocumento(contenido, contentType);
+                if (contentType.startsWith("image/")) {
+                    contenido = imagenWebpConverter.convertir(contenido);
+                    if (contenido.length > maxDocumentoBytes) {
+                        throw new ArchivoDemasiadoGrandeException(
+                                "La imagen convertida supera el límite de "
+                                        + maxDocumentoBytes / (1024 * 1024) + " MB."
+                        );
+                    }
+                    contentType = "image/webp";
+                    extension = ".webp";
+                }
             }
+
+            String carpeta = tipo == TipoArchivo.FOTO ? "fotos" : "documentos";
+            clave = "nautiflow/" + carpeta + "/" + UUID.randomUUID() + extension;
+        } finally {
+            logger.info("Procesamiento y conversión del archivo {} (tipo={}): {} ms",
+                    nombreArchivo, tipo, milisegundosDesde(inicioProcesamiento));
         }
 
-        String carpeta = tipo == TipoArchivo.FOTO ? "fotos" : "documentos";
-        String clave = "nautiflow/" + carpeta + "/" + UUID.randomUUID() + extension;
+        long inicioSubida = System.nanoTime();
         try {
             s3().putObject(
                     PutObjectRequest.builder()
@@ -143,10 +160,19 @@ public class ArchivoLancheroStorage {
             return new ArchivoAlmacenado(clave, contentType);
         } catch (SdkException exception) {
             registrarErrorR2("subir archivo", exception);
+            try {
+                eliminar(List.of(clave));
+            } catch (RuntimeException cleanupException) {
+                exception.addSuppressed(cleanupException);
+                logger.error("No se pudo limpiar el objeto R2 tras fallar su subida.", cleanupException);
+            }
             throw new ErrorAlmacenamientoException(
                     mensajeErrorSubida(exception),
                     exception
             );
+        } finally {
+            logger.info("Subida del archivo {} a Cloudflare R2 (tipo={}): {} ms",
+                    nombreArchivo, tipo, milisegundosDesde(inicioSubida));
         }
     }
 
@@ -154,13 +180,24 @@ public class ArchivoLancheroStorage {
         if (claves.isEmpty()) {
             return;
         }
-        try {
-            for (String clave : claves) {
+        SdkException primerError = null;
+        for (String clave : claves) {
+            try {
                 s3().deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(clave).build());
+            } catch (SdkException exception) {
+                registrarErrorR2("eliminar archivo", exception);
+                if (primerError == null) {
+                    primerError = exception;
+                } else {
+                    primerError.addSuppressed(exception);
+                }
             }
-        } catch (SdkException exception) {
-            registrarErrorR2("eliminar archivo", exception);
-            throw new IllegalStateException("No se pudieron eliminar archivos temporales del bucket R2.", exception);
+        }
+        if (primerError != null) {
+            throw new IllegalStateException(
+                    "No se pudieron eliminar uno o más archivos temporales del bucket R2.",
+                    primerError
+            );
         }
     }
 
@@ -214,6 +251,9 @@ public class ArchivoLancheroStorage {
                                 .pathStyleAccessEnabled(true)
                                 .chunkedEncodingEnabled(false)
                                 .build())
+                        .overrideConfiguration(ClientOverrideConfiguration.builder()
+                                .retryStrategy(StandardRetryStrategy.builder().maxAttempts(3).build())
+                                .build())
                         .build();
             } catch (IllegalArgumentException exception) {
                 throw new IllegalStateException("La URL del endpoint de Cloudflare R2 no es válida.", exception);
@@ -247,6 +287,10 @@ public class ArchivoLancheroStorage {
                 operacion,
                 exception.getClass().getSimpleName()
         );
+    }
+
+    private long milisegundosDesde(long inicioNano) {
+        return (System.nanoTime() - inicioNano) / 1_000_000;
     }
 
     private String mensajeErrorSubida(SdkException exception) {

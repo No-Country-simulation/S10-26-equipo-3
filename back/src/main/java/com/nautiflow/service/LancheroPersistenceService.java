@@ -11,10 +11,15 @@ import com.nautiflow.model.Zona;
 import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
+import com.nautiflow.repository.RegistroEmailOutboxRepository;
 import com.nautiflow.repository.ZonaRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.HashSet;
 import java.util.List;
@@ -23,9 +28,12 @@ import java.util.stream.Collectors;
 
 @Service
 public class LancheroPersistenceService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(LancheroPersistenceService.class);
+
     private final LancheroRepository lancheroRepository;
     private final LanchaRepository lanchaRepository;
     private final DocumentoRepository documentoRepository;
+    private final RegistroEmailOutboxRepository registroEmailOutboxRepository;
     private final ZonaRepository zonaRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -33,12 +41,14 @@ public class LancheroPersistenceService {
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
             DocumentoRepository documentoRepository,
+            RegistroEmailOutboxRepository registroEmailOutboxRepository,
             ZonaRepository zonaRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.lancheroRepository = lancheroRepository;
         this.lanchaRepository = lanchaRepository;
         this.documentoRepository = documentoRepository;
+        this.registroEmailOutboxRepository = registroEmailOutboxRepository;
         this.zonaRepository = zonaRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -54,6 +64,20 @@ public class LancheroPersistenceService {
             String tipoContenidoAntecedentes,
             List<String> rutasFotos
     ) {
+        long inicioPersistencia = System.nanoTime();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    String resultado = status == STATUS_COMMITTED
+                            ? "confirmada"
+                            : status == STATUS_ROLLED_BACK ? "revertida" : "desconocido";
+                    LOGGER.info("Persistencia PostgreSQL y finalización de transacción: {} ms (resultado={})",
+                            milisegundosDesde(inicioPersistencia), resultado);
+                }
+            });
+        }
+
         List<Long> zonasIds = solicitud.zonasIds() == null ? List.of() : solicitud.zonasIds();
         if (zonasIds.stream().anyMatch(id -> id == null || id <= 0)) {
             throw new SolicitudInvalidaException("Los IDs de zonas deben ser positivos.");
@@ -103,6 +127,7 @@ public class LancheroPersistenceService {
         for (String ruta : rutasFotos) {
             guardarDocumento(lanchero, "FOTO_LANCHA", ruta, "image/webp");
         }
+        registroEmailOutboxRepository.encolar(lanchero.getIdLanchero(), lanchero.getCorreo());
 
         return new RegistroLancheroResponse(
                 lanchero.getIdLanchero(),
@@ -125,5 +150,9 @@ public class LancheroPersistenceService {
         documento.setClaveArchivo(clave);
         documento.setTipoContenido(tipoContenido);
         documentoRepository.save(documento);
+    }
+
+    private long milisegundosDesde(long inicioNano) {
+        return (System.nanoTime() - inicioNano) / 1_000_000;
     }
 }
