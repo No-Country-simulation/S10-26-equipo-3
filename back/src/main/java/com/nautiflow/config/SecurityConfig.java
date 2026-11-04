@@ -1,6 +1,7 @@
 package com.nautiflow.config;
 
 import com.nautiflow.service.JwtTokenService;
+import com.nautiflow.service.JwtTokenRevocationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nautiflow.exception.handler.ApiSecurityErrorHandler;
 import org.springframework.context.annotation.Bean;
@@ -26,6 +27,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtTokenService jwtTokenService,
+            JwtTokenRevocationService revocationService,
             ObjectMapper objectMapper,
             CorsConfigurationSource corsConfigurationSource
     )
@@ -35,6 +37,7 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .logout(logout -> logout.disable())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(securityErrorHandler)
                         .accessDeniedHandler(securityErrorHandler)
@@ -47,6 +50,9 @@ public class SecurityConfig {
                                 "/lancheros/registrar",
                                 "/login"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/logout").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/lanchas/destacadas").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/lanchas/*/resenas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/zonas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/resena/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/resena/**").permitAll()
@@ -62,11 +68,16 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtTokenService, securityErrorHandler),
+                        new JwtAuthenticationFilter(jwtTokenService, revocationService, securityErrorHandler),
                         UsernamePasswordAuthenticationFilter.class
                 )
 
                 .build();
+    }
+
+    @Bean
+    JwtTokenRevocationService jwtTokenRevocationService() {
+        return new JwtTokenRevocationService();
     }
 
     @Bean

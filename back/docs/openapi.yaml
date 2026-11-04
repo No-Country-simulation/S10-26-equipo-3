@@ -13,6 +13,66 @@ tags:
   - name: Reseñas públicas
   - name: Zonas
 paths:
+  /lanchas/{idLancha}/resenas:
+    get:
+      operationId: listarResenasDeLancha
+      tags: [Reseñas públicas]
+      summary: Consultar reseñas públicas de una embarcación
+      description: Endpoint público; solo devuelve la puntuación, comentario y fecha de cada reseña.
+      security: []
+      parameters:
+        - name: idLancha
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+      responses:
+        "200":
+          description: Reseñas encontradas o lista vacía si la lancha no tiene reseñas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginaResenasPublicas"
+              example:
+                content:
+                  - idResena: 25
+                    puntuacion: 5
+                    comentario: Excelente experiencia, el lanchero fue muy amable.
+                    fecha: "2026-11-03T18:20:00.000000Z"
+                page: 0
+                size: 10
+                totalElements: 1
+                totalPages: 1
+        "400":
+          description: Parámetros de paginación inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: La lancha no existe.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /lanchas/destacadas:
+    get:
+      operationId: listarLanchasDestacadas
+      tags: [Dashboard]
+      summary: Listar las embarcaciones destacadas de lancheros aprobados
+      description: Devuelve hasta 10 embarcaciones, primero las mejor valoradas y luego las que aún no tienen reseñas.
+      security: []
+      responses:
+        "200":
+          description: Solicitud procesada correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginaLanchasDestacadas"
   /zonas:
     get:
       operationId: listarZonas
@@ -63,6 +123,29 @@ paths:
                 $ref: "#/components/schemas/Error"
         "401":
           description: No autenticado.
+  /logout:
+    post:
+      operationId: cerrarSesionAdministrador
+      tags: [Autenticación]
+      summary: Cerrar la sesión del administrador autenticado
+      description: Revoca el JWT actual hasta su expiración original.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sesión cerrada correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResponse"
+              example:
+                mensaje: Sesión cerrada correctamente
+        "401":
+          description: Token ausente, inválido, expirado o previamente revocado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /lancheros/registrar:
     post:
       operationId: registrarLanchero
@@ -685,6 +768,54 @@ components:
     SinPermiso:
       description: Sin permiso.
   schemas:
+    PaginaLanchasDestacadas:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/LanchaDestacada"
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 10
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+    LanchaDestacada:
+      type: object
+      required:
+        - idLancha
+        - nombreEmbarcacion
+        - lancheroNombreCompleto
+        - fotoPrincipalUrl
+        - promedioCalificacion
+        - totalResenas
+        - verificada
+      properties:
+        idLancha:
+          type: integer
+          format: int64
+        nombreEmbarcacion:
+          type: string
+        lancheroNombreCompleto:
+          type: string
+        fotoPrincipalUrl:
+          type: [string, "null"]
+          format: uri
+        promedioCalificacion:
+          type: [number, "null"]
+          format: double
+        totalResenas:
+          type: integer
+          format: int64
+        verificada:
+          type: boolean
     Zona:
       type: object
       required:
@@ -719,6 +850,13 @@ components:
         mensaje:
           type: string
           example: Inicio de sesión exitoso.
+    LogoutResponse:
+      type: object
+      required: [mensaje]
+      properties:
+        mensaje:
+          type: string
+          example: Sesión cerrada correctamente
     AdminDashboard:
       type: object
       required: [solicitudesPendientes, lanchasVerificadas, viajesActivos]
@@ -1122,6 +1260,40 @@ components:
           format: int64
         totalPages:
           type: integer
+    PaginaResenasPublicas:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResenaPublica"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+    ResenaPublica:
+      type: object
+      required: [idResena, puntuacion, fecha]
+      properties:
+        idResena:
+          type: integer
+          format: int64
+        puntuacion:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comentario:
+          type: [string, "null"]
+          maxLength: 500
+        fecha:
+          type: string
+          format: date-time
     ResenaAdmin:
       type: object
       required:

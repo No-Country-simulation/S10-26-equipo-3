@@ -1,6 +1,7 @@
 package com.nautiflow.config;
 
 import com.nautiflow.service.JwtTokenService;
+import com.nautiflow.service.JwtTokenRevocationService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -20,13 +21,16 @@ import java.util.List;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenService jwtTokenService;
+    private final JwtTokenRevocationService revocationService;
     private final ApiSecurityErrorHandler securityErrorHandler;
 
     public JwtAuthenticationFilter(
             JwtTokenService jwtTokenService,
+            JwtTokenRevocationService revocationService,
             ApiSecurityErrorHandler securityErrorHandler
     ) {
         this.jwtTokenService = jwtTokenService;
+        this.revocationService = revocationService;
         this.securityErrorHandler = securityErrorHandler;
     }
 
@@ -49,6 +53,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
             try {
                 Claims claims = jwtTokenService.validarToken(authorization.substring(7));
+                if (revocationService.estaRevocado(authorization.substring(7))) {
+                    rechazarToken(request, response, new BadCredentialsException("El token JWT fue revocado."));
+                    return;
+                }
                 String subject = claims.getSubject();
                 String role = claims.get("role", String.class);
                 if (subject == null || subject.isBlank()) {

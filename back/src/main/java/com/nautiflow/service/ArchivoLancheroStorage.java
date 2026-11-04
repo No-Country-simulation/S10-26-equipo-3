@@ -233,11 +233,24 @@ public class ArchivoLancheroStorage {
 
     private synchronized S3Client s3() {
         if (s3Client == null) {
-            if (!StringUtils.hasText(endpoint) || !StringUtils.hasText(accessKeyId)
-                    || !StringUtils.hasText(secretAccessKey) || !StringUtils.hasText(bucket)) {
+            List<String> propiedadesFaltantes = new java.util.ArrayList<>();
+            if (!StringUtils.hasText(endpoint)) {
+                propiedadesFaltantes.add("nautiflow.r2.endpoint");
+            }
+            if (!StringUtils.hasText(accessKeyId)) {
+                propiedadesFaltantes.add("nautiflow.r2.access-key-id");
+            }
+            if (!StringUtils.hasText(secretAccessKey)) {
+                propiedadesFaltantes.add("nautiflow.r2.secret-access-key");
+            }
+            if (!StringUtils.hasText(bucket)) {
+                propiedadesFaltantes.add("nautiflow.r2.bucket");
+            }
+            if (!propiedadesFaltantes.isEmpty()) {
                 throw new AlmacenamientoNoConfiguradoException(
-                        "La configuración de Cloudflare R2 está incompleta. Verifica endpoint, bucket, región, "
-                                + "R2_ACCESS_KEY y R2_SECRET_KEY en el entorno del proceso."
+                        "La configuración de Cloudflare R2 está incompleta. "
+                                + "Completa estas propiedades en application.properties: "
+                                + String.join(", ", propiedadesFaltantes) + "."
                 );
             }
             try {
