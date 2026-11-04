@@ -21,17 +21,17 @@ public interface ResenaRepository extends JpaRepository<Resena, Long> {
                         r.idResena, r.estrellas, r.comentario, r.fecha
                     )
                     from Resena r
-                    where r.viaje.lancha.idLancha = :idLancha
+                    where r.viaje.lancha.lanchero.idLanchero = :idLanchero
                     order by r.fecha desc, r.idResena desc
                     """,
             countQuery = """
                     select count(r)
                     from Resena r
-                    where r.viaje.lancha.idLancha = :idLancha
+                    where r.viaje.lancha.lanchero.idLanchero = :idLanchero
                     """
     )
-    Page<ResenaPublicaDTO> findPublicasByLanchaId(
-            @Param("idLancha") Long idLancha,
+    Page<ResenaPublicaDTO> findPublicasByLancheroId(
+            @Param("idLanchero") Long idLanchero,
             Pageable pageable
     );
 

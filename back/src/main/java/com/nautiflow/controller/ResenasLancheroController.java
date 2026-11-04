@@ -1,7 +1,7 @@
 package com.nautiflow.controller;
 
 import com.nautiflow.dto.PaginaResenasPublicasDTO;
-import com.nautiflow.service.ResenasLanchaService;
+import com.nautiflow.service.ResenasLancheroService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -10,19 +10,19 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Tag(name = "Reseñas públicas")
-public class ResenasLanchaController {
-    private final ResenasLanchaService resenasLanchaService;
+public class ResenasLancheroController {
+    private final ResenasLancheroService resenasLancheroService;
 
-    public ResenasLanchaController(ResenasLanchaService resenasLanchaService) {
-        this.resenasLanchaService = resenasLanchaService;
+    public ResenasLancheroController(ResenasLancheroService resenasLancheroService) {
+        this.resenasLancheroService = resenasLancheroService;
     }
 
-    @GetMapping("/lanchas/{idLancha}/resenas")
+    @GetMapping("/lancheros/{idLanchero}/resenas")
     public PaginaResenasPublicasDTO listar(
-            @PathVariable Long idLancha,
+            @PathVariable Long idLanchero,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        return resenasLanchaService.listar(idLancha, page, size);
+        return resenasLancheroService.listar(idLanchero, page, size);
     }
 }

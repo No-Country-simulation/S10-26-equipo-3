@@ -5,7 +5,7 @@ import com.nautiflow.config.SecurityConfig;
 import com.nautiflow.dto.PaginaResenasPublicasDTO;
 import com.nautiflow.dto.ResenaPublicaDTO;
 import com.nautiflow.service.JwtTokenService;
-import com.nautiflow.service.ResenasLanchaService;
+import com.nautiflow.service.ResenasLancheroService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -25,20 +25,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
-        controllers = ResenasLanchaController.class,
+        controllers = ResenasLancheroController.class,
         properties = "nautiflow.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
 )
 @Import({SecurityConfig.class, JacksonConfig.class, JwtTokenService.class})
-class ResenasLanchaControllerTest {
+class ResenasLancheroControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private ResenasLanchaService resenasLanchaService;
+    private ResenasLancheroService resenasLancheroService;
 
     @Test
     void consultaPublicaConPaginacionYNoExponeDatosDelTurista() throws Exception {
-        when(resenasLanchaService.listar(34L, 1, 2)).thenReturn(new PaginaResenasPublicasDTO(
+        when(resenasLancheroService.listar(12L, 1, 2)).thenReturn(new PaginaResenasPublicasDTO(
                 List.of(new ResenaPublicaDTO(
                         25L,
                         5,
@@ -51,7 +51,7 @@ class ResenasLanchaControllerTest {
                 2
         ));
 
-        mockMvc.perform(get("/lanchas/34/resenas")
+        mockMvc.perform(get("/lancheros/12/resenas")
                         .queryParam("page", "1")
                         .queryParam("size", "2"))
                 .andExpect(status().isOk())
@@ -67,24 +67,24 @@ class ResenasLanchaControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(3))
                 .andExpect(jsonPath("$.totalPages").value(2));
 
-        verify(resenasLanchaService).listar(34L, 1, 2);
+        verify(resenasLancheroService).listar(12L, 1, 2);
     }
 
     @Test
-    void lanchaInexistenteDevuelve404() throws Exception {
-        when(resenasLanchaService.listar(99L, 0, 10))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Lancha no encontrada."));
+    void lancheroInexistenteDevuelve404() throws Exception {
+        when(resenasLancheroService.listar(99L, 0, 10))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Lanchero no encontrado."));
 
-        mockMvc.perform(get("/lanchas/99/resenas"))
+        mockMvc.perform(get("/lancheros/99/resenas"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void lanchaSinResenasDevuelveListaVacia() throws Exception {
-        when(resenasLanchaService.listar(34L, 0, 10))
+    void lancheroSinResenasDevuelveListaVacia() throws Exception {
+        when(resenasLancheroService.listar(12L, 0, 10))
                 .thenReturn(new PaginaResenasPublicasDTO(List.of(), 0, 10, 0, 0));
 
-        mockMvc.perform(get("/lanchas/34/resenas"))
+        mockMvc.perform(get("/lancheros/12/resenas"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty())
                 .andExpect(jsonPath("$.totalElements").value(0))

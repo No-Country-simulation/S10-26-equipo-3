@@ -52,7 +52,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/logout").authenticated()
                         .requestMatchers(HttpMethod.GET, "/lanchas/destacadas").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/lanchas/*/resenas").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/lancheros/*/resenas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/zonas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/resena/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/resena/**").permitAll()

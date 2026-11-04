@@ -1,7 +1,7 @@
 package com.nautiflow.service;
 
 import com.nautiflow.dto.ResenaPublicaDTO;
-import com.nautiflow.repository.LanchaRepository;
+import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.ResenaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,40 +24,40 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ResenasLanchaServiceTest {
+class ResenasLancheroServiceTest {
     @Mock
-    private LanchaRepository lanchaRepository;
+    private LancheroRepository lancheroRepository;
 
     @Mock
     private ResenaRepository resenaRepository;
 
     @InjectMocks
-    private ResenasLanchaService service;
+    private ResenasLancheroService service;
 
     @Test
-    void listaSoloLaLanchaSolicitadaEnOrdenPaginado() {
+    void listaResenasDelLancheroEnOrdenPaginado() {
         var fechaReciente = OffsetDateTime.parse("2026-11-03T18:20:00Z");
         var fechaAntigua = OffsetDateTime.parse("2026-11-01T10:00:00Z");
         var reciente = new ResenaPublicaDTO(25L, 5, "Excelente experiencia.", fechaReciente);
         var antigua = new ResenaPublicaDTO(19L, 4, "Muy buen paseo.", fechaAntigua);
 
-        when(lanchaRepository.existsById(34L)).thenReturn(true);
-        when(resenaRepository.findPublicasByLanchaId(34L, PageRequest.of(1, 2)))
+        when(lancheroRepository.existsById(12L)).thenReturn(true);
+        when(resenaRepository.findPublicasByLancheroId(12L, PageRequest.of(1, 2)))
                 .thenReturn(new PageImpl<>(List.of(reciente, antigua), PageRequest.of(1, 2), 4));
 
-        var resultado = service.listar(34L, 1, 2);
+        var resultado = service.listar(12L, 1, 2);
 
         assertEquals(List.of(reciente, antigua), resultado.content());
         assertEquals(1, resultado.page());
         assertEquals(2, resultado.size());
         assertEquals(4, resultado.totalElements());
         assertEquals(2, resultado.totalPages());
-        verify(resenaRepository).findPublicasByLanchaId(34L, PageRequest.of(1, 2));
+        verify(resenaRepository).findPublicasByLancheroId(12L, PageRequest.of(1, 2));
     }
 
     @Test
-    void lanchaInexistenteDevuelve404SinConsultarResenas() {
-        when(lanchaRepository.existsById(99L)).thenReturn(false);
+    void lancheroInexistenteDevuelve404SinConsultarResenas() {
+        when(lancheroRepository.existsById(99L)).thenReturn(false);
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
@@ -65,16 +65,16 @@ class ResenasLanchaServiceTest {
         );
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-        verify(resenaRepository, never()).findPublicasByLanchaId(99L, PageRequest.of(0, 10));
+        verify(resenaRepository, never()).findPublicasByLancheroId(99L, PageRequest.of(0, 10));
     }
 
     @Test
-    void lanchaExistenteSinResenasDevuelvePaginaVacia() {
-        when(lanchaRepository.existsById(34L)).thenReturn(true);
-        when(resenaRepository.findPublicasByLanchaId(34L, PageRequest.of(0, 10)))
+    void lancheroExistenteSinResenasDevuelvePaginaVacia() {
+        when(lancheroRepository.existsById(12L)).thenReturn(true);
+        when(resenaRepository.findPublicasByLancheroId(12L, PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
 
-        var resultado = service.listar(34L, 0, 10);
+        var resultado = service.listar(12L, 0, 10);
 
         assertTrue(resultado.content().isEmpty());
         assertEquals(0, resultado.totalElements());
@@ -85,21 +85,21 @@ class ResenasLanchaServiceTest {
     void rechazaPaginacionInvalidaAntesDeConsultarLaLancha() {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.listar(34L, -1, 10)
+                () -> service.listar(12L, -1, 10)
         );
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
-        verify(lanchaRepository, never()).existsById(34L);
+        verify(lancheroRepository, never()).existsById(12L);
     }
 
     @Test
     void rechazaUnTamanoDePaginaSuperiorAlMaximoPermitido() {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> service.listar(34L, 0, 101)
+                () -> service.listar(12L, 0, 101)
         );
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
-        verify(lanchaRepository, never()).existsById(34L);
+        verify(lancheroRepository, never()).existsById(12L);
     }
 }
