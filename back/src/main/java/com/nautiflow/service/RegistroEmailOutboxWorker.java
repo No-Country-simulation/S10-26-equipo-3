@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
+/**
+ * Worker programado que procesa el outbox de correos de registro con lease, reintentos e idempotencia.
+ */
 @Component
 public class RegistroEmailOutboxWorker {
     private static final Logger LOGGER = LoggerFactory.getLogger(RegistroEmailOutboxWorker.class);
@@ -21,6 +24,9 @@ public class RegistroEmailOutboxWorker {
     private final int maximoIntentos;
     private final String namespaceEntorno;
 
+    /**
+     * Configura los reintentos máximos y el namespace usado en las claves de idempotencia.
+     */
     public RegistroEmailOutboxWorker(
             RegistroEmailOutboxRepository outboxRepository,
             RegistroNotificacionService notificacionService,
@@ -39,6 +45,9 @@ public class RegistroEmailOutboxWorker {
         this.namespaceEntorno = namespaceEntorno;
     }
 
+    /**
+     * Reclama una notificación pendiente, prepara su contenido, la envía y actualiza su estado en el outbox.
+     */
     @Scheduled(fixedDelayString = "${nautiflow.registration.email.poll-interval-ms:1000}")
     public void procesarSiguiente() {
         Optional<RegistroEmailOutboxTask> tareaPendiente;
@@ -82,6 +91,9 @@ public class RegistroEmailOutboxWorker {
         LOGGER.info("Notificación de registro {} enviada correctamente.", tarea.id());
     }
 
+    /**
+     * Genera la clave que evita enviar dos veces el mismo correo; conserva compatibilidad con registros antiguos.
+     */
     private String crearClaveIdempotencia(RegistroEmailOutboxTask tarea) {
         if (tarea.intento() > 1) {
             // Older outbox rows may already have reached Resend with this key before snapshots were persisted.
@@ -90,6 +102,9 @@ public class RegistroEmailOutboxWorker {
         return "registro-confirmacion:" + namespaceEntorno + ":" + tarea.id();
     }
 
+    /**
+     * Registra un reintento con espera exponencial o marca la tarea como fallida al agotar los intentos.
+     */
     private void registrarReintento(
             RegistroEmailOutboxTask tarea,
             RuntimeException exception,
@@ -124,6 +139,9 @@ public class RegistroEmailOutboxWorker {
         }
     }
 
+    /**
+     * Marca la notificación como fallida cuando el proveedor devuelve un error no reintentable.
+     */
     private void registrarFalloPermanente(RegistroEmailOutboxTask tarea, ResendEmailException exception) {
         try {
             outboxRepository.marcarFallida(tarea.id(), tarea.intento(), exception.getErrorCode());

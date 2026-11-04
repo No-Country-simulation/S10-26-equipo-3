@@ -1,9 +1,18 @@
 package com.nautiflow.service;
 
+/**
+ * Plantilla HTML compartida por los correos transaccionales de NautiFlow. También escapa texto para evitar inyección de HTML.
+ */
 final class CorreoHtmlTemplate {
+    /**
+     * Evita instanciar la plantilla; solo se usan sus métodos estáticos.
+     */
     private CorreoHtmlTemplate() {
     }
 
+    /**
+     * Escapa los caracteres especiales de HTML para insertar texto de forma segura.
+     */
     static String escapar(String valor) {
         return valor == null ? "" : valor.replace("&", "&amp;")
                 .replace("<", "&lt;")
@@ -12,6 +21,9 @@ final class CorreoHtmlTemplate {
                 .replace("'", "&#39;");
     }
 
+    /**
+     * Envuelve un contenido HTML en la plantilla visual común de los correos de NautiFlow.
+     */
     static String renderizar(String titulo, String emoji, String contenidoHtml) {
         return """
                 <!doctype html>

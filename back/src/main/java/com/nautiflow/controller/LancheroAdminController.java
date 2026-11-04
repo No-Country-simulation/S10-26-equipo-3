@@ -26,12 +26,18 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
+/**
+ * Expone la consulta de lancheros, el cambio de estado operativo y la búsqueda de embarcaciones disponibles para el administrador.
+ */
 @RestController
 @RequestMapping("/admin")
 public class LancheroAdminController {
     private final AdminWorkflowService adminWorkflowService;
     private final ViajeWorkflowService viajeWorkflowService;
 
+    /**
+     * Inyecta los servicios de administración de lancheros y de viajes.
+     */
     public LancheroAdminController(
             AdminWorkflowService adminWorkflowService,
             ViajeWorkflowService viajeWorkflowService
@@ -40,6 +46,9 @@ public class LancheroAdminController {
         this.viajeWorkflowService = viajeWorkflowService;
     }
 
+    /**
+     * Lista los lancheros con paginación y filtro opcional por estado de solicitud.
+     */
     @GetMapping("/lancheros")
     @Operation(tags = "Lancheros")
     public PaginaLancherosDTO lancheros(
@@ -50,6 +59,9 @@ public class LancheroAdminController {
         return adminWorkflowService.listarLancheros(EstadoSolicitudFiltro.parse(estado), page, size);
     }
 
+    /**
+     * Cambia el estado operativo de un lanchero aprobado que no esté en viaje.
+     */
     @PatchMapping("/lancheros/{id}/estado-viaje")
     @Operation(tags = "Lancheros")
     public LancheroAdminDTO actualizarEstadoOperativoLanchero(
@@ -59,6 +71,9 @@ public class LancheroAdminController {
         return adminWorkflowService.actualizarEstadoOperativo(id, solicitud);
     }
 
+    /**
+     * Busca embarcaciones disponibles para una capacidad, ruta y hora determinadas.
+     */
     @GetMapping("/lancheros/disponibles")
     @Operation(
             tags = "Lancheros",
@@ -92,6 +107,9 @@ public class LancheroAdminController {
         );
     }
 
+    /**
+     * Combina los parámetros de zona por nombre e ID, rechazando que se envíen ambos.
+     */
     private String combinarFiltroZona(String nombre, String id, String tipo) {
         if (nombre != null && id != null) {
             throw new ResponseStatusException(

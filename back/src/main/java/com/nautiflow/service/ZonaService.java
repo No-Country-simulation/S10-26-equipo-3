@@ -8,14 +8,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Servicio de consulta del catálogo de zonas.
+ */
 @Service
 public class ZonaService {
     private final ZonaRepository zonaRepository;
 
+    /**
+     * Inyecta el repositorio de zonas.
+     */
     public ZonaService(ZonaRepository zonaRepository) {
         this.zonaRepository = zonaRepository;
     }
 
+    /**
+     * Lista todas las zonas ordenadas alfabéticamente.
+     */
     @Transactional(readOnly = true)
     public List<ZonaDTO> listar() {
         return zonaRepository.findAll(Sort.by(Sort.Direction.ASC, "nombre")).stream()

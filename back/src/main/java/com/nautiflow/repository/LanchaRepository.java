@@ -13,6 +13,9 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repositorio de embarcaciones, con consultas para contar lanchas y buscar las disponibles para una ruta.
+ */
 public interface LanchaRepository extends JpaRepository<Lancha, Long> {
     interface DestacadaProjection {
         Long getIdLancha();
@@ -23,10 +26,19 @@ public interface LanchaRepository extends JpaRepository<Lancha, Long> {
         Long getTotalResenas();
     }
 
+    /**
+     * Lista las lanchas que cubren una zona determinada.
+     */
     List<Lancha> findDistinctByZonas_IdZona(Long idZona);
 
+    /**
+     * Busca la lancha asociada a un lanchero (relación uno a uno).
+     */
     Optional<Lancha> findByLanchero_IdLanchero(Long idLanchero);
 
+    /**
+     * Cuenta las lanchas cuyos lancheros tienen el estado de solicitud indicado.
+     */
     long countByLanchero_EstadoSolicitud(EstadoSolicitud estadoSolicitud);
 
     @Query("""
@@ -51,9 +63,15 @@ public interface LanchaRepository extends JpaRepository<Lancha, Long> {
             Pageable pageable
     );
 
+    /**
+     * Obtiene el ID del lanchero dueño de una lancha.
+     */
     @Query("select l.lanchero.idLanchero from Lancha l where l.idLancha = :id")
     Optional<Long> findLancheroIdByIdLancha(@Param("id") Long idLancha);
 
+    /**
+     * Consulta lanchas aprobadas, activas, con capacidad y zonas compatibles y sin viajes o retornos activos en la fecha indicada.
+     */
     @EntityGraph(attributePaths = {"lanchero", "zonas"})
     @Query("""
             select distinct l from Lancha l

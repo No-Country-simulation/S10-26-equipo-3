@@ -7,6 +7,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repositorio JDBC del outbox de correos de registro. Implementa el reclamo atómico, el lease, los reintentos y el cierre de tareas.
+ */
 @Repository
 public class RegistroEmailOutboxRepository {
     private static final String RECLAMAR_SQL = """
@@ -34,10 +37,16 @@ public class RegistroEmailOutboxRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * Crea el repositorio JDBC usado para el outbox de correos.
+     */
     public RegistroEmailOutboxRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /**
+     * Registra un correo pendiente para un lanchero; si ya existe, no hace nada.
+     */
     @Transactional
     public void encolar(Long idLanchero, String correo) {
         jdbcTemplate.update("""
@@ -47,6 +56,9 @@ public class RegistroEmailOutboxRepository {
                 """, idLanchero, correo);
     }
 
+    /**
+     * Reclama atómicamente la siguiente tarea disponible y le asigna un lease temporal.
+     */
     @Transactional
     public Optional<RegistroEmailOutboxTask> reclamarSiguiente(int maximoIntentos, long segundosLease) {
         jdbcTemplate.update("""
@@ -79,6 +91,9 @@ public class RegistroEmailOutboxRepository {
         return Optional.of(tarea);
     }
 
+    /**
+     * Marca la tarea como enviada y borra los datos personales del payload.
+     */
     @Transactional
     public void marcarEnviada(long id) {
         jdbcTemplate.update("""
@@ -93,6 +108,9 @@ public class RegistroEmailOutboxRepository {
                 """, id);
     }
 
+    /**
+     * Guarda el payload y la clave de idempotencia si aún no estaban persistidos.
+     */
     @Transactional
     public RegistroEmailOutboxPayload asegurarPayloadYClave(
             long id,
@@ -112,6 +130,9 @@ public class RegistroEmailOutboxRepository {
         ), payloadJson, idempotencyKey, id, intentos);
     }
 
+    /**
+     * Reprograma la tarea con una espera o la marca como fallida al agotar los intentos.
+     */
     @Transactional
     public void programarReintento(
             long id,
@@ -130,6 +151,9 @@ public class RegistroEmailOutboxRepository {
                 """, maximoIntentos, demoraSegundos, tipoError, id, intentos);
     }
 
+    /**
+     * Marca la tarea como fallida por un error permanente.
+     */
     @Transactional
     public void marcarFallida(long id, int intentos, String tipoError) {
         jdbcTemplate.update("""

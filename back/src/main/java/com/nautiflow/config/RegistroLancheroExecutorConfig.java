@@ -8,8 +8,14 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Define el executor usado para subir en paralelo los documentos y fotos del registro de un lanchero.
+ */
 @Configuration
 public class RegistroLancheroExecutorConfig {
+    /**
+     * Configura el pool de dos hilos usado para subir documentos y fotos de forma concurrente.
+     */
     @Bean("registroLancheroUploadExecutor")
     public ThreadPoolTaskExecutor registroLancheroUploadExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -23,6 +29,9 @@ public class RegistroLancheroExecutorConfig {
         return executor;
     }
 
+    /**
+     * Espera hasta que la cola del executor tenga espacio, en lugar de rechazar la subida cuando está llena.
+     */
     private void esperarEspacioEnCola(Runnable tarea, ThreadPoolExecutor executor) {
         try {
             while (!executor.isShutdown()) {

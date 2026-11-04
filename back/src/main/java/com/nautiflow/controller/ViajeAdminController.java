@@ -23,21 +23,33 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Locale;
 
+/**
+ * Expone la creación, consulta, seguimiento y finalización de viajes para el administrador.
+ */
 @RestController
 @RequestMapping("/admin")
 public class ViajeAdminController {
     private final ViajeWorkflowService viajeWorkflowService;
 
+    /**
+     * Inyecta el servicio de flujo de viajes.
+     */
     public ViajeAdminController(ViajeWorkflowService viajeWorkflowService) {
         this.viajeWorkflowService = viajeWorkflowService;
     }
 
+    /**
+     * Crea e inicia un nuevo viaje.
+     */
     @PostMapping("/viajes")
     @Operation(tags = "Viajes")
     public ResponseEntity<ViajeAdminDTO> crearViaje(@Valid @RequestBody CrearViajeRequest solicitud) {
         return ResponseEntity.status(HttpStatus.CREATED).body(viajeWorkflowService.crearEIniciar(solicitud));
     }
 
+    /**
+     * Lista los viajes en curso; solo admite el estado EN_VIAJE.
+     */
     @GetMapping("/viajes")
     @Operation(tags = "Viajes")
     public PaginaViajesDTO viajesEnCurso(
@@ -51,6 +63,9 @@ public class ViajeAdminController {
         return viajeWorkflowService.listarEnCurso(page, size);
     }
 
+    /**
+     * Lista el historial de viajes para seguimiento.
+     */
     @GetMapping("/viajes/seguimiento")
     @Operation(
             tags = "Viajes",
@@ -63,6 +78,9 @@ public class ViajeAdminController {
         return viajeWorkflowService.listarSeguimiento(page, size);
     }
 
+    /**
+     * Finaliza un viaje y genera su token de reseña.
+     */
     @PatchMapping("/viajes/{id}/finalizar")
     @Operation(tags = "Viajes")
     public ViajeFinalizadoDTO finalizarViaje(@PathVariable Long id) {

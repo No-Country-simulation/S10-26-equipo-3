@@ -19,6 +19,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 
+/**
+ * Orquesta el registro de un lanchero: valida, sube archivos en paralelo, persiste y limpia los archivos si algo falla.
+ */
 @Service
 public class LancheroService {
     private static final Logger LOGGER = LoggerFactory.getLogger(LancheroService.class);
@@ -27,6 +30,9 @@ public class LancheroService {
     private final ArchivoLancheroStorage archivoStorage;
     private final Executor uploadExecutor;
 
+    /**
+     * Inyecta el servicio de persistencia, el almacenamiento y el executor de subidas.
+     */
     public LancheroService(
             LancheroPersistenceService persistenceService,
             ArchivoLancheroStorage archivoStorage,
@@ -37,6 +43,9 @@ public class LancheroService {
         this.uploadExecutor = uploadExecutor;
     }
 
+    /**
+     * Orquesta el registro: valida, sube archivos en paralelo, persiste los datos y limpia R2 si algo falla.
+     */
     public RegistroLancheroResponse registrarLanchero(
             LancheroRegistroDTO solicitud,
             MultipartFile licencia,
@@ -143,6 +152,9 @@ public class LancheroService {
         }
     }
 
+    /**
+     * Guarda un archivo y registra cuánto tardó el procesamiento y la subida.
+     */
     private ArchivoLancheroStorage.ArchivoAlmacenado guardarArchivoMedido(
             String nombreArchivo,
             MultipartFile archivo,
@@ -157,6 +169,9 @@ public class LancheroService {
         }
     }
 
+    /**
+     * Lanza las subidas en paralelo, espera a que terminen y conserva los errores para limpiar los archivos ya subidos.
+     */
     private List<ArchivoAlmacenado> guardarArchivos(
             List<SubidaPendiente> archivos,
             List<String> rutas
@@ -214,6 +229,9 @@ public class LancheroService {
         return guardados;
     }
 
+    /**
+     * Recorre la cadena de causas de un CompletionException hasta encontrar la excepción original.
+     */
     private Throwable causaRaiz(CompletionException exception) {
         Throwable causa = exception;
         while (causa instanceof CompletionException && causa.getCause() != null) {
@@ -222,10 +240,20 @@ public class LancheroService {
         return causa;
     }
 
+    /**
+     * Calcula los milisegundos transcurridos desde un instante en nanosegundos.
+     */
     private long milisegundosDesde(long inicioNano) {
         return (System.nanoTime() - inicioNano) / 1_000_000;
     }
 
+    /**
+     * Archivo pendiente de subir, con su nombre original, contenido y tipo.
+     *
+     * @param nombre Nombre del registro.
+     * @param archivo Archivo cargado en el formulario.
+     * @param tipo Tipo o categoría del dato.
+     */
     private record SubidaPendiente(String nombre, MultipartFile archivo, TipoArchivo tipo) {
     }
 

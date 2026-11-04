@@ -20,9 +20,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import java.util.List;
 
+/**
+ * Configura Spring Security: reglas de acceso por ruta, CORS, manejo uniforme de errores y el filtro de autenticación JWT.
+ */
 @Configuration
 public class SecurityConfig {
 
+    /**
+     * Define las reglas de autorización, CORS, manejo de errores y el filtro JWT de la API.
+     */
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -75,6 +81,9 @@ public class SecurityConfig {
                 .build();
     }
 
+    /**
+     * Configura CORS para los orígenes y métodos usados por el frontend.
+     */
     @Bean
     JwtTokenRevocationService jwtTokenRevocationService() {
         return new JwtTokenRevocationService();
@@ -99,11 +108,17 @@ public class SecurityConfig {
         return source;
     }
 
+    /**
+     * Expone el codificador BCrypt usado para almacenar contraseñas.
+     */
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Define un servicio de usuarios que rechaza la autenticación por formulario; la API usa JWT.
+     */
     @Bean
     UserDetailsService userDetailsService() {
         return username -> {

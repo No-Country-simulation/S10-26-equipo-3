@@ -8,10 +8,19 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * Convierte el parámetro de filtro de estado de solicitud en un valor del enum, aceptando TODOS como ausencia de filtro.
+ */
 public final class EstadoSolicitudFiltro {
+    /**
+     * Evita instanciar la clase; solo se usa su método estático.
+     */
     private EstadoSolicitudFiltro() {
     }
 
+    /**
+     * Convierte el texto del filtro en un estado de solicitud; 'TODOS' o null significan sin filtro.
+     */
     public static EstadoSolicitud parse(String valor) {
         if (valor == null) {
             return null;

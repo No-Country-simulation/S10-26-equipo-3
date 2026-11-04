@@ -14,20 +14,32 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Expone los endpoints públicos para consultar un viaje por su token de reseña y para registrar la reseña.
+ */
 @RestController
 @Tag(name = "Reseñas públicas")
 public class ResenaController {
     private final ResenaService resenaService;
 
+    /**
+     * Inyecta el servicio de reseñas.
+     */
     public ResenaController(ResenaService resenaService) {
         this.resenaService = resenaService;
     }
 
+    /**
+     * Consulta el viaje asociado al token de reseña y muestra si ya tiene una reseña.
+     */
     @GetMapping("/resena/{token}")
     public ResenaViajeDTO consultar(@PathVariable String token) {
         return resenaService.obtenerViaje(token);
     }
 
+    /**
+     * Registra la reseña del viaje asociado al token.
+     */
     @PostMapping("/resena/{token}")
     public ResponseEntity<ResenaCreadaDTO> crear(
             @PathVariable String token,

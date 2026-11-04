@@ -13,6 +13,9 @@ import org.springframework.util.StringUtils;
 
 import java.util.stream.Collectors;
 
+/**
+ * Convierte y valida el JSON de la parte solicitud del formulario multipart de registro.
+ */
 @Component
 public class LancheroSolicitudParser {
     private static final Logger LOGGER = LoggerFactory.getLogger(LancheroSolicitudParser.class);
@@ -20,11 +23,17 @@ public class LancheroSolicitudParser {
     private final ObjectMapper objectMapper;
     private final Validator validator;
 
+    /**
+     * Inyecta el ObjectMapper y el validador de Bean Validation.
+     */
     public LancheroSolicitudParser(ObjectMapper objectMapper, Validator validator) {
         this.objectMapper = objectMapper;
         this.validator = validator;
     }
 
+    /**
+     * Convierte y valida el JSON de la parte solicitud del formulario de registro.
+     */
     public LancheroRegistroDTO parsear(String solicitudJson) {
         long inicioParseo = System.nanoTime();
         try {
@@ -65,6 +74,9 @@ public class LancheroSolicitudParser {
         }
     }
 
+    /**
+     * Calcula los milisegundos transcurridos desde un instante en nanosegundos.
+     */
     private long milisegundosDesde(long inicioNano) {
         return (System.nanoTime() - inicioNano) / 1_000_000;
     }

@@ -21,6 +21,9 @@ import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.Locale;
 
+/**
+ * Cliente HTTP de la API de Resend. Construye el correo, envía la petición, clasifica los errores y sanea los mensajes antes de registrarlos.
+ */
 @Component
 public class ResendEmailClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(ResendEmailClient.class);
@@ -35,6 +38,9 @@ public class ResendEmailClient {
     private final URI endpoint;
     private final Duration requestTimeout;
 
+    /**
+     * Crea el cliente HTTP de Resend con tiempos de conexión y espera acotados.
+     */
     @Autowired
     public ResendEmailClient(
             ObjectMapper objectMapper,
@@ -51,6 +57,9 @@ public class ResendEmailClient {
         );
     }
 
+    /**
+     * Constructor interno que permite inyectar el cliente HTTP, el endpoint y el timeout en las pruebas.
+     */
     ResendEmailClient(
             HttpClient httpClient,
             ObjectMapper objectMapper,
@@ -67,14 +76,23 @@ public class ResendEmailClient {
         this.requestTimeout = requestTimeout;
     }
 
+    /**
+     * Envía un correo sin clave de idempotencia.
+     */
     public void enviar(CorreoTransaccional correo) {
         enviar(correo, null);
     }
 
+    /**
+     * Envía un correo con una clave de idempotencia para evitar duplicados.
+     */
     public void enviar(CorreoTransaccional correo, String claveIdempotencia) {
         enviar(crearCuerpoJson(correo), claveIdempotencia);
     }
 
+    /**
+     * Construye y valida el JSON que se enviará a la API de Resend.
+     */
     public String crearCuerpoJson(CorreoTransaccional correo) {
         validarConfiguracion();
 
@@ -103,6 +121,9 @@ public class ResendEmailClient {
         return body;
     }
 
+    /**
+     * Envía a Resend un cuerpo JSON ya construido, con la clave de idempotencia indicada.
+     */
     public void enviar(String body, String claveIdempotencia) {
         validarApiKey();
 
@@ -139,6 +160,9 @@ public class ResendEmailClient {
         }
     }
 
+    /**
+     * Verifica que estén configurados el remitente y la API key de Resend.
+     */
     private void validarConfiguracion() {
         if (remitente == null || remitente.isBlank()) {
             throw error(ResendEmailException.Category.CONFIGURATION,
@@ -147,6 +171,9 @@ public class ResendEmailClient {
         validarApiKey();
     }
 
+    /**
+     * Verifica que la API key de Resend esté configurada.
+     */
     private void validarApiKey() {
         if (apiKey == null || apiKey.isBlank()) {
             throw error(ResendEmailException.Category.CONFIGURATION,
@@ -154,6 +181,9 @@ public class ResendEmailClient {
         }
     }
 
+    /**
+     * Clasifica la respuesta HTTP de Resend en una categoría de error y decide si se puede reintentar.
+     */
     private ResendEmailException errorHttp(int status, String body) {
         String providerErrorCode = null;
         String providerMessage = null;
@@ -210,11 +240,17 @@ public class ResendEmailClient {
         );
     }
 
+    /**
+     * Extrae un campo de texto de un JSON de error del proveedor.
+     */
     private String textField(com.fasterxml.jackson.databind.JsonNode json, String field) {
         var value = json.path(field);
         return value.isTextual() ? value.asText() : null;
     }
 
+    /**
+     * Detecta si el error de Resend corresponde a un remitente o dominio no verificado.
+     */
     private boolean esErrorDeRemitenteNoVerificado(String message) {
         return (message.contains("domain") || message.contains("sender"))
                 && (message.contains("not verified") || message.contains("isn't verified")
@@ -222,6 +258,9 @@ public class ResendEmailClient {
                 || message.contains("verify a domain");
     }
 
+    /**
+     * Oculta la API key, credenciales y correos antes de guardar o registrar un mensaje de error.
+     */
     private String sanitizar(String message) {
         String safe = message.replace(apiKey, "[REDACTED]").replaceAll(
                 "(?i)(password|passwd|token|authorization|credential|secret)(\\s*[=:]\\s*)[^\\s,;]+",
@@ -233,6 +272,9 @@ public class ResendEmailClient {
         return safe.length() <= 1000 ? safe : safe.substring(0, 1000);
     }
 
+    /**
+     * Crea una excepción de Resend con la categoría y la causa indicadas.
+     */
     private ResendEmailException error(
             ResendEmailException.Category categoria,
             String mensaje,

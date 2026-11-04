@@ -18,12 +18,18 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
+/**
+ * Convierte imágenes a WebP, limita su tamaño y reduce sus dimensiones antes de subirlas a R2.
+ */
 @Component
 public class ImagenWebpConverter {
     private static final long MAX_PIXELES = 40_000_000L;
     private static final int MAX_DIMENSION = 1920;
     private static final float CALIDAD_WEBP = 0.82f;
 
+    /**
+     * Convierte una imagen a WebP validando que sea una imagen real y que no supere los 40 megapíxeles.
+     */
     public byte[] convertir(byte[] contenido) throws IOException {
         try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(contenido))) {
             Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
@@ -41,6 +47,9 @@ public class ImagenWebpConverter {
         }
     }
 
+    /**
+     * Lee la imagen y valida sus dimensiones antes de cargarla en memoria.
+     */
     private BufferedImage leerImagen(ImageReader reader, ImageInputStream input) throws IOException {
         try {
             reader.setInput(input, true, true);
@@ -55,6 +64,9 @@ public class ImagenWebpConverter {
         }
     }
 
+    /**
+     * Reduce la imagen a un máximo de 1920 píxeles por lado manteniendo la proporción.
+     */
     private BufferedImage redimensionar(BufferedImage imagen) {
         double escala = Math.min(
                 1.0,
@@ -78,6 +90,9 @@ public class ImagenWebpConverter {
         }
     }
 
+    /**
+     * Codifica la imagen en formato WebP con la calidad configurada.
+     */
     private byte[] codificarWebp(BufferedImage imagen) throws IOException {
         Iterator<ImageWriter> writers = ImageIO.getImageWritersByMIMEType("image/webp");
         if (!writers.hasNext()) {

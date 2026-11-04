@@ -22,12 +22,18 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Clock;
 import java.util.List;
 
+/**
+ * Servicio que ejecuta las decisiones administrativas sobre solicitudes y el estado operativo de los lancheros.
+ */
 @Service
 public class AdminWorkflowService {
     private final LancheroRepository lancheroRepository;
     private final RegistroNotificacionService notificacionService;
     private final Clock clock;
 
+    /**
+     * Inyecta el repositorio de lancheros, el servicio de notificaciones y el reloj de negocio.
+     */
     public AdminWorkflowService(
             LancheroRepository lancheroRepository,
             RegistroNotificacionService notificacionService,
@@ -38,6 +44,9 @@ public class AdminWorkflowService {
         this.clock = clock;
     }
 
+    /**
+     * Aprueba una solicitud pendiente, activa al lanchero, registra la fecha de decisión y envía el correo de aprobación.
+     */
     @Transactional
     public DecisionSolicitudDTO aprobarSolicitud(Long id) {
         Lanchero lanchero = obtenerLancheroParaActualizar(id);
@@ -52,6 +61,9 @@ public class AdminWorkflowService {
         return new DecisionSolicitudDTO(id, lanchero.getEstadoSolicitud().name(), "Solicitud aprobada.");
     }
 
+    /**
+     * Rechaza una solicitud pendiente, guarda el motivo y notifica al lanchero por correo.
+     */
     @Transactional
     public RechazoSolicitudDTO rechazarSolicitud(Long id, String motivo) {
         if (motivo != null && motivo.length() > 500) {
@@ -74,6 +86,9 @@ public class AdminWorkflowService {
         return new RechazoSolicitudDTO(id, lanchero.getEstadoSolicitud().name(), lanchero.getMotivoRechazo());
     }
 
+    /**
+     * Lista lancheros con paginación y filtro opcional por estado de solicitud.
+     */
     @Transactional(readOnly = true)
     public PaginaLancherosDTO listarLancheros(EstadoSolicitud estado, int page, int size) {
         PaginacionValidator.validar(page, size);
@@ -95,6 +110,9 @@ public class AdminWorkflowService {
         );
     }
 
+    /**
+     * Cambia el estado operativo de un lanchero aprobado que no esté en viaje.
+     */
     @Transactional
     public LancheroAdminDTO actualizarEstadoOperativo(Long id, EstadoOperativoRequest solicitud) {
         Lanchero lanchero = obtenerLancheroParaActualizar(id);
@@ -115,17 +133,26 @@ public class AdminWorkflowService {
         return toAdminDTO(lanchero);
     }
 
+    /**
+     * Busca y bloquea al lanchero para evitar decisiones concurrentes.
+     */
     private Lanchero obtenerLancheroParaActualizar(Long id) {
         return lancheroRepository.findLockedById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lanchero no encontrado."));
     }
 
+    /**
+     * Verifica que la solicitud aún esté pendiente antes de aprobarla o rechazarla.
+     */
     private void validarPendiente(Lanchero lanchero) {
         if (lanchero.getEstadoSolicitud() != EstadoSolicitud.PENDIENTE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud ya fue decidida.");
         }
     }
 
+    /**
+     * Convierte un lanchero en el DTO que consume el panel administrativo.
+     */
     private LancheroAdminDTO toAdminDTO(Lanchero lanchero) {
         return new LancheroAdminDTO(
                 lanchero.getIdLanchero(),

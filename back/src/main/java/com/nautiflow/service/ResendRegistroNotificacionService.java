@@ -11,6 +11,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+/**
+ * Implementación de las notificaciones por correo con Resend: confirmación de registro, decisiones, reseñas y viajes programados.
+ */
 @Service
 public class ResendRegistroNotificacionService implements RegistroNotificacionService {
     private static final Logger logger = LoggerFactory.getLogger(ResendRegistroNotificacionService.class);
@@ -33,10 +36,16 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
 
     private final ResendEmailClient resendEmailClient;
 
+    /**
+     * Inyecta el cliente de Resend.
+     */
     public ResendRegistroNotificacionService(ResendEmailClient resendEmailClient) {
         this.resendEmailClient = resendEmailClient;
     }
 
+    /**
+     * Arma el correo de confirmación de registro y devuelve el JSON listo para enviar.
+     */
     @Override
     public String prepararPayloadConfirmacion(String correo) {
         String contenidoHtml = """
@@ -54,6 +63,9 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
         ));
     }
 
+    /**
+     * Envía el correo de confirmación y registra el tiempo que tardó.
+     */
     @Override
     public void enviarConfirmacionPorCorreo(Long idLanchero, String payloadJson, String claveIdempotencia) {
         long inicioEnvio = System.nanoTime();
@@ -65,10 +77,16 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
         }
     }
 
+    /**
+     * Calcula los milisegundos transcurridos desde un instante en nanosegundos.
+     */
     private long milisegundosDesde(long inicioNano) {
         return (System.nanoTime() - inicioNano) / 1_000_000;
     }
 
+    /**
+     * Envía el correo de aprobación con el nombre del lanchero.
+     */
     @Override
     public void enviarDecisionAprobada(Long idLanchero, String nombreCompleto, String correo) {
         String nombreHtml = CorreoHtmlTemplate.escapar(nombreCompleto);
@@ -98,6 +116,9 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
         );
     }
 
+    /**
+     * Envía el correo de rechazo con el motivo persistido.
+     */
     @Override
     public void enviarDecisionRechazada(
             Long idLanchero,
@@ -137,6 +158,9 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
         );
     }
 
+    /**
+     * Envía al lanchero el correo con la calificación y el comentario de la reseña.
+     */
     @Override
     public void notificarResena(
             Long idLanchero,
@@ -196,6 +220,9 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
         );
     }
 
+    /**
+     * Envía al lanchero los detalles del viaje recién programado; si falla, solo registra el error.
+     */
     @Override
     public void notificarViajeProgramado(ViajeProgramadoEvent viaje) {
         String fechaHoraInicio = formatearFechaHoraViaje(viaje.fechaHoraInicio());
@@ -259,11 +286,17 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
         }
     }
 
+    /**
+     * Convierte la fecha del viaje a la zona horaria de Bogotá y la presenta en formato legible.
+     */
     private String formatearFechaHoraViaje(OffsetDateTime fechaHoraInicio) {
         return FORMATO_FECHA_VIAJE.format(fechaHoraInicio.atZoneSameInstant(ZONA_NEGOCIO))
                 .toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * Envía una notificación; si Resend falla, lanza un 503 para que la operación no se confirme.
+     */
     private void enviarNotificacionEstrictaHtml(
             Long idLanchero,
             String correo,

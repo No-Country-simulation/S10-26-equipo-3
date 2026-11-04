@@ -19,6 +19,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Recibe el registro multipart de un lanchero: el JSON con sus datos y los archivos de licencia, seguro, antecedentes y fotos.
+ */
 @RestController
 @RequestMapping("/lancheros")
 @Tag(name = "Lanchero")
@@ -28,11 +31,17 @@ public class LancheroController {
     private final LancheroService lancheroService;
     private final LancheroSolicitudParser solicitudParser;
 
+    /**
+     * Inyecta el servicio de registro y el parser del JSON de la solicitud.
+     */
     public LancheroController(LancheroService lancheroService, LancheroSolicitudParser solicitudParser) {
         this.lancheroService = lancheroService;
         this.solicitudParser = solicitudParser;
     }
 
+    /**
+     * Recibe el formulario multipart, valida la parte solicitud y registra al lanchero con sus archivos.
+     */
     @PostMapping("/registrar")
     public ResponseEntity<RegistroLancheroResponse> register(MultipartHttpServletRequest request) {
         String solicitudJson = request.getParameter("solicitud");
@@ -69,6 +78,9 @@ public class LancheroController {
                 ));
     }
 
+    /**
+     * Obtiene la primera parte de archivo con el nombre indicado o lanza un error si falta.
+     */
     private MultipartFile obtenerArchivo(Map<String, List<MultipartFile>> archivos, String nombre) {
         List<MultipartFile> partes = archivos.get(nombre);
         if (partes == null || partes.isEmpty()) {

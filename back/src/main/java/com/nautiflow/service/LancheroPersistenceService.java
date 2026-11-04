@@ -26,6 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Servicio transaccional que persiste el lanchero, su lancha, sus documentos y la tarea de correo pendiente.
+ */
 @Service
 public class LancheroPersistenceService {
     private static final Logger LOGGER = LoggerFactory.getLogger(LancheroPersistenceService.class);
@@ -37,6 +40,9 @@ public class LancheroPersistenceService {
     private final ZonaRepository zonaRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Inyecta los repositorios, el codificador de contraseñas y el outbox de correos.
+     */
     public LancheroPersistenceService(
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
@@ -53,6 +59,9 @@ public class LancheroPersistenceService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Guarda en una sola transacción el lanchero, su lancha, sus documentos y el correo pendiente en el outbox.
+     */
     @Transactional
     public RegistroLancheroResponse registrar(
             LancheroRegistroDTO solicitud,
@@ -137,12 +146,18 @@ public class LancheroPersistenceService {
         );
     }
 
+    /**
+     * Comprueba que no exista otro lanchero con el mismo correo.
+     */
     public void validarCorreoDisponible(String correo) {
         if (lancheroRepository.existsByCorreo(correo.strip())) {
             throw new ConflictoRegistroException("Ya existe un lanchero con ese correo electrónico.");
         }
     }
 
+    /**
+     * Crea y guarda el metadato de un documento asociado al lanchero.
+     */
     private void guardarDocumento(Lanchero lanchero, String tipo, String clave, String tipoContenido) {
         Documento documento = new Documento();
         documento.setLanchero(lanchero);
@@ -152,6 +167,9 @@ public class LancheroPersistenceService {
         documentoRepository.save(documento);
     }
 
+    /**
+     * Calcula los milisegundos transcurridos desde un instante en nanosegundos.
+     */
     private long milisegundosDesde(long inicioNano) {
         return (System.nanoTime() - inicioNano) / 1_000_000;
     }

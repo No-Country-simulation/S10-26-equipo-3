@@ -34,6 +34,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Servicio de almacenamiento en Cloudflare R2. Valida, convierte imágenes a WebP, sube archivos, elimina objetos y genera URLs prefirmadas.
+ */
 @Service
 public class ArchivoLancheroStorage {
     private static final Logger logger = LoggerFactory.getLogger(ArchivoLancheroStorage.class);
@@ -56,6 +59,9 @@ public class ArchivoLancheroStorage {
     private volatile S3Client s3Client;
     private volatile S3Presigner s3Presigner;
 
+    /**
+     * Configura los límites de tamaño, la vigencia de las URLs y los datos de conexión a Cloudflare R2.
+     */
     public ArchivoLancheroStorage(
             @Value("${nautiflow.r2.endpoint:}") String endpoint,
             @Value("${nautiflow.r2.access-key-id:}") String accessKeyId,
@@ -81,10 +87,16 @@ public class ArchivoLancheroStorage {
         }
     }
 
+    /**
+     * Guarda un archivo usando el tipo como nombre lógico.
+     */
     public ArchivoAlmacenado guardar(MultipartFile archivo, TipoArchivo tipo) throws IOException {
         return guardar(archivo, tipo, tipo == null ? "archivo" : tipo.name().toLowerCase());
     }
 
+    /**
+     * Valida, convierte a WebP cuando corresponde y sube el archivo a Cloudflare R2.
+     */
     public ArchivoAlmacenado guardar(MultipartFile archivo, TipoArchivo tipo, String nombreArchivo)
             throws IOException {
         byte[] contenido = null;
@@ -176,6 +188,9 @@ public class ArchivoLancheroStorage {
         }
     }
 
+    /**
+     * Elimina varios objetos del bucket e informa si alguna eliminación falla.
+     */
     public void eliminar(List<String> claves) {
         if (claves.isEmpty()) {
             return;
@@ -201,6 +216,9 @@ public class ArchivoLancheroStorage {
         }
     }
 
+    /**
+     * Genera una URL temporal para consultar un archivo privado del bucket.
+     */
     public String generarUrlPrefirmada(String clave) {
         if (!StringUtils.hasText(clave) || !clave.startsWith("nautiflow/")) {
             throw new SolicitudInvalidaException("La clave del archivo no es válida.");
@@ -221,6 +239,9 @@ public class ArchivoLancheroStorage {
         }
     }
 
+    /**
+     * Cierra los clientes de S3 y del generador de URLs al apagar la aplicación.
+     */
     @PreDestroy
     void cerrarCliente() {
         if (s3Client != null) {
@@ -275,6 +296,9 @@ public class ArchivoLancheroStorage {
         return s3Client;
     }
 
+    /**
+     * Registra en el log los detalles seguros de un error de Cloudflare R2.
+     */
     private void registrarErrorR2(String operacion, SdkException exception) {
         if (exception instanceof S3Exception s3Exception) {
             String codigo = s3Exception.awsErrorDetails() == null
@@ -302,10 +326,16 @@ public class ArchivoLancheroStorage {
         );
     }
 
+    /**
+     * Calcula los milisegundos transcurridos desde un instante en nanosegundos.
+     */
     private long milisegundosDesde(long inicioNano) {
         return (System.nanoTime() - inicioNano) / 1_000_000;
     }
 
+    /**
+     * Traduce los códigos de error más comunes de R2 a mensajes accionables.
+     */
     private String mensajeErrorSubida(SdkException exception) {
         if (!(exception instanceof S3Exception s3Exception) || s3Exception.awsErrorDetails() == null) {
             return "No se pudo conectar con Cloudflare R2. Verifica endpoint, conectividad y credenciales S3.";
@@ -345,6 +375,9 @@ public class ArchivoLancheroStorage {
         return s3Presigner;
     }
 
+    /**
+     * Comprueba que los primeros bytes del archivo coincidan con el tipo de contenido declarado.
+     */
     private void validarContenidoDocumento(byte[] contenido, String contentType) {
         boolean valido = switch (contentType) {
             case "application/pdf" -> contenido.length >= 5
@@ -366,11 +399,20 @@ public class ArchivoLancheroStorage {
         }
     }
 
+    /**
+     * Tipo de archivo del registro de un lanchero: foto de la lancha o documento.
+     */
     public enum TipoArchivo {
         FOTO,
         DOCUMENTO
     }
 
+    /**
+     * Resultado de subir un archivo: clave del objeto en R2 y tipo de contenido.
+     *
+     * @param clave Clave del objeto almacenado en R2.
+     * @param tipoContenido Tipo MIME del archivo.
+     */
     public record ArchivoAlmacenado(String clave, String tipoContenido) {
     }
 }

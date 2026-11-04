@@ -15,12 +15,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Servicio de reseñas: consulta el viaje por token, registra la reseña y lista las reseñas para el administrador.
+ */
 @Service
 public class ResenaService {
     private final ViajeRepository viajeRepository;
     private final ResenaRepository resenaRepository;
     private final RegistroNotificacionService notificacionService;
 
+    /**
+     * Inyecta los repositorios de viajes y reseñas y el servicio de notificaciones.
+     */
     public ResenaService(
             ViajeRepository viajeRepository,
             ResenaRepository resenaRepository,
@@ -31,6 +37,9 @@ public class ResenaService {
         this.notificacionService = notificacionService;
     }
 
+    /**
+     * Obtiene los datos del viaje asociado a un token de reseña y si ya tiene una reseña registrada.
+     */
     @Transactional
     public ResenaViajeDTO obtenerViaje(String tokenResena) {
         Viaje viaje = obtenerViajePorToken(tokenResena);
@@ -50,6 +59,9 @@ public class ResenaService {
         );
     }
 
+    /**
+     * Crea la reseña de un viaje finalizado y notifica al lanchero.
+     */
     @Transactional
     public ResenaCreadaDTO crear(CrearResenaRequest solicitud, String tokenResena) {
         Viaje viaje = obtenerViajePorToken(tokenResena);
@@ -89,6 +101,9 @@ public class ResenaService {
         );
     }
 
+    /**
+     * Busca el viaje por su token de reseña o responde 404 si no existe.
+     */
     private Viaje obtenerViajePorToken(String tokenResena) {
         if (tokenResena == null || tokenResena.isBlank()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Enlace de reseña no válido.");
@@ -100,6 +115,9 @@ public class ResenaService {
                 ));
     }
 
+    /**
+     * Lista todas las reseñas con paginación para el panel administrativo.
+     */
     @Transactional(readOnly = true)
     public PaginaResenasDTO listar(int page, int size) {
         PaginacionValidator.validar(page, size);
@@ -119,6 +137,9 @@ public class ResenaService {
         );
     }
 
+    /**
+     * Convierte una reseña y su viaje al DTO del panel administrativo.
+     */
     private ResenaAdminDTO toResenaAdminDTO(Resena resena, Viaje viaje) {
         Lanchero lanchero = viaje.getLancha().getLanchero();
         return new ResenaAdminDTO(
@@ -137,6 +158,9 @@ public class ResenaService {
         );
     }
 
+    /**
+     * Convierte una reseña al DTO que se muestra en el enlace público.
+     */
     private ResenaTokenDTO toResenaTokenDTO(Resena resena) {
         Lanchero lanchero = resena.getViaje().getLancha().getLanchero();
         return new ResenaTokenDTO(

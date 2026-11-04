@@ -14,13 +14,22 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Responde en formato JSON los errores de autenticación (401) y de permisos (403) generados por Spring Security.
+ */
 public class ApiSecurityErrorHandler implements AuthenticationEntryPoint, AccessDeniedHandler {
     private final ObjectMapper objectMapper;
 
+    /**
+     * Crea el manejador con el ObjectMapper usado para escribir respuestas JSON.
+     */
     public ApiSecurityErrorHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Responde 401 cuando falta autenticación o el token es inválido.
+     */
     @Override
     public void commence(
             HttpServletRequest request,
@@ -35,6 +44,9 @@ public class ApiSecurityErrorHandler implements AuthenticationEntryPoint, Access
         );
     }
 
+    /**
+     * Responde 403 cuando el usuario autenticado no tiene permisos.
+     */
     @Override
     public void handle(
             HttpServletRequest request,
@@ -49,6 +61,9 @@ public class ApiSecurityErrorHandler implements AuthenticationEntryPoint, Access
         );
     }
 
+    /**
+     * Escribe una respuesta de error JSON con el estado y el mensaje indicados.
+     */
     private void escribirError(
             HttpServletRequest request,
             HttpServletResponse response,

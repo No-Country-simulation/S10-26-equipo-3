@@ -7,13 +7,22 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
+/**
+ * Repositorio de documentos de los lancheros.
+ */
 public interface DocumentoRepository extends JpaRepository<Documento, Long> {
     interface FotoLanchaProjection {
         Long getIdLanchero();
         String getClaveArchivo();
     }
 
+    /**
+     * Lista los documentos de un lanchero.
+     */
     List<Documento> findByLanchero_IdLanchero(Long idLanchero);
+    /**
+     * Lista los documentos de un lanchero ordenados por ID ascendente.
+     */
     List<Documento> findByLanchero_IdLancheroOrderByIdDocumentoAsc(Long idLanchero);
 
     @Query("""

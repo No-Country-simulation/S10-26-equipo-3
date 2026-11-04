@@ -11,8 +11,17 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
+/**
+ * Repositorio de reseñas, con consultas por viaje y una consulta paginada con las relaciones necesarias para el panel.
+ */
 public interface ResenaRepository extends JpaRepository<Resena, Long> {
+    /**
+     * Busca la reseña de un viaje.
+     */
     Optional<Resena> findByViaje_IdViaje(Long idViaje);
+    /**
+     * Indica si un viaje ya tiene reseña.
+     */
     boolean existsByViaje_IdViaje(Long idViaje);
 
     @Query(
@@ -35,6 +44,9 @@ public interface ResenaRepository extends JpaRepository<Resena, Long> {
             Pageable pageable
     );
 
+    /**
+     * Lista las reseñas con el viaje, la lancha, el lanchero y las zonas cargadas.
+     */
     @EntityGraph(attributePaths = {
             "viaje",
             "viaje.lancha",

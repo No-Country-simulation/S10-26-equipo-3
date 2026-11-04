@@ -19,11 +19,17 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Filtro de seguridad que valida el token JWT enviado en el encabezado Authorization y registra al usuario autenticado con su rol.
+ */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenService jwtTokenService;
     private final JwtTokenRevocationService revocationService;
     private final ApiSecurityErrorHandler securityErrorHandler;
 
+    /**
+     * Crea el filtro con el servicio de JWT y el manejador de errores de seguridad.
+     */
     public JwtAuthenticationFilter(
             JwtTokenService jwtTokenService,
             JwtTokenRevocationService revocationService,
@@ -34,11 +40,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.securityErrorHandler = securityErrorHandler;
     }
 
+    /**
+     * Omite el filtro en solicitudes preflight CORS para que el navegador pueda negociar la conexión.
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return CorsUtils.isPreFlightRequest(request);
     }
 
+    /**
+     * Lee el encabezado Authorization, valida el token Bearer y registra la autenticación con el rol del usuario.
+     */
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -80,6 +92,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * Limpia el contexto de seguridad y responde con el error 401 correspondiente.
+     */
     private void rechazarToken(
             HttpServletRequest request,
             HttpServletResponse response,

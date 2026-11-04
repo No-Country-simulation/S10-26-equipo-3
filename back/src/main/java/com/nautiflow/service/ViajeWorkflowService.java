@@ -38,6 +38,9 @@ import java.time.ZoneId;
 import java.util.HexFormat;
 import java.util.List;
 
+/**
+ * Servicio que crea, consulta, busca disponibilidad y finaliza viajes, manteniendo sincronizado el estado del lanchero.
+ */
 @Service
 public class ViajeWorkflowService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -50,6 +53,9 @@ public class ViajeWorkflowService {
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
+    /**
+     * Inyecta los repositorios, el publicador de eventos y el reloj de negocio.
+     */
     public ViajeWorkflowService(
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
@@ -66,6 +72,9 @@ public class ViajeWorkflowService {
         this.clock = clock;
     }
 
+    /**
+     * Crea un viaje, marca al lanchero como EN_VIAJE y publica el evento para notificar por correo.
+     */
     @Transactional
     public ViajeAdminDTO crearEIniciar(CrearViajeRequest solicitud) {
         Long idLanchero = lanchaRepository.findLancheroIdByIdLancha(solicitud.idLancha())
@@ -110,6 +119,9 @@ public class ViajeWorkflowService {
         return toDTO(viaje);
     }
 
+    /**
+     * Lista los viajes sin finalizar de lancheros en estado EN_VIAJE.
+     */
     @Transactional(readOnly = true)
     public PaginaViajesDTO listarEnCurso(int page, int size) {
         PaginacionValidator.validar(page, size);
@@ -130,6 +142,9 @@ public class ViajeWorkflowService {
         );
     }
 
+    /**
+     * Busca lanchas aprobadas, activas y libres para una capacidad, ruta y hora determinadas.
+     */
     @Transactional(readOnly = true)
     public List<LanchaDisponibleDTO> buscarDisponibles(
             Integer capacidad,
@@ -168,6 +183,9 @@ public class ViajeWorkflowService {
                 .toList();
     }
 
+    /**
+     * Lista el historial de viajes con su estado y la última ubicación confirmada.
+     */
     @Transactional(readOnly = true)
     public PaginaSeguimientoViajesDTO listarSeguimiento(int page, int size) {
         PaginacionValidator.validar(page, size);
@@ -185,6 +203,9 @@ public class ViajeWorkflowService {
         );
     }
 
+    /**
+     * Finaliza un viaje en curso, genera el token de reseña y libera al lanchero si no tiene otros viajes abiertos.
+     */
     @Transactional
     public ViajeFinalizadoDTO finalizar(Long idViaje) {
         Long idLanchero = viajeRepository.findLancheroIdByIdViaje(idViaje)
@@ -220,11 +241,17 @@ public class ViajeWorkflowService {
         );
     }
 
+    /**
+     * Busca y bloquea al lanchero para evitar cambios concurrentes.
+     */
     private Lanchero obtenerLancheroParaActualizar(Long id) {
         return lancheroRepository.findLockedById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lanchero no encontrado."));
     }
 
+    /**
+     * Exige que el lanchero esté aprobado y activo para iniciar un viaje.
+     */
     private void validarLancheroDisponible(Lanchero lanchero) {
         if (lanchero.getEstadoSolicitud() != EstadoSolicitud.APROBADO
                 || lanchero.getEstadoViaje() != EstadoOperativoLanchero.ACTIVO) {
@@ -235,12 +262,18 @@ public class ViajeWorkflowService {
         }
     }
 
+    /**
+     * Verifica que el lanchero no tenga otro viaje sin finalizar.
+     */
     private void validarNoHayViajeEnCurso(Long idLanchero) {
         if (viajeRepository.existsByLancha_Lanchero_IdLancheroAndFechaHoraFinIsNull(idLanchero)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El lanchero ya tiene un viaje sin finalizar.");
         }
     }
 
+    /**
+     * Valida que los pasajeros no superen la capacidad y que el origen y el destino sean distintos.
+     */
     private void validarCapacidadYZonas(CrearViajeRequest solicitud, Lancha lancha) {
         if (solicitud.cantidadPasajeros() > lancha.getCapacidad()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cantidad supera la capacidad de la lancha.");
@@ -250,12 +283,18 @@ public class ViajeWorkflowService {
         }
     }
 
+    /**
+     * Genera un token aleatorio seguro de 32 bytes para el enlace de reseña.
+     */
     private String generarTokenResena() {
         byte[] bytes = new byte[32];
         SECURE_RANDOM.nextBytes(bytes);
         return HexFormat.of().formatHex(bytes);
     }
 
+    /**
+     * Convierte un viaje al DTO que devuelve la creación de viajes.
+     */
     private ViajeAdminDTO toDTO(Viaje viaje) {
         return new ViajeAdminDTO(
                 viaje.getIdViaje(),
@@ -272,6 +311,9 @@ public class ViajeWorkflowService {
         );
     }
 
+    /**
+     * Convierte un viaje al DTO de viajes en curso.
+     */
     private ViajeEnCursoDTO toViajeEnCursoDTO(Viaje viaje) {
         Lanchero lanchero = viaje.getLancha().getLanchero();
         return new ViajeEnCursoDTO(
@@ -289,6 +331,9 @@ public class ViajeWorkflowService {
         );
     }
 
+    /**
+     * Busca una zona por ID o nombre y valida el filtro recibido.
+     */
     private Zona validarZona(String filtro, String tipo) {
         if (filtro == null) {
             return null;
@@ -319,6 +364,9 @@ public class ViajeWorkflowService {
         }
     }
 
+    /**
+     * Convierte una lancha al DTO de disponibilidad.
+     */
     private LanchaDisponibleDTO toLanchaDisponibleDTO(Lancha lancha) {
         Lanchero lanchero = lancha.getLanchero();
         return new LanchaDisponibleDTO(
@@ -332,6 +380,9 @@ public class ViajeWorkflowService {
         );
     }
 
+    /**
+     * Convierte un viaje al DTO de seguimiento, incluida la última ubicación confirmada.
+     */
     private ViajeSeguimientoDTO toViajeSeguimientoDTO(Viaje viaje) {
         String ultimaUbicacionConfirmada = viajeRepository
                 .findFirstByLancha_IdLanchaAndFechaHoraFinIsNotNullOrderByFechaHoraFinDescIdViajeDesc(

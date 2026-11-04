@@ -23,6 +23,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.time.ZoneOffset;
 
+/**
+ * Servicio de consultas del panel administrativo: métricas, listado y detalle de solicitudes.
+ */
 @Service
 public class AdminService {
     private final LancheroRepository lancheroRepository;
@@ -30,6 +33,9 @@ public class AdminService {
     private final DocumentoRepository documentoRepository;
     private final ArchivoLancheroStorage archivoStorage;
 
+    /**
+     * Inyecta los repositorios y el servicio de archivos usados por el panel.
+     */
     public AdminService(
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
@@ -42,6 +48,9 @@ public class AdminService {
         this.archivoStorage = archivoStorage;
     }
 
+    /**
+     * Cuenta solicitudes pendientes, lanchas verificadas y viajes activos para el panel administrativo.
+     */
     @Transactional(readOnly = true)
     public AdminDashboardDTO obtenerDashboard() {
         return new AdminDashboardDTO(
@@ -51,6 +60,9 @@ public class AdminService {
         );
     }
 
+    /**
+     * Lista las solicitudes de registro con paginación y filtro opcional por estado, de la más reciente a la más antigua.
+     */
     @Transactional(readOnly = true)
     public PaginaSolicitudesDTO listarSolicitudes(EstadoSolicitud estado, int page, int size) {
         PaginacionValidator.validar(page, size);
@@ -79,6 +91,9 @@ public class AdminService {
         );
     }
 
+    /**
+     * Obtiene el detalle de una solicitud, incluida su embarcación, zonas y URLs prefirmadas de los documentos.
+     */
     @Transactional(readOnly = true)
     public SolicitudDetalleDTO obtenerDetalle(Long id) {
         Lanchero lanchero = lancheroRepository.findByIdLanchero(id)

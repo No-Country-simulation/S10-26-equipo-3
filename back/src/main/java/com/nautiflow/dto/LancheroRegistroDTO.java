@@ -8,6 +8,17 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
+/**
+ * Datos del formulario de registro de un lanchero (parte JSON del multipart), con sus validaciones.
+ *
+ * @param nombreCompleto Nombre completo de la persona.
+ * @param whatsapp Número de WhatsApp de contacto.
+ * @param correo Correo electrónico de contacto.
+ * @param contrasena Contraseña opcional del lanchero. Si se envía, debe tener entre 8 y 72 caracteres.
+ * @param nombreEmbarcacion Nombre de la embarcación.
+ * @param capacidadPasajeros Capacidad máxima de pasajeros de la embarcación.
+ * @param zonasIds Identificadores de las zonas que cubre la embarcación.
+ */
 public record LancheroRegistroDTO(
         @NotBlank(message = "El nombre completo es obligatorio")
         @Size(max = 201, message = "El nombre completo no puede superar 201 caracteres")

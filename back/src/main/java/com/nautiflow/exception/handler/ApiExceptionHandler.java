@@ -34,10 +34,16 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * Centraliza la traducción de excepciones a respuestas JSON de error con el estado HTTP adecuado.
+ */
 @RestControllerAdvice
 public class ApiExceptionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
+    /**
+     * Convierte credenciales inválidas en una respuesta 401 sin revelar cuál dato falló.
+     */
     @ExceptionHandler(CredencialesInvalidasException.class)
     public ResponseEntity<ApiErrorResponse> manejarCredencialesInvalidas(
             CredencialesInvalidasException exception,
@@ -46,6 +52,9 @@ public class ApiExceptionHandler {
         return responder(HttpStatus.UNAUTHORIZED, "El correo o la contraseña no son correctos.", request);
     }
 
+    /**
+     * Devuelve 400 con los mensajes de validación del cuerpo de la solicitud.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> manejarValidacionDeCuerpo(
             MethodArgumentNotValidException exception,
@@ -61,6 +70,9 @@ public class ApiExceptionHandler {
         return responder(HttpStatus.BAD_REQUEST, mensaje, request);
     }
 
+    /**
+     * Devuelve 400 con los errores de binding de parámetros.
+     */
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ApiErrorResponse> manejarErroresDeBinding(
             BindException exception,
@@ -77,6 +89,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Devuelve 400 con las violaciones de restricciones de parámetros.
+     */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiErrorResponse> manejarRestriccionesDeMetodo(
             ConstraintViolationException exception,
@@ -88,6 +103,9 @@ public class ApiExceptionHandler {
         return responder(HttpStatus.BAD_REQUEST, mensaje, request);
     }
 
+    /**
+     * Devuelve 400 cuando el JSON está vacío o mal formado.
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorResponse> manejarCuerpoIlegible(
             HttpMessageNotReadableException exception,
@@ -100,6 +118,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Devuelve 400 cuando falta un parámetro o su tipo no coincide.
+     */
     @ExceptionHandler({
             MissingServletRequestParameterException.class,
             MissingServletRequestPartException.class,
@@ -116,6 +137,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Devuelve 415 cuando el Content-Type no es compatible.
+     */
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ApiErrorResponse> manejarTipoDeContenidoNoSoportado(
             HttpMediaTypeNotSupportedException exception,
@@ -128,6 +152,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Devuelve 406 cuando no se puede producir el formato solicitado.
+     */
     @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
     public ResponseEntity<ApiErrorResponse> manejarTipoDeRespuestaNoAceptable(
             HttpMediaTypeNotAcceptableException exception,
@@ -140,6 +167,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Devuelve 405 cuando el método HTTP no está permitido.
+     */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiErrorResponse> manejarMetodoNoSoportado(
             HttpRequestMethodNotSupportedException exception,
@@ -152,6 +182,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Devuelve 413 cuando un archivo o la solicitud superan el tamaño máximo.
+     */
     @ExceptionHandler({
             ArchivoDemasiadoGrandeException.class,
             MaxUploadSizeExceededException.class
@@ -166,6 +199,9 @@ public class ApiExceptionHandler {
         return responder(HttpStatus.PAYLOAD_TOO_LARGE, mensaje, request);
     }
 
+    /**
+     * Devuelve 413 o 400 según si el error multipart se debe al tamaño.
+     */
     @ExceptionHandler(MultipartException.class)
     public ResponseEntity<ApiErrorResponse> manejarMultipartInvalido(
             MultipartException exception,
@@ -181,6 +217,9 @@ public class ApiExceptionHandler {
         return responder(HttpStatus.BAD_REQUEST, "La solicitud multipart no es válida.", request);
     }
 
+    /**
+     * Devuelve 400 con el mensaje de una solicitud inválida del dominio.
+     */
     @ExceptionHandler(SolicitudInvalidaException.class)
     public ResponseEntity<ApiErrorResponse> manejarSolicitudInvalida(
             SolicitudInvalidaException exception,
@@ -189,6 +228,9 @@ public class ApiExceptionHandler {
         return responder(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
     }
 
+    /**
+     * Devuelve 409 cuando el registro entra en conflicto con datos existentes.
+     */
     @ExceptionHandler(ConflictoRegistroException.class)
     public ResponseEntity<ApiErrorResponse> manejarConflictoDeRegistro(
             ConflictoRegistroException exception,
@@ -197,6 +239,9 @@ public class ApiExceptionHandler {
         return responder(HttpStatus.CONFLICT, exception.getMessage(), request);
     }
 
+    /**
+     * Devuelve 409 ante violaciones de integridad de la base de datos.
+     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> manejarConflictoDeDatos(
             DataIntegrityViolationException exception,
@@ -209,6 +254,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Respeta el estado de una ResponseStatusException y oculta los detalles de errores 5xx.
+     */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> manejarEstadoHttp(
             ResponseStatusException exception,
@@ -224,6 +272,9 @@ public class ApiExceptionHandler {
         return responder(status, mensaje, request);
     }
 
+    /**
+     * Devuelve 503 cuando falta configuración de almacenamiento.
+     */
     @ExceptionHandler(AlmacenamientoNoConfiguradoException.class)
     public ResponseEntity<ApiErrorResponse> manejarAlmacenamientoNoConfigurado(
             AlmacenamientoNoConfiguradoException exception,
@@ -236,6 +287,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Devuelve 502 cuando falla una operación con el almacenamiento.
+     */
     @ExceptionHandler(ErrorAlmacenamientoException.class)
     public ResponseEntity<ApiErrorResponse> manejarErrorDeAlmacenamiento(
             ErrorAlmacenamientoException exception,
@@ -248,6 +302,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Devuelve 500 cuando falla el registro del lanchero.
+     */
     @ExceptionHandler(ErrorRegistroException.class)
     public ResponseEntity<ApiErrorResponse> manejarErrorDeRegistro(
             ErrorRegistroException exception,
@@ -260,6 +317,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Devuelve 404 cuando el recurso solicitado no existe.
+     */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiErrorResponse> manejarRecursoNoEncontrado(
             NoResourceFoundException exception,
@@ -268,6 +328,9 @@ public class ApiExceptionHandler {
         return responder(HttpStatus.NOT_FOUND, "El recurso solicitado no existe.", request);
     }
 
+    /**
+     * Registra el error y devuelve 500 sin exponer detalles internos.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> manejarErrorInesperado(
             Exception exception,
@@ -281,6 +344,9 @@ public class ApiExceptionHandler {
         );
     }
 
+    /**
+     * Busca en la cadena de causas si el origen fue un límite de subida excedido.
+     */
     private boolean contieneLimiteExcedido(Throwable exception) {
         Throwable causa = exception.getCause();
         while (causa != null) {
@@ -292,6 +358,9 @@ public class ApiExceptionHandler {
         return false;
     }
 
+    /**
+     * Construye la respuesta JSON de error con la ruta y la marca de tiempo.
+     */
     private ResponseEntity<ApiErrorResponse> responder(
             HttpStatus status,
             String mensaje,
