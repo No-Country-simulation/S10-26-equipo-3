@@ -1,6 +1,7 @@
 import type { SyntheticEvent } from "react";
 import { BsChevronLeft } from "react-icons/bs";
 import type { DatosLanchero } from "./types";
+import { PREFIJO_CELULAR, LARGO_CELULAR } from "./types";
 import Logo from "../Logo";
 import Input from "./Input";
 import IndicadorPasos from "./IndicadorPasos";
@@ -43,17 +44,35 @@ export default function Paso1Datos({ datos, onChange, onSiguiente, onAtras }: Pr
                         value={datos.nombreCompleto}
                         onChange={(e) => onChange({ nombreCompleto: e.target.value })}
                     />
-                    <Input
-                        label="WhatsApp"
-                        type="tel"
-                        inputMode="numeric"
-                        placeholder="9 11 1234 5678"
-                        autoComplete="tel"
-                        maxLength={15}
-                        required
-                        value={datos.whatsapp}
-                        onChange={(e) => onChange({ whatsapp: e.target.value.replace(/\D/g, "") })}
-                    />
+                    <div className="flex flex-col gap-1">
+                        <label htmlFor="celular" className="text-sm font-semibold leading-[22px] text-text-primary">
+                            Celular
+                        </label>
+                        <div className="flex w-full overflow-hidden rounded-m border border-border-secondary bg-bg-surface-primary focus-within:ring-2 focus-within:ring-bg-fill-primary">
+                            <span className="flex items-center border-r border-border-secondary bg-bg-surface-secondary px-3 text-sm font-semibold leading-[22px] text-text -primary">
+                                {PREFIJO_CELULAR}
+                            </span>
+                            <input
+                                id="celular"
+                                type="tel"
+                                inputMode="numeric"
+                                autoComplete="tel-national"
+                                placeholder="11 1234 5678"
+                                maxLength={LARGO_CELULAR}
+                                pattern={`[0-9]{${LARGO_CELULAR}}`}
+                                title={`Ingresa los ${LARGO_CELULAR} dígitos de tu celular, sin 0 ni 15`}
+                                required
+                                value={datos.whatsapp}
+                                onChange={(e) =>
+                                    onChange({ whatsapp: e.target.value.replace(/\D/g, "").slice(0, LARGO_CELULAR) })
+                                }
+                                className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm leading-[22px] text-text-primary outline-none placeholder:text-text-disable"
+                            />
+                        </div>
+                        <p className="text-xs leading-4 text-text-secondary">
+                            Sin 0 ni 15. Ejemplo: 11 1234 5678
+                        </p>
+                    </div>
                     <Input
                         label="Correo electrónico"
                         type="email"
