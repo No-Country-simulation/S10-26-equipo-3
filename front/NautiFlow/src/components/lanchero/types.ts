@@ -23,3 +23,6 @@ export const datosIniciales: DatosLanchero = {
     seguro: null,
     antecedentes: null,
 };
+
+export const PREFIJO_CELULAR = "+54";
+export const LARGO_CELULAR = 10;
