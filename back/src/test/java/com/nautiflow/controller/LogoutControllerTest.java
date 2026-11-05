@@ -7,6 +7,7 @@ import com.nautiflow.dto.AdminDashboardDTO;
 import com.nautiflow.service.AdminAuthService;
 import com.nautiflow.service.AdminService;
 import com.nautiflow.service.JwtTokenService;
+import com.nautiflow.service.LoginAttemptService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -51,6 +52,9 @@ class LogoutControllerTest {
 
     @MockitoBean
     private AdminService adminService;
+
+    @MockitoBean
+    private LoginAttemptService loginAttemptService;
 
     @Test
     void logoutRevocaElTokenYUnaNuevaSesionSigueFuncionando() throws Exception {
