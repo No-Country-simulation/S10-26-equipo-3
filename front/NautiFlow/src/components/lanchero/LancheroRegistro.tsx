@@ -5,7 +5,7 @@ import LancheroIntro from "./LancheroIntro";
 import Paso1Datos from "./Paso1Datos";
 import Paso2Embarcacion from "./Paso2Embarcacion";
 import Paso3Documentos from "./Paso3Documentos";
-import LancheroConfirmacion from "../LancheroConfirmacion";
+import LancheroConfirmacion from "../LancheroConfirmacion/LancheroConfirmacion";
 
 export default function LancheroRegistro() {
     // 0 = intro, 1-3 = pasos, 4 = confirmación
@@ -22,6 +22,9 @@ export default function LancheroRegistro() {
         console.log("Datos del lanchero:", datos); // envio a backend
         setPaso(4);
     };
+    const volverInicio =() =>{
+        setPaso(0)
+    }
 
     return (
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-none">
@@ -33,7 +36,8 @@ export default function LancheroRegistro() {
 
             {paso === 3 && ( <Paso3Documentos datos={datos} onChange={actualizar} onFinalizar={finalizar} onAtras={atras} />)}
             
-            {paso === 4 && <LancheroConfirmacion />}
+            {paso === 4 && <LancheroConfirmacion finalizar={volverInicio} />}
+
         </div>
     );
 }

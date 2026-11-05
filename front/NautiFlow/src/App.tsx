@@ -1,10 +1,17 @@
 import LancheroRegistro from "./components/lanchero/LancheroRegistro";
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Admin from "./components/Admin/Admin";
 
 function App() {
   return (
-    <div className="flex min-h-dvh flex-col bg-bg-fill-secondary p-4 md:p-16">
-      <LancheroRegistro />
-    </div>
+    <BrowserRouter>
+      <Routes>
+     
+        <Route  path="/" element={<LancheroRegistro/>} />
+     
+      <Route path="/admin" element={<Admin/>}/>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
