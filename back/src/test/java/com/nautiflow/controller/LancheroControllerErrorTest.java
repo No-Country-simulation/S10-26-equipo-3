@@ -22,9 +22,9 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -100,14 +100,7 @@ class LancheroControllerErrorTest {
     }
 
     @Test
-    void registroAceptaContrasenaOmitidaOVacia() throws Exception {
-        when(lancheroService.registrarLanchero(
-                any(LancheroRegistroDTO.class), any(MultipartFile.class), any(MultipartFile.class),
-                any(MultipartFile.class), anyList()
-        )).thenReturn(new RegistroLancheroResponse(
-                12L, 34L, "PENDIENTE", "Solicitud de registro recibida correctamente."
-        ));
-
+    void registroRechazaContrasenaOmitidaOVacia() throws Exception {
         for (String campoContrasena : List.of("", ",\"contrasena\":\"\"")) {
             String solicitud = """
                     {"nombreCompleto":"Ana Pérez","whatsapp":"+573212684025",
@@ -115,17 +108,13 @@ class LancheroControllerErrorTest {
                      "capacidadPasajeros":8,"zonasIds":[1,3]}
                     """.formatted(campoContrasena);
             mockMvc.perform(requestWithParts(solicitud))
-                    .andExpect(status().isCreated());
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(
+                            org.hamcrest.Matchers.containsString("La contraseña es obligatoria")
+                    ));
         }
 
-        verify(lancheroService, org.mockito.Mockito.times(2)).registrarLanchero(
-                argThat(solicitud -> solicitud.contrasena() == null
-                        || solicitud.contrasena().isEmpty()),
-                any(MultipartFile.class),
-                any(MultipartFile.class),
-                any(MultipartFile.class),
-                anyList()
-        );
+        verifyNoInteractions(lancheroService);
     }
 
     @Test

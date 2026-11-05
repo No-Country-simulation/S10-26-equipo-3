@@ -114,6 +114,9 @@ class LancheroPersistenceServiceTest {
         ArgumentCaptor<Lancha> lanchaCaptor = ArgumentCaptor.forClass(Lancha.class);
         verify(lanchaRepository).save(lanchaCaptor.capture());
         assertEquals(Set.of(norte), lanchaCaptor.getValue().getZonas());
+        ArgumentCaptor<Lanchero> lancheroCaptor = ArgumentCaptor.forClass(Lanchero.class);
+        verify(lancheroRepository).save(lancheroCaptor.capture());
+        assertEquals("hash", lancheroCaptor.getValue().getPasswordHash());
     }
 
     @Test
@@ -131,7 +134,7 @@ class LancheroPersistenceServiceTest {
     }
 
     @Test
-    void permiteRegistroSinContrasenaYGuardaNullEnPasswordHash() {
+    void rechazaRegistroSinContrasena() {
         when(zonaRepository.findAllById(List.of())).thenReturn(List.of());
         LancheroRegistroDTO solicitud = new LancheroRegistroDTO(
                 "María Pérez",
@@ -143,13 +146,14 @@ class LancheroPersistenceServiceTest {
                 null
         );
 
-        service.registrar(solicitud, "l.pdf", "application/pdf",
-                "s.pdf", "application/pdf", "a.pdf", "application/pdf", List.of());
+        assertThrows(
+                SolicitudInvalidaException.class,
+                () -> service.registrar(solicitud, "l.pdf", "application/pdf",
+                        "s.pdf", "application/pdf", "a.pdf", "application/pdf", List.of())
+        );
 
-        ArgumentCaptor<Lanchero> lancheroCaptor = ArgumentCaptor.forClass(Lanchero.class);
-        verify(lancheroRepository).save(lancheroCaptor.capture());
-        assertEquals(null, lancheroCaptor.getValue().getPasswordHash());
-        verify(passwordEncoder, never()).encode(any());
+        verify(lancheroRepository, never()).save(any());
+        verifyNoInteractions(lanchaRepository, documentoRepository, passwordEncoder);
     }
 
     @Test

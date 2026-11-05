@@ -116,9 +116,10 @@ public class LancheroPersistenceService {
         lanchero.setWhatsapp(solicitud.whatsapp().strip());
         lanchero.setCorreo(solicitud.correo().strip());
         String contrasena = solicitud.contrasena();
-        lanchero.setPasswordHash(contrasena == null || contrasena.isBlank()
-                ? null
-                : passwordEncoder.encode(contrasena));
+        if (contrasena == null || contrasena.isBlank()) {
+            throw new SolicitudInvalidaException("La contraseña es obligatoria.");
+        }
+        lanchero.setPasswordHash(passwordEncoder.encode(contrasena));
         lanchero = lancheroRepository.save(lanchero);
 
         Lancha lancha = new Lancha();

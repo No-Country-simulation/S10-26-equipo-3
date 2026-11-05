@@ -14,7 +14,7 @@ import java.util.List;
  * @param nombreCompleto Nombre completo de la persona.
  * @param whatsapp Número de WhatsApp de contacto.
  * @param correo Correo electrónico de contacto.
- * @param contrasena Contraseña opcional del lanchero. Si se envía, debe tener entre 8 y 72 caracteres.
+ * @param contrasena Contraseña obligatoria del lanchero, de entre 8 y 72 caracteres.
  * @param nombreEmbarcacion Nombre de la embarcación.
  * @param capacidadPasajeros Capacidad máxima de pasajeros de la embarcación.
  * @param zonasIds Identificadores de las zonas que cubre la embarcación.
@@ -33,10 +33,8 @@ public record LancheroRegistroDTO(
         @Size(max = 100, message = "El correo no puede superar 100 caracteres")
         String correo,
 
-        @Pattern(
-                regexp = "^(?:|(?=.*\\S).{8,72})$",
-                message = "Si proporciona una contraseña, debe tener entre 8 y 72 caracteres"
-        )
+        @NotBlank(message = "La contraseña es obligatoria")
+        @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres")
         String contrasena,
 
         @NotBlank(message = "El nombre de la embarcación es obligatorio")
