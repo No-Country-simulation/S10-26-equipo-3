@@ -29,10 +29,12 @@ import com.nautiflow.service.AdminAuthService;
 import com.nautiflow.service.AdminAuthService.CredencialesInvalidasException;
 import com.nautiflow.service.AdminService;
 import com.nautiflow.service.AdminWorkflowService;
+import com.nautiflow.service.LoginAttemptService;
 import com.nautiflow.service.ViajeWorkflowService;
 import com.nautiflow.service.JwtTokenService;
 import com.nautiflow.service.ResenaService;
 import com.nautiflow.service.ZonaService;
+import com.nautiflow.exception.DemasiadosIntentosLoginException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -57,7 +59,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -92,6 +96,9 @@ class AdminControllerTest {
 
     @MockitoBean
     private AdminAuthService adminAuthService;
+
+    @MockitoBean
+    private LoginAttemptService loginAttemptService;
 
     @MockitoBean
     private AdminWorkflowService adminWorkflowService;
@@ -202,6 +209,25 @@ class AdminControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.path").value("/login"));
+
+        verify(loginAttemptService).registrarFallo(anyString());
+    }
+
+    @Test
+    void loginBloqueadoPorDemasiadosIntentosDevuelve429ConRetryAfter() throws Exception {
+        doThrow(new DemasiadosIntentosLoginException(600))
+                .when(loginAttemptService).validarPermitido(anyString());
+
+        mockMvc.perform(post("/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"admin@nautiflow.com","password":"Admin123*"}
+                                """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "600"))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.error").value("Too Many Requests"))
                 .andExpect(jsonPath("$.path").value("/login"));
     }
 

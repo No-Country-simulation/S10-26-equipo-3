@@ -4,6 +4,7 @@ import com.nautiflow.exception.AlmacenamientoNoConfiguradoException;
 import com.nautiflow.exception.ApiErrorResponse;
 import com.nautiflow.exception.ArchivoDemasiadoGrandeException;
 import com.nautiflow.exception.ConflictoRegistroException;
+import com.nautiflow.exception.DemasiadosIntentosLoginException;
 import com.nautiflow.exception.ErrorAlmacenamientoException;
 import com.nautiflow.exception.ErrorRegistroException;
 import com.nautiflow.exception.SolicitudInvalidaException;
@@ -13,6 +14,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -50,6 +52,23 @@ public class ApiExceptionHandler {
             HttpServletRequest request
     ) {
         return responder(HttpStatus.UNAUTHORIZED, "El correo o la contraseña no son correctos.", request);
+    }
+
+    /**
+     * Devuelve 429 con el tiempo de espera cuando una IP superó los intentos fallidos permitidos.
+     */
+    @ExceptionHandler(DemasiadosIntentosLoginException.class)
+    public ResponseEntity<ApiErrorResponse> manejarDemasiadosIntentosLogin(
+            DemasiadosIntentosLoginException exception,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.getSegundosRestantes()))
+                .body(ApiErrorResponse.of(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        exception.getMessage(),
+                        request.getRequestURI()
+                ));
     }
 
     /**
