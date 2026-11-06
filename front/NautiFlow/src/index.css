@@ -66,7 +66,8 @@
 
    /*typography*/
 
-   --font-inter:'inter';
+   --font-inter: "Inter", sans-serif;
+   --font-sans: "Inter", sans-serif;
 
    --text-display-one-size: 60px; /* 3.75rem */
    --leading-display-one-line-height: 76px;
@@ -94,7 +95,7 @@
    --leading-heading-lg-line-height: 30px;
    --font-weight-heading-lg: 700; /*Bold*/
 
-   --text-subtitle-md-size: 24px; /* 1.13rem */
+   --text-subtitle-md-size: 20px; /* 1.25rem */
    --leading-subtitle-md-line-height: 28px;
    --font-weight-subtitle-md: 600; /* Semi Bold */
 
@@ -131,9 +132,9 @@
    --leading-button-md-line-height: 22px;
    --font-weight-button-md: 600;
 
-   --text-button-sm-size: 18px; /* 0.88rem */
-   --leading-button-sm-line-height: 28px;
-   --font-weight-button-sm: 500;
+   --text-button-sm-size: 14px; /* 0.88rem */
+   --leading-button-sm-line-height: 20px;
+   --font-weight-button-sm: 600;
 
    --text-label-md-bold-size: 16px; /* 0.88rem */
    --leading-label-md-bold-line-height: 20px;

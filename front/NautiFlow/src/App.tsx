@@ -6,10 +6,15 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-     
-        <Route  path="/" element={<LancheroRegistro/>} />
-     
-      <Route path="/admin" element={<Admin/>}/>
+        <Route
+          path="/"
+          element={
+            <div className="flex min-h-dvh flex-col bg-bg-fill-secondary p-4 font-inter md:p-16">
+              <LancheroRegistro />
+            </div>
+          }
+        />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>
   );
