@@ -12,7 +12,6 @@ CREATE TABLE lanchero (
     fecha_decision TIMESTAMP WITH TIME ZONE,
     motivo_rechazo VARCHAR(500),
     estado_viaje VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
-    password_hash VARCHAR(100) NOT NULL,
     CONSTRAINT ck_lanchero_estado_solicitud
         CHECK (estado_solicitud IN ('PENDIENTE', 'APROBADO', 'RECHAZADO')),
     CONSTRAINT ck_lanchero_estado_viaje

@@ -18,9 +18,11 @@ No ejecutar de nuevo `back/init/01-schema.sql` sobre una base que se quiera cons
 
 El registro ya no solicita ni almacena el documento de identidad del lanchero. Para actualizar una base existente, ejecutar manualmente `back/init/02-eliminar-documento-identidad.sql` una vez que se haya decidido descartar los valores guardados en esa columna; la operación elimina esos datos.
 
+El registro de lancheros no requiere cuentas ni contraseñas. En bases existentes, ejecutar manualmente `back/init/03-eliminar-password-hash-lanchero.sql` para retirar los hashes de contraseña que ya no se usan. El script inicial `back/init/01-schema.sql` ya crea el esquema sin esa columna.
+
 ## Endpoints
 
-`GET /zonas` es público y devuelve únicamente `id` y `nombre` de las zonas existentes, ordenadas por nombre. En el registro multipart, incluye opcionalmente `zonasIds` dentro del JSON de texto `solicitud` (por ejemplo `[1,3]`). Los IDs deben existir y no repetirse; si se omite o está vacío, la lancha queda sin zonas. La respuesta del registro contiene únicamente `idLanchero`, `idLancha`, `estado` y `mensaje`. La colección Postman incluye la consulta de zonas y un ejemplo de registro.
+`GET /zonas` es público y devuelve únicamente `id` y `nombre` de las zonas existentes, ordenadas por nombre. En `POST /lancheros/registrar`, `solicitud` es un campo de texto con JSON y requiere `nombreCompleto`, `whatsapp`, `correo`, `nombreEmbarcacion` y `capacidadPasajeros`; `zonasIds` es opcional. No se envían credenciales. Los IDs de zonas deben existir y no repetirse; si se omiten o están vacíos, la lancha queda sin zonas. El multipart requiere `licencia`, `seguro` y `antecedentes`; `fotos` es opcional (máximo cinco). La respuesta `201` contiene únicamente `idLanchero`, `idLancha`, `estado` y `mensaje`. El registro encola el correo de confirmación para procesamiento asíncrono: la respuesta HTTP no confirma su entrega. Los errores usan el campo `message` junto al estado, ruta y marca de tiempo.
 
 La colección Postman importable está en `back/docs/NautiFlow.postman_collection.json`. Configura `baseUrl`, `adminEmail` y `adminPassword`; ejecuta Login para guardar el JWT. Los IDs de ejemplo se deben cambiar por registros válidos de la base de datos. No se incluyen credenciales ni secretos.
 

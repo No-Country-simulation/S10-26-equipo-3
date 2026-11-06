@@ -27,9 +27,6 @@ public class Lanchero {
     @Column(nullable = false, unique = true, length = 100)
     private String correo;
 
-    @Column(name = "password_hash", nullable = false, length = 100)
-    private String passwordHash;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_solicitud", nullable = false, length = 20)
     private EstadoSolicitud estadoSolicitud = EstadoSolicitud.PENDIENTE;
@@ -114,20 +111,6 @@ public class Lanchero {
      */
     public void setCorreo(String correo) {
         this.correo = correo;
-    }
-
-    /**
-     * Obtiene hash de la contraseña del lanchero.
-     */
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    /**
-     * Establece hash de la contraseña del lanchero.
-     */
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
     }
 
     /**

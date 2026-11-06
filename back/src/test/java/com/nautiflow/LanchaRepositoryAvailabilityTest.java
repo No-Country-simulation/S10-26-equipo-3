@@ -164,7 +164,6 @@ class LanchaRepositoryAvailabilityTest {
         lanchero.setNombreCompleto("Lanchero " + sufijo);
         lanchero.setWhatsapp("+570000000000");
         lanchero.setCorreo(UUID.randomUUID() + "@test.invalid");
-        lanchero.setPasswordHash("hash-test");
         lanchero.setEstadoSolicitud(estado);
         lanchero.setEstadoViaje(EstadoOperativoLanchero.INACTIVO);
         lanchero = lancheroRepository.saveAndFlush(lanchero);

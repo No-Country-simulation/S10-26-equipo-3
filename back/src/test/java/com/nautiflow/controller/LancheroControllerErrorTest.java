@@ -4,6 +4,7 @@ import com.nautiflow.config.SecurityConfig;
 import com.nautiflow.config.JacksonConfig;
 import com.nautiflow.dto.LancheroRegistroDTO;
 import com.nautiflow.dto.RegistroLancheroResponse;
+import com.nautiflow.exception.ConflictoRegistroException;
 import com.nautiflow.service.JwtTokenService;
 import com.nautiflow.service.LancheroService;
 import com.nautiflow.service.LancheroSolicitudParser;
@@ -24,7 +25,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -54,7 +54,7 @@ class LancheroControllerErrorTest {
     @Test
     void camposObligatoriosVaciosYIdsDeZonaInvalidosDevuelven400() throws Exception {
         mockMvc.perform(requestWithParts("""
-                        {"nombreCompleto":"","whatsapp":"","correo":"","contrasena":"",
+                        {"nombreCompleto":"","whatsapp":"","correo":"",
                          "nombreEmbarcacion":"","capacidadPasajeros":0,"zonasIds":[0]}
                         """))
                 .andExpect(status().isBadRequest())
@@ -100,34 +100,15 @@ class LancheroControllerErrorTest {
     }
 
     @Test
-    void registroRechazaContrasenaOmitidaOVacia() throws Exception {
-        for (String campoContrasena : List.of("", ",\"contrasena\":\"\"")) {
-            String solicitud = """
-                    {"nombreCompleto":"Ana Pérez","whatsapp":"+573212684025",
-                     "correo":"ana@example.com"%s,"nombreEmbarcacion":"Brisa Marina",
-                     "capacidadPasajeros":8,"zonasIds":[1,3]}
-                    """.formatted(campoContrasena);
-            mockMvc.perform(requestWithParts(solicitud))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.message").value(
-                            org.hamcrest.Matchers.containsString("La contraseña es obligatoria")
-                    ));
-        }
+    void correoDuplicadoDevuelve409ConElMensajeDelBackend() throws Exception {
+        when(lancheroService.registrarLanchero(
+                eq(solicitudValida()), any(MultipartFile.class), any(MultipartFile.class),
+                any(MultipartFile.class), anyList()
+        )).thenThrow(new ConflictoRegistroException("Ya existe un lanchero con ese correo electrónico."));
 
-        verifyNoInteractions(lancheroService);
-    }
-
-    @Test
-    void registroRechazaContrasenaDemasiadoCorta() throws Exception {
-        mockMvc.perform(requestWithParts("""
-                        {"nombreCompleto":"Ana Pérez","whatsapp":"+573212684025",
-                         "correo":"ana@example.com","contrasena":"corta",
-                         "nombreEmbarcacion":"Brisa Marina","capacidadPasajeros":8}
-                        """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(
-                        org.hamcrest.Matchers.containsString("entre 8 y 72 caracteres")
-                ));
+        mockMvc.perform(requestWithParts(jsonSolicitudValida()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Ya existe un lanchero con ese correo electrónico."));
     }
 
     private MockMultipartHttpServletRequestBuilder requestWithParts(String solicitud) {
@@ -143,15 +124,14 @@ class LancheroControllerErrorTest {
     private String jsonSolicitudValida() {
         return """
                 {"nombreCompleto":"Ana Pérez","whatsapp":"+573212684025",
-                 "correo":"ana@example.com","contrasena":"ClaveSegura123",
+                 "correo":"ana@example.com",
                  "nombreEmbarcacion":"Brisa Marina","capacidadPasajeros":8,"zonasIds":[1,3]}
                 """;
     }
 
     private LancheroRegistroDTO solicitudValida() {
         return new LancheroRegistroDTO(
-                "Ana Pérez", "+573212684025", "ana@example.com", "ClaveSegura123",
-                "Brisa Marina", 8, List.of(1L, 3L)
+                "Ana Pérez", "+573212684025", "ana@example.com", "Brisa Marina", 8, List.of(1L, 3L)
         );
     }
 }

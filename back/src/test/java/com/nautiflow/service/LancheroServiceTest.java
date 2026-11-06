@@ -33,7 +33,6 @@ class LancheroServiceTest {
                 "Ana Pérez",
                 "+573001234567",
                 "ana@example.com",
-                "password-segura",
                 "Lancha",
                 8,
                 List.of(1L)
@@ -120,7 +119,7 @@ class LancheroServiceTest {
 
     private LancheroRegistroDTO solicitud() {
         return new LancheroRegistroDTO(
-                "Ana Pérez", "+573001234567", "ana@example.com", "password-segura", "Lancha", 8, List.of(1L)
+                "Ana Pérez", "+573001234567", "ana@example.com", "Lancha", 8, List.of(1L)
         );
     }
 
