@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { DatosLanchero } from "./types";
-import { datosIniciales } from "./types";
+import { datosIniciales, PREFIJO_CELULAR } from "./types";
 import LancheroIntro from "./LancheroIntro";
 import Paso1Datos from "./Paso1Datos";
 import Paso2Embarcacion from "./Paso2Embarcacion";
@@ -19,7 +19,8 @@ export default function LancheroRegistro() {
     const atras = () => setPaso((p) => p - 1);
 
     const finalizar = () => {
-        console.log("Datos del lanchero:", datos); // envio a backend
+        const datosAEnviar = { ...datos, whatsapp: `${PREFIJO_CELULAR}${datos.whatsapp}` };
+        console.log("Datos del lanchero:", datosAEnviar);
         setPaso(4);
     };
     const volverInicio =() =>{
@@ -30,11 +31,11 @@ export default function LancheroRegistro() {
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-none">
             {paso === 0 && <LancheroIntro onContinuar={siguiente} />}
 
-            {paso === 1 && ( <Paso1Datos datos={datos} onChange={actualizar} onSiguiente={siguiente} onAtras={atras} />)}
+            {paso === 1 && (<Paso1Datos datos={datos} onChange={actualizar} onSiguiente={siguiente} onAtras={atras} />)}
 
-            {paso === 2 && ( <Paso2Embarcacion datos={datos} onChange={actualizar} onSiguiente={siguiente} onAtras={atras} /> )}
+            {paso === 2 && (<Paso2Embarcacion datos={datos} onChange={actualizar} onSiguiente={siguiente} onAtras={atras} />)}
 
-            {paso === 3 && ( <Paso3Documentos datos={datos} onChange={actualizar} onFinalizar={finalizar} onAtras={atras} />)}
+            {paso === 3 && (<Paso3Documentos datos={datos} onChange={actualizar} onFinalizar={finalizar} onAtras={atras} />)}
             
             {paso === 4 && <LancheroConfirmacion finalizar={volverInicio} />}
 
