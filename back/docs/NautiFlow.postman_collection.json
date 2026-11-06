@@ -38,7 +38,6 @@
     { "key": "estadoSolicitud", "value": "PENDIENTE", "type": "string" },
     { "key": "estadoLanchero", "value": "APROBADO", "type": "string" },
     { "key": "registroEmail", "value": "", "type": "string" },
-    { "key": "registroPassword", "value": "", "type": "string" },
     { "key": "comentario501", "value": "", "type": "string" },
     { "key": "expiredToken", "value": "", "type": "string" }
   ],
@@ -100,7 +99,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["lancheros", "registrar"]
             },
-            "description": "Público. Selecciona los tres archivos requeridos y configura registroEmail/registroPassword en el entorno. fotos es opcional; habilita esa fila para adjuntar imágenes. No agregues manualmente Content-Type: Postman debe generar el boundary."
+            "description": "Público. El JSON de solicitud no incluye contraseña. Selecciona los tres archivos requeridos; fotos es opcional. No agregues manualmente Content-Type: Postman debe generar el boundary."
           },
           "event": [
             {
@@ -175,7 +174,7 @@
               "formdata": [
                 {
                   "key": "solicitud",
-                  "value": "{\n  \"nombreCompleto\": \"\",\n  \"whatsapp\": \"\",\n  \"correo\": \"\",\n  \"contrasena\": \"\",\n  \"nombreEmbarcacion\": \"\",\n  \"capacidadPasajeros\": 0,\n  \"zonasIds\": [0]\n}",
+                  "value": "{\n  \"nombreCompleto\": \"\",\n  \"whatsapp\": \"\",\n  \"correo\": \"\",\n  \"nombreEmbarcacion\": \"\",\n  \"capacidadPasajeros\": 0,\n  \"zonasIds\": [0]\n}",
                   "type": "text",
                   "contentType": "text/plain"
                 },
@@ -215,7 +214,7 @@
               "formdata": [
                 {
                   "key": "solicitud",
-                  "value": "{\n  \"nombreCompleto\": \"Ana Pérez\",\n  \"whatsapp\": \"+573212684025\",\n  \"correo\": \"{{registroEmail}}\",\n  \"contrasena\": \"{{registroPassword}}\",\n  \"nombreEmbarcacion\": \"Brisa de prueba\",\n  \"capacidadPasajeros\": 8,\n  \"zonasIds\": [{{idZonaOrigen}}, {{idZonaDestino}}]\n}",
+                  "value": "{\n  \"nombreCompleto\": \"Ana Pérez\",\n  \"whatsapp\": \"+573212684025\",\n  \"correo\": \"{{registroEmail}}\",\n  \"nombreEmbarcacion\": \"Brisa de prueba\",\n  \"capacidadPasajeros\": 8,\n  \"zonasIds\": [{{idZonaOrigen}}, {{idZonaDestino}}]\n}",
                   "type": "text",
                   "contentType": "text/plain"
                 },
