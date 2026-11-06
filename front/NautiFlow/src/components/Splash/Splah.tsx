@@ -43,7 +43,7 @@ export default function Splash({ onFinish }: SplashProps) {
     <div
       role="status"
       aria-label="Cargando"
-      className="fixed inset-0 z-50 grid place-items-center overflow-hidden bg-[#e2e8e8]"
+      className="fixed inset-0 z-50 grid place-items-center overflow-hidden bg-bg-fill-secondary"
       style={{
         opacity: phase === "fading" ? 0 : 1,
         transition: `opacity ${FADE}ms ease-out`,
@@ -60,7 +60,8 @@ export default function Splash({ onFinish }: SplashProps) {
           d={LINE_PATH}
           pathLength={1}
           fill="none"
-          stroke="#1f5463"
+          className="text-bg-fill-primary"
+          stroke="currentColor"
           strokeWidth={3}
           strokeLinecap="round"
           strokeDasharray="1"

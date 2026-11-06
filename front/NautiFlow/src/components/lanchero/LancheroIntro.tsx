@@ -14,7 +14,7 @@ export default function LancheroIntro({ onContinuar }: Props) {
             </header>
 
             <div className="flex flex-col gap-4 md:mx-auto md:mt-auto md:w-full md:max-w-xl">
-                <p className="text-xs font-semibold uppercase leading-4 text-text-primary">
+                <p className="text-xs font-semibold uppercase leading-4 text-text-secondary">
                     Registro de lancheros
                 </p>
 
@@ -22,7 +22,7 @@ export default function LancheroIntro({ onContinuar }: Props) {
                     Registra tu lancha y comienza a recibir solicitudes
                 </h1>
 
-                <p className="text-sm leading-[22px] text-text-secondary">
+                <p className="text-sm leading-[22px] text-text-primary">
                     Completa tus datos y los de tu embarcación para que los turistas
                     puedan encontrar tus servicios.
                 </p>

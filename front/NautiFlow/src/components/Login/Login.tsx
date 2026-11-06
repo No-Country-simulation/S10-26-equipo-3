@@ -8,7 +8,7 @@ interface LoginProps {
 }
  
 const inputClass =
-  "h-11 w-full rounded-lg border border-transparent bg-white px-3.5 text-sm text-[#1b1f21] placeholder:text-[#8d9799] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#1f5463]";
+  "h-11 w-full rounded-lg border border-transparent bg-bg-surface-primary px-3.5 text-sm text-text-primary placeholder:text-text-disable focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-bg-fill-primary";
  
 export default function Login({ onSuccess }: LoginProps) {
   const [email, setEmail] = useState("");
@@ -33,7 +33,7 @@ export default function Login({ onSuccess }: LoginProps) {
   };
  
   return (
-    <main className="grid min-h-screen grid-cols-1 overflow-x-hidden bg-[#e2e8e8] font-sans text-[#1b1f21] md:grid-cols-[minmax(360px,45%)_minmax(0,1fr)]">
+    <main className="grid min-h-screen grid-cols-1 overflow-x-hidden bg-bg-fill-secondary font-inter text-text-primary md:grid-cols-[minmax(360px,45%)_minmax(0,1fr)]">
      
       <svg className="absolute" width="0" height="0" aria-hidden="true">
         <defs>
@@ -51,8 +51,8 @@ export default function Login({ onSuccess }: LoginProps) {
         </div>
  
         <div className="mx-auto flex w-full max-w-[360px] flex-1 flex-col justify-center md:mx-0">
-          <p className="text-lg font-medium text-[#5f6b6e]">Bienvenido a</p>
-          <h1 className="mb-10 mt-1 text-[2rem] font-bold tracking-tight sm:text-4xl">
+          <p className="text-lg font-medium text-text-secondary">Bienvenido a</p>
+          <h1 className="mb-10 mt-1 text-[2rem] font-bold tracking-normal sm:text-4xl">
             NautiFlow
           </h1>
  
@@ -91,7 +91,7 @@ export default function Login({ onSuccess }: LoginProps) {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                className="absolute right-0 top-0 grid h-11 w-11 place-items-center rounded-lg focus-visible:outline-2 focus-visible:outline-[#1f5463]"
+                className="absolute right-0 top-0 grid h-11 w-11 place-items-center rounded-lg focus-visible:outline-2 focus-visible:outline-bg-fill-primary"
               >
                 <svg
                   width="18"
@@ -120,7 +120,7 @@ export default function Login({ onSuccess }: LoginProps) {
             </div>
  
             {error && (
-              <p role="alert" className="mb-2 text-sm text-red-700">
+              <p role="alert" className="mb-2 text-sm text-text-error">
                 {error}
               </p>
             )}
@@ -128,7 +128,7 @@ export default function Login({ onSuccess }: LoginProps) {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 h-11 rounded-full bg-[#1f5463] text-sm font-semibold text-white transition-colors hover:bg-[#17414d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f5463] disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-2 h-11 rounded-full bg-bg-fill-primary text-sm font-semibold text-text-invert transition-colors hover:bg-bg-fill-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bg-fill-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Iniciando sesión…" : "Iniciar sesión"}
             </button>

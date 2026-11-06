@@ -69,9 +69,6 @@ export default function Paso1Datos({ datos, onChange, onSiguiente, onAtras }: Pr
                                 className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm leading-[22px] text-text-primary outline-none placeholder:text-text-disable"
                             />
                         </div>
-                        <p className="text-xs leading-4 text-text-secondary">
-                            Sin 0 ni 15. Ejemplo: 11 1234 5678
-                        </p>
                     </div>
                     <Input
                         label="Correo electrónico"
