@@ -3,7 +3,7 @@ import { BsArrowDown } from "react-icons/bs";
 // Video de fondo del diseño (Figma: "Hero Desktop"), exportado a 720p sin audio; el póster es su primer cuadro.
 // Con prefers-reduced-motion se muestra el póster fijo en lugar del video.
 const VIDEO_FONDO = "/landing/hero-delta.mp4";
-const POSTER_FONDO = "/landing/hero-delta.jpg";
+const POSTER_FONDO = "/landing/hero-delta.png";
 
 export default function Hero() {
     return (
