@@ -6,6 +6,7 @@ import com.nautiflow.dto.AdminDashboardDTO;
 import com.nautiflow.dto.DecisionSolicitudDTO;
 import com.nautiflow.dto.ViajeAdminDTO;
 import com.nautiflow.dto.LancheroAdminDTO;
+import com.nautiflow.dto.LancheroListadoAdminDTO;
 import com.nautiflow.dto.LanchaDisponibleDTO;
 import com.nautiflow.dto.LoginRequest;
 import com.nautiflow.dto.LoginResponse;
@@ -606,8 +607,9 @@ class AdminControllerTest {
     @Test
     void listadoLancherosExponeAmbosEstadosPorSeparado() throws Exception {
         when(adminWorkflowService.listarLancheros(EstadoSolicitud.APROBADO, 0, 10)).thenReturn(new PaginaLancherosDTO(
-                List.of(new LancheroAdminDTO(
-                        12L, "Ana Pérez", OffsetDateTime.parse("2026-10-25T10:30:00Z"), "APROBADO", "ACTIVO"
+                List.of(new LancheroListadoAdminDTO(
+                        12L, "Ana Pérez", "+573001234567", "La Aurora",
+                        OffsetDateTime.parse("2026-10-25T10:30:00Z"), "APROBADO", "ACTIVO"
                 )),
                 0, 10, 1, 1
         ));
@@ -617,6 +619,8 @@ class AdminControllerTest {
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].estadoSolicitud").value("APROBADO"))
+                .andExpect(jsonPath("$.content[0].whatsapp").value("+573001234567"))
+                .andExpect(jsonPath("$.content[0].nombreLancha").value("La Aurora"))
                 .andExpect(jsonPath("$.content[0].estadoViaje").value("ACTIVO"));
         verify(adminWorkflowService).listarLancheros(EstadoSolicitud.APROBADO, 0, 10);
     }
