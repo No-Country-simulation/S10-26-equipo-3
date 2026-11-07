@@ -16,7 +16,6 @@ function App() {
             </div>
           }
         />
-       
         <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>
