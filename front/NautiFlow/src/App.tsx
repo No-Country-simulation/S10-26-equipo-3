@@ -5,6 +5,7 @@ import Admin from "./components/Admin/Admin";
 import type { AdminOutletContext } from "./components/Admin/Admin";
 import SolicitudesPendientes from "./components/Admin/SolicitudesPendientes";
 import DashboardPage from "./pages/admin/DashboardPage";
+import ViajesPage from "./pages/admin/ViajesPage";
 
 function SolicitudesPanel() {
   const { token, onLogout } = useOutletContext<AdminOutletContext>();
@@ -14,6 +15,11 @@ function SolicitudesPanel() {
 function DashboardPanel() {
   const { token } = useOutletContext<AdminOutletContext>();
   return <DashboardPage token={token} />;
+}
+
+function ViajesPanel() {
+  const { token } = useOutletContext<AdminOutletContext>();
+  return <ViajesPage token={token} />;
 }
 
 function App() {
@@ -36,7 +42,7 @@ function App() {
         <Route path="/panel" element={<Admin />}>
           <Route index element={<DashboardPanel />} />
           <Route path="buscador" element={<p className="text-text-primary">Buscador (pendiente)</p>} />
-          <Route path="viajes" element={<p className="text-text-primary">Viajes (pendiente)</p>} />
+          <Route path="viajes" element={<ViajesPanel />} />
           <Route path="solicitudes" element={<SolicitudesPanel />} />
           <Route path="solicitudes/:id" element={<SolicitudesPanel />} />
           <Route path="lancheros" element={<p className="text-text-primary">Lancheros (pendiente)</p>} />

@@ -25,6 +25,15 @@ export interface ViajeCreado {
   turistaWhatsapp: string;
 }
 
+export interface ViajeFinalizado {
+  id: number;
+  fechaHoraFin: string;
+  tokenResena: string;
+  nombreUsuario: string;
+  whatsappUsuario: string;
+  mensajeResena: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -44,8 +53,15 @@ function isViajeCreado(value: unknown): value is ViajeCreado {
     typeof value.turistaWhatsapp === "string";
 }
 
+function isViajeFinalizado(value: unknown): value is ViajeFinalizado {
+  return isRecord(value) && typeof value.id === "number" &&
+    typeof value.fechaHoraFin === "string" && typeof value.tokenResena === "string" &&
+    typeof value.nombreUsuario === "string" && typeof value.whatsappUsuario === "string" &&
+    typeof value.mensajeResena === "string";
+}
+
 async function errorServidor(response: Response): Promise<Error> {
-  let message = `No se pudo asignar el viaje (HTTP ${response.status}).`;
+  let message = `No se pudo completar la operación del viaje (HTTP ${response.status}).`;
   try {
     const body: unknown = await response.json();
     if (isRecord(body)) {
@@ -89,4 +105,29 @@ export async function registrarViaje(
     throw new Error("El servidor devolvió datos de viaje inválidos.");
   }
   return body;
+}
+
+async function solicitarAdmin(token: string, path: string, method: "GET" | "PATCH", signal?: AbortSignal): Promise<Response> {
+  try {
+    return await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      signal,
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new Error("No se pudo conectar con el servidor.");
+  }
+}
+
+async function leerRespuesta<T>(response: Response, validar: (value: unknown) => value is T): Promise<T> {
+  if (!response.ok) throw await errorServidor(response);
+  let body: unknown;
+  try { body = await response.json(); } catch { throw new Error("El servidor devolvió una respuesta inválida."); }
+  if (!validar(body)) throw new Error("El servidor devolvió datos de viaje inválidos.");
+  return body;
+}
+
+export async function finalizarViaje(token: string, id: number): Promise<ViajeFinalizado> {
+  const response = await solicitarAdmin(token, `/admin/viajes/${id}/finalizar`, "PATCH");
+  return leerRespuesta(response, isViajeFinalizado);
 }

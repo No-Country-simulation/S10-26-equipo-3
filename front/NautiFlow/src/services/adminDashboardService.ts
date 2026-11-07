@@ -8,6 +8,8 @@ export interface AdminDashboardMetrics {
 export interface ViajeSeguimiento {
   id: number;
   nombreEmbarcacion: string;
+  turistaNombreCompleto: string;
+  turistaWhatsapp: string;
   zonaOrigen: string;
   zonaDestino: string;
   fechaHoraInicio: string;
@@ -28,6 +30,7 @@ function esRegistro(value: unknown): value is Record<string, unknown> {
 function esViaje(value: unknown): value is ViajeSeguimiento {
   return esRegistro(value) && typeof value.id === "number" &&
     typeof value.nombreEmbarcacion === "string" && typeof value.zonaOrigen === "string" &&
+    typeof value.turistaNombreCompleto === "string" && typeof value.turistaWhatsapp === "string" &&
     typeof value.zonaDestino === "string" && typeof value.fechaHoraInicio === "string" &&
     (typeof value.fechaHoraFin === "string" || value.fechaHoraFin === null) &&
     typeof value.estado === "string" &&
@@ -62,8 +65,13 @@ export async function obtenerAdminDashboard(token: string, signal: AbortSignal):
     viajesActivos: body.viajesActivos,
   };
 }
-export async function listarSeguimientoViajes(token: string, page: number, signal: AbortSignal): Promise<PaginaSeguimientoViajes> {
-  const query = new URLSearchParams({ page: String(page), size: "10" });
+export async function listarSeguimientoViajes(
+  token: string,
+  page: number,
+  signal: AbortSignal,
+  estado = "TODOS",
+): Promise<PaginaSeguimientoViajes> {
+  const query = new URLSearchParams({ page: String(page), size: "10", estado });
   const body = await solicitar(token, "/admin/viajes/seguimiento?" + query, signal);
   if (!esRegistro(body) || !Array.isArray(body.content) || !body.content.every(esViaje) ||
       typeof body.page !== "number" || typeof body.size !== "number" ||
