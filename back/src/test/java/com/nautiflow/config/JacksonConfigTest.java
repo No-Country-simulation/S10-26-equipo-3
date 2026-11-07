@@ -14,17 +14,17 @@ class JacksonConfigTest {
     private final ObjectMapper objectMapper = new JacksonConfig().objectMapper();
 
     @Test
-    void serializaOffsetDateTimeComoUtcConPrecisionDeMicrosegundos() throws Exception {
+    void serializaOffsetDateTimeEnZonaArgentinaConPrecisionDeMicrosegundos() throws Exception {
         OffsetDateTime fecha = OffsetDateTime.parse("2026-11-02T13:22:22.682941899-05:00");
 
-        assertEquals("\"2026-11-02T18:22:22.682942Z\"", objectMapper.writeValueAsString(fecha));
+        assertEquals("\"2026-11-02T15:22:22.682942-03:00\"", objectMapper.writeValueAsString(fecha));
     }
 
     @Test
     void conservaPrecisionDeMicrosegundosSinRedondeoAdicional() throws Exception {
         OffsetDateTime fecha = OffsetDateTime.parse("2026-11-02T18:22:22.682941Z");
 
-        assertEquals("\"2026-11-02T18:22:22.682941Z\"", objectMapper.writeValueAsString(fecha));
+        assertEquals("\"2026-11-02T15:22:22.682941-03:00\"", objectMapper.writeValueAsString(fecha));
     }
 
     @Test
@@ -38,7 +38,7 @@ class JacksonConfigTest {
         );
         String json = objectMapper.writeValueAsString(viaje);
 
-        assertTrue(json.contains("\"fechaHoraInicio\":\"2026-11-02T18:22:22.682941Z\""));
+        assertTrue(json.contains("\"fechaHoraInicio\":\"2026-11-02T15:22:22.682941-03:00\""));
         assertTrue(json.contains("\"fechaHoraFin\":null"));
     }
 }

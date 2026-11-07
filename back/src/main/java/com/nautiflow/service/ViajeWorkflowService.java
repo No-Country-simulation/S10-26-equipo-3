@@ -19,6 +19,7 @@ import com.nautiflow.repository.LanchaRepository;
 import com.nautiflow.repository.ViajeRepository;
 import com.nautiflow.repository.ZonaRepository;
 import com.nautiflow.util.FechaHoraUtc;
+import com.nautiflow.util.ZonaNegocio;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -34,7 +35,6 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.HexFormat;
 import java.util.List;
 
@@ -44,7 +44,6 @@ import java.util.List;
 @Service
 public class ViajeWorkflowService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final ZoneId ZONA_NEGOCIO = ZoneId.of("America/Bogota");
 
     private final LancheroRepository lancheroRepository;
     private final LanchaRepository lanchaRepository;
@@ -159,9 +158,9 @@ public class ViajeWorkflowService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La capacidad debe ser mayor que cero.");
         }
 
-        Clock clockNegocio = clock.withZone(ZONA_NEGOCIO);
+        Clock clockNegocio = clock.withZone(ZonaNegocio.ZONA);
         LocalDateTime fechaHoraLocal = LocalDateTime.of(LocalDate.now(clockNegocio), hora);
-        OffsetDateTime fechaHoraConsulta = fechaHoraLocal.atZone(ZONA_NEGOCIO).toOffsetDateTime();
+        OffsetDateTime fechaHoraConsulta = fechaHoraLocal.atZone(ZonaNegocio.ZONA).toOffsetDateTime();
         if (fechaHoraConsulta.isBefore(OffsetDateTime.now(clockNegocio))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora seleccionada ya pasó para la fecha actual.");
         }

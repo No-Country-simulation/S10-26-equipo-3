@@ -21,7 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Comparator;
 import java.util.List;
-import java.time.ZoneOffset;
+import com.nautiflow.util.ZonaNegocio;
 
 /**
  * Servicio de consultas del panel administrativo: métricas, listado y detalle de solicitudes.
@@ -77,7 +77,7 @@ public class AdminService {
                 .map(lanchero -> new SolicitudResumenDTO(
                         lanchero.getIdLanchero(),
                         lanchero.getNombreCompleto(),
-                        lanchero.getFechaRegistro().withOffsetSameInstant(ZoneOffset.UTC).toLocalDate(),
+                        lanchero.getFechaRegistro().atZoneSameInstant(ZonaNegocio.ZONA).toLocalDate(),
                         lanchero.getEstadoSolicitud().name()
                 ))
                 .toList();

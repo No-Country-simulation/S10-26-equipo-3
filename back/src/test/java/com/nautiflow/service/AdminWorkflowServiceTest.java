@@ -452,7 +452,7 @@ class AdminWorkflowServiceTest {
         ))
                 .thenReturn(List.of(lancha));
 
-        var resultado = servicio.buscarDisponibles(5, "DELTA", "PRIMERA_SECCION", LocalTime.of(18, 0));
+        var resultado = servicio.buscarDisponibles(5, "DELTA", "PRIMERA_SECCION", LocalTime.of(20, 0));
 
         assertEquals(1, resultado.size());
         assertEquals(34L, resultado.getFirst().id());
@@ -466,7 +466,7 @@ class AdminWorkflowServiceTest {
                 eq(5), eq(2L), eq(3L), eq(EstadoSolicitud.APROBADO),
                 eq(EstadoOperativoLanchero.ACTIVO), fechaConsulta.capture()
         );
-        assertEquals(OffsetDateTime.parse("2026-11-02T18:00:00-05:00"), fechaConsulta.getValue());
+        assertEquals(OffsetDateTime.parse("2026-11-02T20:00:00-03:00"), fechaConsulta.getValue());
         assertEquals(OffsetDateTime.parse("2026-11-02T23:00:00Z").toInstant(), fechaConsulta.getValue().toInstant());
     }
 

@@ -3,6 +3,7 @@ package com.nautiflow;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import com.nautiflow.util.ZonaNegocio;
 
 import java.util.TimeZone;
 
@@ -14,12 +15,12 @@ import java.util.TimeZone;
 public class NautiflowApplication {
 
     /**
-     * Punto de entrada de la aplicación. Fija la zona horaria de Bogotá y arranca Spring Boot.
+	 * Punto de entrada de la aplicación. Fija la zona horaria de Argentina y arranca Spring Boot.
      */
 	public static void main(String[] args) {
 
 		TimeZone.setDefault(
-				TimeZone.getTimeZone("America/Bogota")
+				TimeZone.getTimeZone(ZonaNegocio.ZONA)
 		);
 
 		SpringApplication.run(
