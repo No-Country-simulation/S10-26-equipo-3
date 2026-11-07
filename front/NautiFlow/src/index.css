@@ -68,6 +68,7 @@
 
    --font-inter: "Inter", sans-serif;
    --font-sans: "Inter", sans-serif;
+   --font-jakarta: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
    --text-display-one-size: 60px; /* 3.75rem */
    --leading-display-one-line-height: 76px;
