@@ -35,9 +35,7 @@ function App() {
             </div>
           }
         />
-        <Route path="/admin" element={<Admin />}>
-          <Route index element={<Navigate to="/panel" replace />} />
-        </Route>
+        <Route path="/admin" element={<Admin />} />
         <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
         <Route path="/panel" element={<Admin />}>
           <Route index element={<DashboardPanel />} />
