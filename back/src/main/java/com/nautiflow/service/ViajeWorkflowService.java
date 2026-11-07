@@ -392,6 +392,8 @@ public class ViajeWorkflowService {
         return new ViajeSeguimientoDTO(
                 viaje.getIdViaje(),
                 viaje.getLancha().getNombre(),
+                viaje.getTuristaNombreCompleto(),
+                viaje.getTuristaWhatsapp(),
                 viaje.getZonaOrigen().getNombre(),
                 viaje.getZonaDestino().getNombre(),
                 viaje.getFechaHoraInicio(),

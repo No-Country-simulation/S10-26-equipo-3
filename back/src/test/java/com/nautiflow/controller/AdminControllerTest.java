@@ -349,7 +349,7 @@ class AdminControllerTest {
     void seguimientoDevuelveHistorialConEstadoYUltimaUbicacion() throws Exception {
         when(viajeWorkflowService.listarSeguimiento(0, 10)).thenReturn(new PaginaSeguimientoViajesDTO(
                 List.of(new ViajeSeguimientoDTO(
-                        25L, "Brisa Marina", "Delta", "Primera Seccion",
+                        25L, "Brisa Marina", "Turista Prueba", "+573001112233", "Delta", "Primera Seccion",
                         OffsetDateTime.parse("2026-11-02T14:00:00Z"), null,
                         "EN_VIAJE", "Segunda Seccion"
                 )),
@@ -360,6 +360,8 @@ class AdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(25))
                 .andExpect(jsonPath("$.content[0].nombreEmbarcacion").value("Brisa Marina"))
+                .andExpect(jsonPath("$.content[0].turistaNombreCompleto").value("Turista Prueba"))
+                .andExpect(jsonPath("$.content[0].turistaWhatsapp").value("+573001112233"))
                 .andExpect(jsonPath("$.content[0].estado").value("EN_VIAJE"))
                 .andExpect(jsonPath("$.content[0].ultimaUbicacionConfirmada").value("Segunda Seccion"));
     }

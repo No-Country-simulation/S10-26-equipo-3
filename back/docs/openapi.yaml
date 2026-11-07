@@ -1120,12 +1120,16 @@ components:
           type: integer
     ViajeSeguimiento:
       type: object
-      required: [id, nombreEmbarcacion, zonaOrigen, zonaDestino, fechaHoraInicio, estado]
+      required: [id, nombreEmbarcacion, turistaNombreCompleto, turistaWhatsapp, zonaOrigen, zonaDestino, fechaHoraInicio, estado]
       properties:
         id:
           type: integer
           format: int64
         nombreEmbarcacion:
+          type: string
+        turistaNombreCompleto:
+          type: string
+        turistaWhatsapp:
           type: string
         zonaOrigen:
           type: string
