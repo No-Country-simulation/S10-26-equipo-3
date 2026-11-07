@@ -21,6 +21,7 @@ export default function Admin() {
   const cerrarSesion = () => {
     authService.logout();
     setToken(null);
+    navigate("/admin", { replace: true });
   };
 
   return (
