@@ -67,7 +67,6 @@ export default function AdminLayout({
     const anchoSidebar = menuExpandido ? "clamp(240px, 20vw, 280px)" : "clamp(56px, 4vw, 72px)";
     const basePath = pathname.startsWith("/admin") ? "/admin" : "/panel";
     const esDetalleSolicitud = /\/solicitudes\/[^/]+$/.test(pathname);
-    const esListadoSolicitudes = pathname === `${basePath}/solicitudes`;
     const paginaActual = pathname === basePath ? "Dashboard" : (
         GRUPOS.flatMap((g) => g.items)
             .find((i) => i.ruta && pathname.startsWith(`${basePath}/${i.ruta}`))?.etiqueta ??
@@ -199,7 +198,7 @@ export default function AdminLayout({
                                 </li>
                             </ol>
                         </nav>
-                    ) : !esListadoSolicitudes && pathname !== basePath ? (
+                    ) : pathname !== basePath ? (
                         <nav aria-label="Ruta de navegación" className="min-w-0">
                             <ol className="flex flex-wrap items-center gap-x-2 text-sm sm:text-base">
                                 <li>
