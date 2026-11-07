@@ -5,7 +5,6 @@ type LanchaCardProps = {
   lanchero: string;
   rating: number;
   reseñas: number;
-  capacidad: number;
   verificado: boolean;
   /** "nuevo" muestra badge de nuevo en lugar de rating con estrellas */
   esNuevo?: boolean;
