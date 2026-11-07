@@ -1,12 +1,23 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { IconType } from "react-icons";
-import { BsBoxArrowRight, BsChevronDown, BsFolderCheck, BsList, BsPeople, BsPerson, BsSearch, BsSignpostSplit, BsX } from "react-icons/bs";
+import { BsBoxArrowRight, BsChevronDown, BsFolderCheck, BsHouseDoor, BsList, BsPeople, BsPerson, BsSearch, BsX } from "react-icons/bs";
 import { useEffect, useRef, useState } from "react";
 import Logo from "../Logo";
 import { NavLink, useLocation } from "react-router-dom";
 
 export type Seccion = "buscador" | "viajes" | "solicitudes" | "lancheros";
 
+const IconoRuta: IconType = ({ className }) => (
+    <span
+        className={className}
+        aria-hidden="true"
+        style={{
+            backgroundColor: "currentColor",
+            mask: "url('/icons/route.svg') center / contain no-repeat",
+            WebkitMask: "url('/icons/route.svg') center / contain no-repeat",
+        }}
+    />
+);
 type Grupo = {
     titulo: string;
     items: { ruta: string; etiqueta: string; Icono: IconType }[];
@@ -14,10 +25,14 @@ type Grupo = {
 
 const GRUPOS: Grupo[] = [
     {
+        titulo: "General",
+        items: [{ ruta: "", etiqueta: "Dashboard", Icono: BsHouseDoor }],
+    },
+    {
         titulo: "Gestión de viajes",
         items: [
             { ruta: "buscador", etiqueta: "Buscador", Icono: BsSearch },
-            { ruta: "viajes", etiqueta: "Viajes", Icono: BsSignpostSplit },
+            { ruta: "viajes", etiqueta: "Viajes", Icono: IconoRuta },
         ],
     },
     {
@@ -53,10 +68,11 @@ export default function AdminLayout({
     const basePath = pathname.startsWith("/admin") ? "/admin" : "/panel";
     const esDetalleSolicitud = /\/solicitudes\/[^/]+$/.test(pathname);
     const esListadoSolicitudes = pathname === `${basePath}/solicitudes`;
-    const paginaActual =
+    const paginaActual = pathname === basePath ? "Dashboard" : (
         GRUPOS.flatMap((g) => g.items)
-            .find((i) => pathname.startsWith(`${basePath}/${i.ruta}`))?.etiqueta ??
-        "Bienvenido a NautiFlow";
+            .find((i) => i.ruta && pathname.startsWith(`${basePath}/${i.ruta}`))?.etiqueta ??
+        "Bienvenido a NautiFlow"
+    );
 
     useEffect(() => {
         const cerrarMenuMovil = (event: KeyboardEvent) => {
@@ -137,8 +153,9 @@ export default function AdminLayout({
                             {grupo.items.map(({ ruta, etiqueta, Icono }) => (
                                 <NavLink
                                     key={ruta}
-                                    to={`${basePath}/${ruta}`}
+                                    to={ruta ? `${basePath}/${ruta}` : basePath}
                                     onClick={() => setMenuMobileOpen(false)}
+                                    end={!ruta}
                                     title={etiqueta}
                                     aria-label={etiqueta}
                                     className={({ isActive }) =>
@@ -182,7 +199,7 @@ export default function AdminLayout({
                                 </li>
                             </ol>
                         </nav>
-                    ) : !esListadoSolicitudes ? (
+                    ) : !esListadoSolicitudes && pathname !== basePath ? (
                         <nav aria-label="Ruta de navegación" className="min-w-0">
                             <ol className="flex flex-wrap items-center gap-x-2 text-sm sm:text-base">
                                 <li>
@@ -196,6 +213,8 @@ export default function AdminLayout({
                                 </li>
                             </ol>
                         </nav>
+                    ) : pathname === basePath ? (
+                        <h1 className="min-w-0 flex-1 truncate text-lg font-bold leading-6 text-text-primary sm:text-xl lg:text-2xl">Bienvenido a NautiFlow</h1>
                     ) : (
                         <div aria-hidden="true" className="min-w-0" />
                     )}

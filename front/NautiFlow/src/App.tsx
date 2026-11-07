@@ -4,10 +4,16 @@ import { BrowserRouter, Navigate, Route, Routes, useOutletContext } from "react-
 import Admin from "./components/Admin/Admin";
 import type { AdminOutletContext } from "./components/Admin/Admin";
 import SolicitudesPendientes from "./components/Admin/SolicitudesPendientes";
+import DashboardPage from "./pages/admin/DashboardPage";
 
 function SolicitudesPanel() {
   const { token, onLogout } = useOutletContext<AdminOutletContext>();
   return <SolicitudesPendientes token={token} onLogout={onLogout} />;
+}
+
+function DashboardPanel() {
+  const { token } = useOutletContext<AdminOutletContext>();
+  return <DashboardPage token={token} />;
 }
 
 function App() {
@@ -23,9 +29,12 @@ function App() {
             </div>
           }
         />
-        <Route path="/admin/*" element={<Navigate to="/panel/solicitudes" replace />} />
+        <Route path="/admin" element={<Admin />}>
+          <Route index element={<Navigate to="/panel" replace />} />
+        </Route>
+        <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
         <Route path="/panel" element={<Admin />}>
-          <Route index element={<p className="text-text-primary">Resumen general (pendiente)</p>} />
+          <Route index element={<DashboardPanel />} />
           <Route path="buscador" element={<p className="text-text-primary">Buscador (pendiente)</p>} />
           <Route path="viajes" element={<p className="text-text-primary">Viajes (pendiente)</p>} />
           <Route path="solicitudes" element={<SolicitudesPanel />} />
