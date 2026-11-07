@@ -171,3 +171,69 @@ export async function actualizarEstadoLanchero(
   });
   return leerLancheroActualizado(response, id, estadoViaje);
 }
+
+export interface LanchaDisponible {
+  id: number;
+  nombre: string;
+  capacidad: number;
+  zonasDisponibles: string[];
+  verificada: boolean;
+  estadoOperativo: string;
+  whatsappLanchero: string;
+}
+
+export interface FiltrosBuscarLanchas {
+  capacidad?: number;
+  zonaOrigen?: number | string;
+  zonaDestino?: number | string;
+  hora: string;
+}
+
+export async function buscarLanchasDisponibles(
+  token: string,
+  filtros: FiltrosBuscarLanchas,
+  signal?: AbortSignal,
+): Promise<LanchaDisponible[]> {
+  const query = new URLSearchParams();
+  if (filtros.capacidad !== undefined && filtros.capacidad !== null) {
+    query.set("capacidad", String(filtros.capacidad));
+  }
+  if (filtros.zonaOrigen !== undefined && filtros.zonaOrigen !== null) {
+    query.set("zonaOrigen", String(filtros.zonaOrigen));
+  }
+  if (filtros.zonaDestino !== undefined && filtros.zonaDestino !== null) {
+    query.set("zonaDestino", String(filtros.zonaDestino));
+  }
+  query.set("hora", filtros.hora);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/admin/lancheros/disponibles?${query.toString()}`, {
+      signal,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (err: unknown) {
+    if (signal?.aborted) throw err;
+    throw new Error("No se pudo conectar con el servidor.");
+  }
+
+  if (!response.ok) {
+    throw await errorRespuesta(response);
+  }
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw new Error("El servidor devolvió una respuesta inválida.");
+  }
+
+  if (!Array.isArray(body)) {
+    throw new Error("El servidor devolvió un formato inesperado de embarcaciones disponibles.");
+  }
+
+  return body as LanchaDisponible[];
+}
