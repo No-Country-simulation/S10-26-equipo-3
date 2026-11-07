@@ -1,8 +1,14 @@
 import Landing from "./components/landing/Landing";
 import LancheroRegistro from "./components/lanchero/LancheroRegistro";
-import { BrowserRouter, Outlet, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useOutletContext } from "react-router-dom";
 import Admin from "./components/Admin/Admin";
-import AdminLayout from "./components/Admin/AdminLayout";
+import type { AdminOutletContext } from "./components/Admin/Admin";
+import SolicitudesPendientes from "./components/Admin/SolicitudesPendientes";
+
+function SolicitudesPanel() {
+  const { token, onLogout } = useOutletContext<AdminOutletContext>();
+  return <SolicitudesPendientes token={token} onLogout={onLogout} />;
+}
 
 function App() {
   return (
@@ -17,21 +23,15 @@ function App() {
             </div>
           }
         />
-        <Route path="/admin/*" element={<Admin />} />
-
-        <Route
-          path="/panel"
-          element={
-            <AdminLayout onCerrarSesion={() => console.log("Cerrar sesión")}>
-              <Outlet />
-            </AdminLayout>
-          }
-        >
+        <Route path="/admin/*" element={<Navigate to="/panel/solicitudes" replace />} />
+        <Route path="/panel" element={<Admin />}>
           <Route index element={<p className="text-text-primary">Resumen general (pendiente)</p>} />
           <Route path="buscador" element={<p className="text-text-primary">Buscador (pendiente)</p>} />
           <Route path="viajes" element={<p className="text-text-primary">Viajes (pendiente)</p>} />
-          <Route path="solicitudes" element={<p className="text-text-primary">Solicitudes (pendiente)</p>} />
+          <Route path="solicitudes" element={<SolicitudesPanel />} />
+          <Route path="solicitudes/:id" element={<SolicitudesPanel />} />
           <Route path="lancheros" element={<p className="text-text-primary">Lancheros (pendiente)</p>} />
+          <Route path="*" element={<Navigate to="/panel/solicitudes" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

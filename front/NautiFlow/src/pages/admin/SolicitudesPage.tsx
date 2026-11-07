@@ -20,6 +20,7 @@ import {
 
 type Props = {
   token: string;
+  dentroDelPanel?: boolean;
 };
 
 type DecisionSeleccionada = {
@@ -37,8 +38,9 @@ type Aviso = {
 const ERROR_TITLE = "¡Uh oh! Algo salió mal";
 const ERROR_MESSAGE = "No se pudo completar la acción. Inténtalo nuevamente.";
 
-export default function SolicitudesPage({ token }: Props) {
+export default function SolicitudesPage({ token, dentroDelPanel = false }: Props) {
   const navigate = useNavigate();
+  const rutaSolicitudes = dentroDelPanel ? "/panel/solicitudes" : "/admin/solicitudes";
   const { id: routeId } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const estadoUrl = searchParams.get("estado");
@@ -126,7 +128,7 @@ export default function SolicitudesPage({ token }: Props) {
     setSolicitudes([]);
     setTotalPages(0);
     setError(null);
-    navigate(`/admin/solicitudes?estado=${nuevoEstado}&page=0`);
+    navigate(`${rutaSolicitudes}?estado=${nuevoEstado}&page=0`);
     setDetalle(null);
     setDetalleError(null);
     setLoading(true);
@@ -150,18 +152,18 @@ export default function SolicitudesPage({ token }: Props) {
   };
 
   const prepararDetalle = useCallback((id: number) => {
-    navigate(`/admin/solicitudes/${id}?estado=${estado}&page=${page}`);
+    navigate(`${rutaSolicitudes}/${id}?estado=${estado}&page=${page}`);
     setDetalle(null);
     setDetalleError(null);
     setDetalleLoading(true);
-  }, [estado, navigate, page]);
+  }, [estado, navigate, page, rutaSolicitudes]);
 
   const volverTabla = useCallback(() => {
-    navigate(`/admin/solicitudes?estado=${estado}&page=${page}`);
+    navigate(`${rutaSolicitudes}?estado=${estado}&page=${page}`);
     setDetalle(null);
     setDetalleError(null);
     setDetalleLoading(false);
-  }, [estado, navigate, page]);
+  }, [estado, navigate, page, rutaSolicitudes]);
 
   const reintentarDetalle = useCallback(() => {
     setDetalleError(null);
@@ -234,21 +236,21 @@ export default function SolicitudesPage({ token }: Props) {
   };
 
   return (
-    <div className="w-full pt-6 font-inter text-text-primary">
-      <div className={`mx-auto w-full ${solicitudSeleccionadaId === null ? "max-w-[1026px]" : "max-w-[1112px]"}`}>
+    <div className="w-full pt-4 font-inter text-text-primary">
+      <div className="mx-auto w-[96%] max-w-[1400px]">
         {solicitudSeleccionadaId === null ? (
           <>
             <SolicitudesHeader />
             <SolicitudesFiltros seleccionado={estado} onChange={cambiarFiltro} />
 
-            <section className="overflow-hidden rounded-[9px] border border-border-secondary bg-white">
+            <section className="overflow-visible rounded-none border-0 bg-transparent lg:overflow-hidden lg:rounded-[9px] lg:border lg:border-border-secondary lg:bg-white">
               {loading ? (
-                <div role="status" className="flex items-center justify-center gap-3 px-6 py-12 text-sm text-text-secondary">
+                <div role="status" className="flex items-center justify-center gap-3 rounded-[11px] border border-border-secondary bg-white px-4 py-8 text-sm text-text-secondary lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:py-12">
                   <span className="h-5 w-5 animate-spin rounded-full border-2 border-bg-fill-secondary border-t-bg-fill-primary" />
                   Cargando solicitudes…
                 </div>
               ) : error ? (
-                <div className="px-6 py-10 text-center">
+                <div className="rounded-[11px] border border-border-secondary bg-white px-4 py-7 text-center lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:py-10">
                   <p role="alert" className="text-sm text-text-error">{error}</p>
                   <button
                     type="button"
@@ -260,7 +262,7 @@ export default function SolicitudesPage({ token }: Props) {
                 </div>
               ) : solicitudes.length === 0 ? (
                 estado === "PENDIENTE" ? (
-                  <div className="flex min-h-[480px] flex-col items-center px-6 pb-10 pt-10 text-center sm:min-h-[540px] sm:pt-12">
+                  <div className="flex min-h-[300px] flex-col items-center rounded-[11px] border border-border-secondary bg-white px-5 pb-6 pt-7 text-center sm:min-h-[540px] sm:pt-12 lg:min-h-[480px] lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:pb-10 lg:pt-10 2xl:min-h-[540px] 2xl:pt-12">
                     <h2 className="text-xl font-semibold text-text-primary">Sin solicitudes</h2>
                     <p className="mt-2 text-sm text-text-secondary">
                       No hay solicitudes para mostrar
@@ -268,11 +270,11 @@ export default function SolicitudesPage({ token }: Props) {
                     <img
                       src="/solicitudes/sinresultados.png"
                       alt="Ilustración de una lancha y una lupa indicando que no hay resultados"
-                      className="mt-8 h-auto w-full max-w-[560px] object-contain md:max-w-[760px] lg:max-w-[900px]"
+                      className="mt-5 h-auto w-full max-w-[560px] object-contain sm:mt-8 md:max-w-[760px] lg:max-w-[900px]"
                     />
                   </div>
                 ) : (
-                  <p className="px-6 py-12 text-center text-sm text-text-secondary">
+                  <p className="rounded-[11px] border border-border-secondary bg-white px-4 py-8 text-center text-sm text-text-secondary lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:py-12">
                     No hay solicitudes para el filtro seleccionado.
                   </p>
                 )

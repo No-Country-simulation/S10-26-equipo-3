@@ -1,14 +1,18 @@
 import Login from "../Login/Login";
 import Splash from "../Splash/Splah";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { useState } from "react";
 import { authService, type LoginResponse } from "../../services/authService";
-import SolicitudesPendientes from "./SolicitudesPendientes";
+import AdminLayout from "./AdminLayout";
+
+export type AdminOutletContext = {
+  token: string;
+  onLogout: () => void;
+};
 
 export default function Admin() {
   const [token, setToken] = useState(() => authService.getToken());
   const [showSplash, setShowSplash] = useState(true);
-
   const iniciarSesion = (response: LoginResponse) => setToken(response.token);
   const cerrarSesion = () => {
     authService.logout();
@@ -18,11 +22,9 @@ export default function Admin() {
   return (
     <>
       {token ? (
-        <Routes>
-          <Route path="solicitudes" element={<SolicitudesPendientes token={token} onLogout={cerrarSesion} />} />
-          <Route path="solicitudes/:id" element={<SolicitudesPendientes token={token} onLogout={cerrarSesion} />} />
-          <Route path="*" element={<Navigate to="/admin/solicitudes" replace />} />
-        </Routes>
+        <AdminLayout onCerrarSesion={cerrarSesion}>
+          <Outlet context={{ token, onLogout: cerrarSesion } satisfies AdminOutletContext} />
+        </AdminLayout>
       ) : <Login onSuccess={iniciarSesion} />}
       {showSplash && <Splash onFinish={() => setShowSplash(false)} />}
     </>

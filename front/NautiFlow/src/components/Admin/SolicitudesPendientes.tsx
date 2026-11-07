@@ -6,7 +6,5 @@ type Props = {
 };
 
 export default function SolicitudesPendientes({ token }: Props) {
-  return (
-    <SolicitudesPage token={token} />
-  );
+  return <SolicitudesPage token={token} dentroDelPanel />;
 }

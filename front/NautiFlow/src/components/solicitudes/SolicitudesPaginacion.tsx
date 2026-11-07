@@ -23,15 +23,15 @@ export default function SolicitudesPaginacion({
   return (
     <nav
       aria-label="Paginación de solicitudes"
-      className="flex items-center justify-center gap-4 py-10 text-sm font-semibold text-text-primary"
+      className="flex items-center justify-center py-3 text-xs font-semibold text-text-primary sm:py-5 lg:py-6"
     >
-      <div className="flex flex-wrap items-center justify-center gap-3">
+      <div className="flex items-center justify-center gap-1 sm:gap-2">
         {paginas[0] > 0 && (
           <button
             type="button"
             disabled={disabled}
             onClick={() => onChange(0)}
-            className="grid h-9 w-9 place-items-center rounded-full hover:bg-bg-surface-secondary disabled:cursor-not-allowed"
+            className="grid h-8 w-8 place-items-center rounded-full hover:bg-bg-surface-secondary disabled:cursor-not-allowed"
           >
             1
           </button>
@@ -45,7 +45,7 @@ export default function SolicitudesPaginacion({
             aria-label={`Página ${pagina + 1}`}
             disabled={disabled}
             onClick={() => onChange(pagina)}
-            className={`grid h-9 w-9 place-items-center rounded-full disabled:cursor-not-allowed ${
+            className={`grid h-8 w-8 place-items-center rounded-full disabled:cursor-not-allowed ${
               page === pagina
                 ? "border border-bg-fill-primary text-text-primary"
                 : "hover:bg-bg-surface-secondary"
@@ -61,9 +61,9 @@ export default function SolicitudesPaginacion({
           type="button"
           disabled={disabled || page + 1 >= totalPages}
           onClick={() => onChange(page + 1)}
-          className="inline-flex items-center gap-2 rounded-full px-2 py-2 hover:bg-bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-h-8 items-center gap-1 rounded-full px-1.5 py-1 hover:bg-bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-50 sm:gap-2 sm:px-2 sm:py-2 lg:px-2 lg:py-2"
         >
-          Siguiente
+          <span className="hidden sm:inline">Siguiente</span>
           <span aria-hidden="true">›</span>
         </button>
       </div>
