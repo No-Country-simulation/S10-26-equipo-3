@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { IconType } from "react-icons";
-import { BsBoxArrowRight, BsChevronDown, BsFolderCheck, BsPeople, BsPerson, BsSearch, BsSignpostSplit } from "react-icons/bs";
+import { BsBoxArrowRight, BsChevronDown, BsFolderCheck, BsList, BsPeople, BsPerson, BsSearch, BsSignpostSplit, BsX } from "react-icons/bs";
 import { useEffect, useRef, useState } from "react";
 import Logo from "../Logo";
 import { NavLink, useLocation } from "react-router-dom";
@@ -45,9 +45,10 @@ export default function AdminLayout({
     const { pathname } = useLocation();
     const [menuHover, setMenuHover] = useState(false);
     const [menuFocus, setMenuFocus] = useState(false);
+    const [menuMobileOpen, setMenuMobileOpen] = useState(false);
     const [perfilAbierto, setPerfilAbierto] = useState(false);
     const perfilRef = useRef<HTMLDivElement>(null);
-    const menuExpandido = menuHover || menuFocus;
+    const menuExpandido = menuHover || menuFocus || menuMobileOpen;
     const anchoSidebar = menuExpandido ? "clamp(240px, 20vw, 280px)" : "clamp(56px, 4vw, 72px)";
     const basePath = pathname.startsWith("/admin") ? "/admin" : "/panel";
     const esDetalleSolicitud = /\/solicitudes\/[^/]+$/.test(pathname);
@@ -57,6 +58,21 @@ export default function AdminLayout({
             .find((i) => pathname.startsWith(`${basePath}/${i.ruta}`))?.etiqueta ??
         "Bienvenido a NautiFlow";
 
+    useEffect(() => {
+        const cerrarMenuMovil = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setMenuMobileOpen(false);
+        };
+        const cerrarMenuEnEscritorio = () => {
+            if (window.matchMedia("(min-width: 768px)").matches) setMenuMobileOpen(false);
+        };
+
+        document.addEventListener("keydown", cerrarMenuMovil);
+        window.addEventListener("resize", cerrarMenuEnEscritorio);
+        return () => {
+            document.removeEventListener("keydown", cerrarMenuMovil);
+            window.removeEventListener("resize", cerrarMenuEnEscritorio);
+        };
+    }, []);
     useEffect(() => {
         if (!perfilAbierto) return;
 
@@ -78,10 +94,19 @@ export default function AdminLayout({
     }, [perfilAbierto]);
 
     return (
-        <div className="min-h-dvh bg-bg-fill-secondary font-inter">
+        <div className="min-h-dvh bg-bg-fill-secondary font-inter" style={{ "--admin-sidebar-width": anchoSidebar } as CSSProperties}>
+            {menuMobileOpen && (
+                <button
+                    type="button"
+                    aria-label="Cerrar menu de navegacion"
+                    className="fixed inset-0 z-20 bg-black/30 md:hidden"
+                    onClick={() => setMenuMobileOpen(false)}
+                />
+            )}
             <aside
-                className="group fixed inset-y-0 left-0 z-20 overflow-hidden bg-[var(--bg-surface-primary,#FAFBFC)] transition-[width] duration-200"
-                style={{ width: anchoSidebar }}
+                id="admin-sidebar"
+                className={`group fixed inset-y-0 left-0 z-30 overflow-hidden bg-[var(--bg-surface-primary,#FAFBFC)] transition-[width,transform] duration-200 md:translate-x-0 ${menuMobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+                style={{ width: menuMobileOpen ? "min(280px, 86vw)" : anchoSidebar }}
                 onMouseEnter={() => {
                     if (window.matchMedia("(min-width: 768px)").matches) setMenuHover(true);
                 }}
@@ -113,6 +138,7 @@ export default function AdminLayout({
                                 <NavLink
                                     key={ruta}
                                     to={`${basePath}/${ruta}`}
+                                    onClick={() => setMenuMobileOpen(false)}
                                     title={etiqueta}
                                     aria-label={etiqueta}
                                     className={({ isActive }) =>
@@ -130,11 +156,18 @@ export default function AdminLayout({
                 </nav>
             </aside>
 
-            <div
-                className="min-h-dvh min-w-0 transition-[margin] duration-200"
-                style={{ marginLeft: anchoSidebar }}
-            >
-                <header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-4 bg-[var(--bg-surface-white,#FFFFFF)] px-5 sm:px-7 lg:px-10">
+            <div className="ml-0 min-h-dvh min-w-0 transition-[margin] duration-200 md:ml-[var(--admin-sidebar-width)]">
+                <header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-3 bg-[var(--bg-surface-white,#FFFFFF)] px-3 sm:gap-4 sm:px-7 lg:px-10">
+                    <button
+                        type="button"
+                        aria-label={menuMobileOpen ? "Cerrar menu" : "Abrir menu"}
+                        aria-controls="admin-sidebar"
+                        aria-expanded={menuMobileOpen}
+                        onClick={() => setMenuMobileOpen((open) => !open)}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-text-primary transition-colors hover:bg-bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bg-fill-primary md:hidden"
+                    >
+                        {menuMobileOpen ? <BsX className="h-6 w-6" aria-hidden="true" /> : <BsList className="h-6 w-6" aria-hidden="true" />}
+                    </button>
                     {esDetalleSolicitud ? (
                         <nav aria-label="Ruta de navegación" className="min-w-0">
                             <ol className="flex flex-wrap items-center gap-x-2 text-sm sm:text-base">
