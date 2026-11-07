@@ -16,7 +16,7 @@ function App() {
             </div>
           }
         />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/*" element={<Admin />} />
       </Routes>
     </BrowserRouter>
   );
