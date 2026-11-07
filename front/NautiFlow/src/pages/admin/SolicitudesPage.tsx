@@ -261,23 +261,19 @@ export default function SolicitudesPage({ token, dentroDelPanel = false }: Props
                   </button>
                 </div>
               ) : solicitudes.length === 0 ? (
-                estado === "PENDIENTE" ? (
-                  <div className="flex min-h-[300px] flex-col items-center rounded-[11px] border border-border-secondary bg-white px-5 pb-6 pt-7 text-center sm:min-h-[540px] sm:pt-12 lg:min-h-[480px] lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:pb-10 lg:pt-10 2xl:min-h-[540px] 2xl:pt-12">
-                    <h2 className="text-xl font-semibold text-text-primary">Sin solicitudes</h2>
-                    <p className="mt-2 text-sm text-text-secondary">
-                      No hay solicitudes para mostrar
-                    </p>
-                    <img
-                      src="/solicitudes/sinresultados.png"
-                      alt="Ilustración de una lancha y una lupa indicando que no hay resultados"
-                      className="mt-5 h-auto w-full max-w-[560px] object-contain sm:mt-8 md:max-w-[760px] lg:max-w-[900px]"
-                    />
-                  </div>
-                ) : (
-                  <p className="rounded-[11px] border border-border-secondary bg-white px-4 py-8 text-center text-sm text-text-secondary lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:py-12">
-                    No hay solicitudes para el filtro seleccionado.
+                <div className="flex min-h-[300px] flex-col items-center rounded-[11px] border border-border-secondary bg-white px-5 pb-6 pt-7 text-center sm:min-h-[540px] sm:pt-12 lg:min-h-[480px] lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:pb-10 lg:pt-10 2xl:min-h-[540px] 2xl:pt-12">
+                  <h2 className="text-xl font-semibold text-text-primary">Sin solicitudes</h2>
+                  <p className="mt-2 text-sm text-text-secondary">
+                    {estado === "PENDIENTE"
+                      ? "No hay solicitudes para mostrar"
+                      : "No hay solicitudes para el filtro seleccionado."}
                   </p>
-                )
+                  <img
+                    src="/solicitudes/sinresultados.png"
+                    alt="Ilustración de una lancha y una lupa indicando que no hay resultados"
+                    className="mt-5 h-auto w-full max-w-[560px] object-contain sm:mt-8 md:max-w-[760px] lg:max-w-[900px]"
+                  />
+                </div>
               ) : (
                 <SolicitudesTabla
                   solicitudes={solicitudes}

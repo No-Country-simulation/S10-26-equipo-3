@@ -140,9 +140,12 @@ export default function ViajesPage({ token }: Props) {
         {[{ value: "TODOS", label: "Todos" }, { value: "EN_VIAJE", label: "En viaje" }, { value: "FINALIZADO", label: "Finalizados" }].map(({ value, label }) => <button key={value} type="button" aria-pressed={estadoFiltro === value} onClick={() => cambiarFiltroEstado(value)} className={`shrink-0 rounded-full px-2 py-1.5 text-xs font-semibold leading-5 transition-colors sm:px-3 sm:text-sm ${estadoFiltro === value ? "bg-white text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"}`}>{label}</button>)}
       </nav>}
       {activeTab === "tramos-vacios" ? (
-        <section role="tabpanel" id="panel-tramos-vacios" aria-labelledby="tab-tramos-vacios" className="rounded-[11px] border border-border-secondary bg-white px-5 py-10 text-center lg:rounded-[9px]">
-          <h2 className="text-lg font-semibold text-text-primary">Tramos vacíos</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-text-secondary">El backend todavía no ofrece una consulta para listar los tramos vacíos. Cuando esté disponible, esta pestaña podrá mostrar sus registros.</p>
+        <section role="tabpanel" id="panel-tramos-vacios" aria-labelledby="tab-tramos-vacios" className="overflow-visible rounded-none border-0 bg-transparent lg:overflow-hidden lg:rounded-[9px] lg:border lg:border-border-secondary lg:bg-white">
+          <div className="flex min-h-[300px] flex-col items-center rounded-[11px] border border-border-secondary bg-white px-5 pb-6 pt-7 text-center sm:min-h-[540px] sm:pt-12 lg:min-h-[480px] lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:pb-10 lg:pt-10 2xl:min-h-[540px] 2xl:pt-12">
+            <h2 className="text-xl font-semibold text-text-primary">Sin tramos vacíos</h2>
+            <p className="mt-2 text-sm text-text-secondary">No hay tramos vacíos para mostrar</p>
+            <img src="/solicitudes/sinresultados.png" alt="Ilustración que indica que no hay tramos vacíos" className="mt-5 h-auto w-full max-w-[560px] object-contain sm:mt-8 md:max-w-[760px] lg:max-w-[900px]" />
+          </div>
         </section>
       ) : <section role="tabpanel" id="panel-viajes" aria-labelledby="tab-viajes" className="overflow-visible rounded-none border-0 bg-transparent lg:overflow-hidden lg:rounded-[9px] lg:border lg:border-border-secondary lg:bg-white">
         {loading ? <div role="status" className="flex items-center justify-center gap-3 bg-white px-4 py-8 text-sm text-text-secondary lg:bg-transparent lg:py-12"><span className="h-5 w-5 animate-spin rounded-full border-2 border-bg-fill-secondary border-t-bg-fill-primary" />Cargando viajes…</div>
