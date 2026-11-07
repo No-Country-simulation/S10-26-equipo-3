@@ -26,10 +26,10 @@ export default function LanchaCard({
     <div className="relative flex flex-col flex-1 min-w-0 w-full max-w-sm sm:max-w-none mx-auto bg-bg-surface-primary rounded-m shadow-[0px_12px_8px_rgba(12,12,13,0.08),0px_4px_2px_rgba(12,12,13,0.05)] px-2.5 py-1">
       {/* Imagen */}
       <div
-        className="relative rounded-l mb-[-50px] w-full shrink-0"
+        className="relative rounded-xl mb-[-50px] w-full shrink-0"
         style={{ aspectRatio: "346/275" }}
       >
-        <div className="absolute inset-0 rounded-l overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
           <img
             src={imagen}
             alt={nombre}
@@ -42,7 +42,7 @@ export default function LanchaCard({
             }}
           />
         </div>
-        <div className="absolute inset-0 rounded-l bg-gradient-to-b from-[rgba(102,102,102,0)] to-[rgba(0,0,0,0.5)]" />
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-b from-[rgba(102,102,102,0)] to-[rgba(0,0,0,0.5)]" />
       </div>
 
       {/* Badge verificado */}
