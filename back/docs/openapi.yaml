@@ -166,6 +166,7 @@ paths:
               properties:
                 solicitud:
                   type: string
+                  description: JSON serializado como texto con los campos de LancheroRegistro. No requiere contraseña.
                   example: '{"nombreCompleto":"María Pérez","whatsapp":"+573000000000","correo":"ejemplo@gmail.com","nombreEmbarcacion":"Brisa Marina","capacidadPasajeros":8,"zonasIds":[1,3]}'
                 licencia:
                   type: string
@@ -1348,7 +1349,6 @@ components:
         - nombreCompleto
         - whatsapp
         - correo
-        - contrasena
         - nombreEmbarcacion
         - capacidadPasajeros
       properties:
@@ -1365,12 +1365,6 @@ components:
           format: email
           maxLength: 100
           example: ana@example.com
-        contrasena:
-          type: string
-          format: password
-          minLength: 8
-          maxLength: 72
-          example: ClaveSegura123
         nombreEmbarcacion:
           type: string
           maxLength: 100
@@ -1412,12 +1406,23 @@ components:
           example: Solicitud de registro recibida correctamente.
     Error:
       type: object
-      required:
-        - mensaje
+      required: [status, error, message, path, timestamp]
       properties:
-        mensaje:
+        status:
+          type: integer
+          example: 409
+        error:
+          type: string
+          example: Conflict
+        message:
           type: string
           example: Los datos registrados entran en conflicto con un registro existente.
+        path:
+          type: string
+          example: /lancheros/registrar
+        timestamp:
+          type: string
+          format: date-time
     ReservaResena:
       type: object
       required:

@@ -18,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Set;
@@ -29,7 +28,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,8 +37,6 @@ class LancheroPersistenceServiceTest {
     @Mock private DocumentoRepository documentoRepository;
     @Mock private RegistroEmailOutboxRepository registroEmailOutboxRepository;
     @Mock private ZonaRepository zonaRepository;
-    @Mock private PasswordEncoder passwordEncoder;
-
     private LancheroPersistenceService service;
 
     @BeforeEach
@@ -50,11 +46,9 @@ class LancheroPersistenceServiceTest {
                 lanchaRepository,
                 documentoRepository,
                 registroEmailOutboxRepository,
-                zonaRepository,
-                passwordEncoder
+                zonaRepository
         );
         lenient().when(lancheroRepository.existsByCorreo("maria@example.com")).thenReturn(false);
-        lenient().when(passwordEncoder.encode("ClaveSegura123")).thenReturn("hash");
         lenient().when(lancheroRepository.save(any(Lanchero.class))).thenAnswer(invocation -> {
             Lanchero lanchero = invocation.getArgument(0);
             lanchero.setIdLanchero(12L);
@@ -116,7 +110,7 @@ class LancheroPersistenceServiceTest {
         assertEquals(Set.of(norte), lanchaCaptor.getValue().getZonas());
         ArgumentCaptor<Lanchero> lancheroCaptor = ArgumentCaptor.forClass(Lanchero.class);
         verify(lancheroRepository).save(lancheroCaptor.capture());
-        assertEquals("hash", lancheroCaptor.getValue().getPasswordHash());
+        assertEquals("maria@example.com", lancheroCaptor.getValue().getCorreo());
     }
 
     @Test
@@ -131,29 +125,6 @@ class LancheroPersistenceServiceTest {
         assertEquals(Set.of(), lanchaCaptor.getValue().getZonas());
         verify(zonaRepository).findAllById(List.of());
         verify(zonaRepository, org.mockito.Mockito.never()).save(any());
-    }
-
-    @Test
-    void rechazaRegistroSinContrasena() {
-        when(zonaRepository.findAllById(List.of())).thenReturn(List.of());
-        LancheroRegistroDTO solicitud = new LancheroRegistroDTO(
-                "María Pérez",
-                "+573212684025",
-                "maria@example.com",
-                null,
-                "Brisa Marina",
-                8,
-                null
-        );
-
-        assertThrows(
-                SolicitudInvalidaException.class,
-                () -> service.registrar(solicitud, "l.pdf", "application/pdf",
-                        "s.pdf", "application/pdf", "a.pdf", "application/pdf", List.of())
-        );
-
-        verify(lancheroRepository, never()).save(any());
-        verifyNoInteractions(lanchaRepository, documentoRepository, passwordEncoder);
     }
 
     @Test
@@ -185,7 +156,6 @@ class LancheroPersistenceServiceTest {
                 "María Pérez",
                 "+573212684025",
                 "maria@example.com",
-                "ClaveSegura123",
                 "Brisa Marina",
                 8,
                 zonasIds

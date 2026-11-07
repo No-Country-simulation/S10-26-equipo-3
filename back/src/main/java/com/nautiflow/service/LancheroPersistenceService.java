@@ -15,7 +15,6 @@ import com.nautiflow.repository.RegistroEmailOutboxRepository;
 import com.nautiflow.repository.ZonaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -38,25 +37,21 @@ public class LancheroPersistenceService {
     private final DocumentoRepository documentoRepository;
     private final RegistroEmailOutboxRepository registroEmailOutboxRepository;
     private final ZonaRepository zonaRepository;
-    private final PasswordEncoder passwordEncoder;
-
     /**
-     * Inyecta los repositorios, el codificador de contraseñas y el outbox de correos.
+     * Inyecta los repositorios y el outbox de correos.
      */
     public LancheroPersistenceService(
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
             DocumentoRepository documentoRepository,
             RegistroEmailOutboxRepository registroEmailOutboxRepository,
-            ZonaRepository zonaRepository,
-            PasswordEncoder passwordEncoder
+            ZonaRepository zonaRepository
     ) {
         this.lancheroRepository = lancheroRepository;
         this.lanchaRepository = lanchaRepository;
         this.documentoRepository = documentoRepository;
         this.registroEmailOutboxRepository = registroEmailOutboxRepository;
         this.zonaRepository = zonaRepository;
-        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -115,11 +110,6 @@ public class LancheroPersistenceService {
         lanchero.setNombreCompleto(nombreCompleto);
         lanchero.setWhatsapp(solicitud.whatsapp().strip());
         lanchero.setCorreo(solicitud.correo().strip());
-        String contrasena = solicitud.contrasena();
-        if (contrasena == null || contrasena.isBlank()) {
-            throw new SolicitudInvalidaException("La contraseña es obligatoria.");
-        }
-        lanchero.setPasswordHash(passwordEncoder.encode(contrasena));
         lanchero = lancheroRepository.save(lanchero);
 
         Lancha lancha = new Lancha();
