@@ -1,6 +1,6 @@
-import destinoSanFernando from "../assets/landing/destino-san-fernando.jpeg";
-import destinoDeltaTigre from "../assets/landing/destino-delta-tigre.jpeg";
-import destinoRioLujan from "../assets/landing/destino-rio-lujan.jpeg";
+import destinoSanFernando from "../../assets/landing/destino-san-fernando.jpeg";
+import destinoDeltaTigre from "../../assets/landing/destino-delta-tigre.jpeg";
+import destinoRioLujan from "../../assets/landing/destino-rio-lujan.jpeg";
 import DestinoCard from "./DestinoCard";
 
 const DESTINOS = [
@@ -26,14 +26,14 @@ const DESTINOS = [
 
 export default function DestinosSection() {
   return (
-    <section className="flex flex-col gap-8 items-center w-full overflow-clip px-10 py-12 shrink-0">
+    <section className="flex flex-col gap-8 md:gap-10 items-center w-full overflow-clip px-4 sm:px-8 md:px-[60px] py-10 md:py-16 shrink-0">
       {/* Título */}
-      <h2 className="font-bold text-[length:var(--text-heading-2xl-size)] leading-[var(--text-heading-2xl-line-height)] text-bg-fill-primary text-center w-full">
+      <h2 className="font-bold text-2xl sm:text-3xl md:text-[length:var(--text-heading-2xl-size)] leading-snug md:leading-[var(--text-heading-2xl-line-height)] text-bg-fill-primary text-center w-full">
         Explora nuestros destinos
       </h2>
 
       {/* Lista de destinos */}
-      <div className="flex gap-6 items-center justify-center overflow-clip p-2.5 w-full shrink-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-center justify-center w-full max-w-6xl mx-auto">
         {DESTINOS.map((destino) => (
           <DestinoCard key={destino.id} {...destino} />
         ))}
