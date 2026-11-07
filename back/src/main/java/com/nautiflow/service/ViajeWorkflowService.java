@@ -37,6 +37,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Servicio que crea, consulta, busca disponibilidad y finaliza viajes, manteniendo sincronizado el estado del lanchero.
@@ -187,11 +188,20 @@ public class ViajeWorkflowService {
      */
     @Transactional(readOnly = true)
     public PaginaSeguimientoViajesDTO listarSeguimiento(int page, int size) {
+        return listarSeguimiento(page, size, "TODOS");
+    }
+
+    @Transactional(readOnly = true)
+    public PaginaSeguimientoViajesDTO listarSeguimiento(int page, int size, String estado) {
         PaginacionValidator.validar(page, size);
+        String filtro = estado == null ? "TODOS" : estado.toUpperCase(Locale.ROOT);
+        if (!List.of("TODOS", "EN_VIAJE", "FINALIZADO").contains(filtro)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado no válido. Valores permitidos: TODOS, EN_VIAJE, FINALIZADO.");
+        }
         Sort sort = Sort.by(Sort.Direction.DESC, "fechaHoraInicio")
                 .and(Sort.by(Sort.Direction.DESC, "idViaje"));
         Page<ViajeSeguimientoDTO> resultados = viajeRepository
-                .findAllForSeguimiento(PageRequest.of(page, size, sort))
+                .findForSeguimiento(filtro, PageRequest.of(page, size, sort))
                 .map(this::toViajeSeguimientoDTO);
         return new PaginaSeguimientoViajesDTO(
                 resultados.getContent(),

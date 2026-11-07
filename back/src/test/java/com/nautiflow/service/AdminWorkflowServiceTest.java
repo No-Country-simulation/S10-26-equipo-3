@@ -534,7 +534,7 @@ class AdminWorkflowServiceTest {
         finalizado.setZonaDestino(destinoAnterior);
         finalizado.setFechaHoraInicio(OffsetDateTime.parse("2026-11-01T14:00:00Z"));
         finalizado.setFechaHoraFin(OffsetDateTime.parse("2026-11-01T14:30:00Z"));
-        when(viajeRepository.findAllForSeguimiento(any(Pageable.class)))
+        when(viajeRepository.findForSeguimiento(eq("TODOS"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(activo, finalizado), PageRequest.of(0, 10), 2));
         when(viajeRepository.findFirstByLancha_IdLanchaAndFechaHoraFinIsNotNullOrderByFechaHoraFinDescIdViajeDesc(34L))
                 .thenReturn(Optional.of(finalizado));

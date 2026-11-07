@@ -347,7 +347,7 @@ class AdminControllerTest {
 
     @Test
     void seguimientoDevuelveHistorialConEstadoYUltimaUbicacion() throws Exception {
-        when(viajeWorkflowService.listarSeguimiento(0, 10)).thenReturn(new PaginaSeguimientoViajesDTO(
+        when(viajeWorkflowService.listarSeguimiento(0, 10, "TODOS")).thenReturn(new PaginaSeguimientoViajesDTO(
                 List.of(new ViajeSeguimientoDTO(
                         25L, "Brisa Marina", "Turista Prueba", "+573001112233", "Delta", "Primera Seccion",
                         OffsetDateTime.parse("2026-11-02T14:00:00Z"), null,
