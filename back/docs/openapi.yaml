@@ -623,6 +623,13 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [TODOS, EN_VIAJE, FINALIZADO]
+            default: TODOS
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Size"
       responses:
@@ -1120,12 +1127,16 @@ components:
           type: integer
     ViajeSeguimiento:
       type: object
-      required: [id, nombreEmbarcacion, zonaOrigen, zonaDestino, fechaHoraInicio, estado]
+      required: [id, nombreEmbarcacion, turistaNombreCompleto, turistaWhatsapp, zonaOrigen, zonaDestino, fechaHoraInicio, estado]
       properties:
         id:
           type: integer
           format: int64
         nombreEmbarcacion:
+          type: string
+        turistaNombreCompleto:
+          type: string
+        turistaWhatsapp:
           type: string
         zonaOrigen:
           type: string

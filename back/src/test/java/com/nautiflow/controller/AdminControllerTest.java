@@ -347,9 +347,9 @@ class AdminControllerTest {
 
     @Test
     void seguimientoDevuelveHistorialConEstadoYUltimaUbicacion() throws Exception {
-        when(viajeWorkflowService.listarSeguimiento(0, 10)).thenReturn(new PaginaSeguimientoViajesDTO(
+        when(viajeWorkflowService.listarSeguimiento(0, 10, "TODOS")).thenReturn(new PaginaSeguimientoViajesDTO(
                 List.of(new ViajeSeguimientoDTO(
-                        25L, "Brisa Marina", "Delta", "Primera Seccion",
+                        25L, "Brisa Marina", "Turista Prueba", "+573001112233", "Delta", "Primera Seccion",
                         OffsetDateTime.parse("2026-11-02T14:00:00Z"), null,
                         "EN_VIAJE", "Segunda Seccion"
                 )),
@@ -360,6 +360,8 @@ class AdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(25))
                 .andExpect(jsonPath("$.content[0].nombreEmbarcacion").value("Brisa Marina"))
+                .andExpect(jsonPath("$.content[0].turistaNombreCompleto").value("Turista Prueba"))
+                .andExpect(jsonPath("$.content[0].turistaWhatsapp").value("+573001112233"))
                 .andExpect(jsonPath("$.content[0].estado").value("EN_VIAJE"))
                 .andExpect(jsonPath("$.content[0].ultimaUbicacionConfirmada").value("Segunda Seccion"));
     }
@@ -758,9 +760,9 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.content[0].turistaNombreCompleto").value("Ana Pérez"))
                 .andExpect(jsonPath("$.content[0].zonaOrigen").value("Zona Norte"))
                 .andExpect(jsonPath("$.content[0].zonaDestino").value("Zona Sur"))
-                .andExpect(jsonPath("$.content[0].fecha").value("2026-11-02T11:05:00.000000Z"))
-                .andExpect(jsonPath("$.content[0].fechaHoraInicio").value("2026-11-02T10:00:00.000000Z"))
-                .andExpect(jsonPath("$.content[0].fechaHoraFin").value("2026-11-02T11:00:00.000000Z"))
+                .andExpect(jsonPath("$.content[0].fecha").value("2026-11-02T08:05:00.000000-03:00"))
+                .andExpect(jsonPath("$.content[0].fechaHoraInicio").value("2026-11-02T07:00:00.000000-03:00"))
+                .andExpect(jsonPath("$.content[0].fechaHoraFin").value("2026-11-02T08:00:00.000000-03:00"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(10))
                 .andExpect(jsonPath("$.totalElements").value(1))
@@ -899,7 +901,7 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.resena.comentario").value("Excelente servicio"))
                 .andExpect(jsonPath("$.resena.idLanchero").value(3))
                 .andExpect(jsonPath("$.resena.nombreLanchero").value("María Pérez"))
-                .andExpect(jsonPath("$.resena.fecha").value("2026-11-02T18:22:22.682942Z"))
+                .andExpect(jsonPath("$.resena.fecha").value("2026-11-02T15:22:22.682942-03:00"))
                 .andExpect(jsonPath("$.resena.idViaje").doesNotExist())
                 .andExpect(jsonPath("$.resena.turistaNombreCompleto").doesNotExist())
                 .andExpect(jsonPath("$.resena.zonaOrigen").doesNotExist())
@@ -909,8 +911,8 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.idViaje").value(3))
                 .andExpect(jsonPath("$.zonaOrigen").value("Zona Norte"))
                 .andExpect(jsonPath("$.zonaDestino").value("Zona Sur"))
-                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T18:16:19.230457Z"))
-                .andExpect(jsonPath("$.fechaHoraFin").value("2026-11-02T18:22:18.068711Z"));
+                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T15:16:19.230457-03:00"))
+                .andExpect(jsonPath("$.fechaHoraFin").value("2026-11-02T15:22:18.068711-03:00"));
     }
 
     @Test
@@ -946,7 +948,7 @@ class AdminControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.turistaWhatsapp").value("+5491123456789"))
                 .andExpect(jsonPath("$.turistaWhatsapp").isString())
-                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T17:53:31.897597Z"))
+                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T14:53:31.897597-03:00"))
                 .andExpect(jsonPath("$.turistaNombreCompleto").value("Pasajero de prueba"))
                 .andExpect(jsonPath("$.fechaHoraFin").value(org.hamcrest.Matchers.nullValue()));
     }

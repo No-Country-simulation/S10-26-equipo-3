@@ -7,9 +7,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import com.nautiflow.util.ZonaNegocio;
 
 /**
  * Implementación de las notificaciones por correo con Resend: confirmación de registro, decisiones, reseñas y viajes programados.
@@ -30,7 +30,6 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
 
             El equipo de NautiFlow
             """;
-    private static final ZoneId ZONA_NEGOCIO = ZoneId.of("America/Bogota");
     private static final DateTimeFormatter FORMATO_FECHA_VIAJE =
             DateTimeFormatter.ofPattern("d/M/uuuu h:mma", Locale.ROOT);
 
@@ -287,10 +286,10 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
     }
 
     /**
-     * Convierte la fecha del viaje a la zona horaria de Bogotá y la presenta en formato legible.
+     * Convierte la fecha del viaje a la zona horaria de Argentina y la presenta en formato legible.
      */
     private String formatearFechaHoraViaje(OffsetDateTime fechaHoraInicio) {
-        return FORMATO_FECHA_VIAJE.format(fechaHoraInicio.atZoneSameInstant(ZONA_NEGOCIO))
+        return FORMATO_FECHA_VIAJE.format(fechaHoraInicio.atZoneSameInstant(ZonaNegocio.ZONA))
                 .toLowerCase(Locale.ROOT);
     }
 
