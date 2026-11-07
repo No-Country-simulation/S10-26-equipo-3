@@ -15,20 +15,19 @@ const GRUPOS: Grupo[] = [
     {
         titulo: "Gestión de viajes",
         items: [
-            { ruta: "/admin/buscador", etiqueta: "Buscador", Icono: BsSearch },
-            { ruta: "/admin/viajes", etiqueta: "Viajes", Icono: BsSignpostSplit },
+            { ruta: "/panel/buscador", etiqueta: "Buscador", Icono: BsSearch },
+            { ruta: "/panel/viajes", etiqueta: "Viajes", Icono: BsSignpostSplit },
         ],
     },
     {
         titulo: "Gestión de la flota",
         items: [
-            { ruta: "/admin/solicitudes", etiqueta: "Solicitudes", Icono: BsFolderCheck },
-            { ruta: "/admin/lancheros", etiqueta: "Lancheros", Icono: BsPeople },
+            { ruta: "/panel/solicitudes", etiqueta: "Solicitudes", Icono: BsFolderCheck },
+            { ruta: "/panel/lancheros", etiqueta: "Lancheros", Icono: BsPeople },
         ],
     },
 ];
 
-// Textos del desplegable
 const soloDesplegado = "whitespace-nowrap opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100";
 const tituloDeGrupo = "h-0 overflow-hidden whitespace-nowrap px-3.5 text-xs font-semibold leading-4 text-text-secondary opacity-0 transition-all group-hover:h-6 group-hover:opacity-100 group-focus-within:h-6 group-focus-within:opacity-100";
 
@@ -55,7 +54,6 @@ export default function AdminLayout({
         "Bienvenido a NautiFlow";
     return (
         <div className="min-h-dvh bg-bg-fill-secondary font-inter">
-            {/* Menú lateral desplegable por encima del contenido*/}
             <aside className="group fixed inset-y-0 left-0 z-20 w-16 overflow-hidden border-r border-border-secondary bg-bg-surface-primary transition-all duration-200 hover:w-60 hover:shadow-lg focus-within:w-60 focus-within:shadow-lg">
                 <div className="flex items-center gap-3 py-5 pl-5">
                     <Logo className="h-6 w-auto shrink-0" />
@@ -70,10 +68,7 @@ export default function AdminLayout({
                             <p className={tituloDeGrupo}>{grupo.titulo}</p>
 
                             {grupo.items.map(({ ruta, etiqueta, Icono }) => (
-                                <NavLink
-                                    key={ruta}
-                                    to={ruta}
-                                    className={({ isActive }) =>
+                                <NavLink key={ruta} to={ruta} className={({ isActive }) =>
                                         `flex w-full items-center gap-3 rounded-m px-3.5 py-2 text-left text-sm leading-[22px] text-text-primary focus-visible:ring-2 focus-visible:ring-bg-fill-primary ${isActive ? "bg-bg-fill-primary/10 font-semibold" : "hover:bg-bg-surface-secondary"
                                         }`
                                     }
