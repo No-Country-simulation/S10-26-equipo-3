@@ -270,8 +270,11 @@ export default function BuscadorPage({ token }: Props) {
     ejecutarBusqueda(capacidad, origen, destino, hora);
   };
 
-  const construirUrlWhatsApp = (lancha: LanchaResultado) => {
-    const telefono = (lancha.whatsapp ?? "1123456789").replace(/\D/g, "");
+  const obtenerUrlWhatsApp = (lancha: LanchaResultado): string | null => {
+    const telefono = (lancha.whatsapp ?? "").replace(/\D/g, "");
+    if (!telefono || telefono.length < 8) {
+      return null;
+    }
     const mensaje =
       `Hola, te consulto por la embarcación *${lancha.nombre}*:\n` +
       `• Capacidad requerida: *${capacidad} personas*\n` +
@@ -825,14 +828,32 @@ export default function BuscadorPage({ token }: Props) {
                     />
 
                     {/* Botón Contactar por WhatsApp */}
-                    <a
-                      href={construirUrlWhatsApp(lancha)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-full bg-bg-fill-secondary px-4 py-2.5 text-sm font-semibold text-text-primary hover:bg-bg-fill-secondary-hover hover:text-text-invert transition-colors flex items-center justify-center gap-2 cursor-pointer text-center"
-                    >
-                      Contactar
-                    </a>
+                    {(() => {
+                      const whatsappUrl = obtenerUrlWhatsApp(lancha);
+                      if (whatsappUrl) {
+                        return (
+                          <a
+                            href={whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-full bg-bg-fill-secondary px-4 py-2.5 text-sm font-semibold text-text-primary hover:bg-bg-fill-secondary-hover hover:text-text-invert transition-colors flex items-center justify-center gap-2 cursor-pointer text-center"
+                          >
+                            Contactar
+                          </a>
+                        );
+                      }
+                      return (
+                        <button
+                          type="button"
+                          disabled
+                          aria-disabled="true"
+                          title="Número de WhatsApp no disponible para esta embarcación"
+                          className="rounded-full bg-bg-fill-secondary/50 px-4 py-2.5 text-sm font-semibold text-text-secondary/50 cursor-not-allowed flex items-center justify-center gap-2 text-center"
+                        >
+                          Contactar
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               </article>
