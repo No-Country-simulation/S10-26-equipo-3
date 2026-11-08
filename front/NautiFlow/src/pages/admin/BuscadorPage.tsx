@@ -112,7 +112,7 @@ function obtenerHoraInicial(): string {
   if (disponibles.length > 0) {
     return disponibles[0].valor24h;
   }
-  return "22:00";
+  return "";
 }
 
 type Aviso = {
@@ -146,6 +146,8 @@ export default function BuscadorPage({ token }: Props) {
   const [cargandoLanchas, setCargandoLanchas] = useState(false);
   const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null);
   const [aviso, setAviso] = useState<Aviso | null>(null);
+  const busquedaAbortRef = useRef<AbortController | null>(null);
+  const ultimaBusquedaIdRef = useRef<number>(0);
 
   useEffect(() => {
     let cancelado = false;
@@ -206,7 +208,8 @@ export default function BuscadorPage({ token }: Props) {
   const zonaDestinoSeleccionada = zonas.find((z) => z.id === destino)?.nombre ?? "Primera Sección";
   const horariosDisponibles = obtenerHorariosDisponibles();
   const horaSeleccionadaEtiqueta =
-    HORARIOS_CATALOGO.find((h) => h.valor24h === hora)?.etiqueta12h ?? `${hora} hs`;
+    HORARIOS_CATALOGO.find((h) => h.valor24h === hora)?.etiqueta12h ??
+    (hora ? `${hora} hs` : "No disponible");
 
   const ejecutarBusqueda = async (
     filtroCapacidad: number,
@@ -214,15 +217,37 @@ export default function BuscadorPage({ token }: Props) {
     filtroDestino: number,
     filtroHora: string,
   ) => {
+    busquedaAbortRef.current?.abort();
+    const busquedaId = ++ultimaBusquedaIdRef.current;
+
+    if (!filtroHora) {
+      setCargandoLanchas(false);
+      setErrorBusqueda(null);
+      setLanchas([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    busquedaAbortRef.current = controller;
+
     setCargandoLanchas(true);
     setErrorBusqueda(null);
     try {
-      const data = await buscarLanchasDisponibles(token, {
-        capacidad: filtroCapacidad,
-        zonaOrigen: filtroOrigen,
-        zonaDestino: filtroDestino,
-        hora: filtroHora,
-      });
+      const data = await buscarLanchasDisponibles(
+        token,
+        {
+          capacidad: filtroCapacidad,
+          zonaOrigen: filtroOrigen,
+          zonaDestino: filtroDestino,
+          hora: filtroHora,
+        },
+        controller.signal,
+      );
+
+      if (controller.signal.aborted || ultimaBusquedaIdRef.current !== busquedaId) {
+        return;
+      }
+
       const mapeadas: LanchaResultado[] = data.map((item: LanchaDisponible) => ({
         id: item.id,
         nombre: item.nombre,
@@ -239,21 +264,36 @@ export default function BuscadorPage({ token }: Props) {
       }));
       setLanchas(mapeadas);
     } catch (err: unknown) {
+      if (controller.signal.aborted || ultimaBusquedaIdRef.current !== busquedaId) {
+        return;
+      }
       const mensaje =
         err instanceof Error ? err.message : "Error al buscar embarcaciones disponibles.";
       setErrorBusqueda(mensaje);
       setLanchas([]);
     } finally {
-      setCargandoLanchas(false);
+      if (!controller.signal.aborted && ultimaBusquedaIdRef.current === busquedaId) {
+        setCargandoLanchas(false);
+      }
     }
   };
 
   const handleBuscar = () => {
+    if (!hora) {
+      busquedaAbortRef.current?.abort();
+      setCargandoLanchas(false);
+      setErrorBusqueda(null);
+      setLanchas([]);
+      return;
+    }
     ejecutarBusqueda(capacidad, origen, destino, hora);
   };
 
   useEffect(() => {
     ejecutarBusqueda(capacidad, origen, destino, hora);
+    return () => {
+      busquedaAbortRef.current?.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -664,8 +704,9 @@ export default function BuscadorPage({ token }: Props) {
           <button
             type="button"
             onClick={handleBuscar}
+            disabled={!hora}
             aria-label="Buscar viajes"
-            className="shrink-0 size-12 md:size-14 rounded-full bg-bg-fill-primary text-text-invert flex items-center justify-center hover:bg-bg-fill-primary-hover transition-colors shadow-sm cursor-pointer self-center md:self-auto"
+            className="shrink-0 size-12 md:size-14 rounded-full bg-bg-fill-primary text-text-invert flex items-center justify-center hover:bg-bg-fill-primary-hover transition-colors shadow-sm cursor-pointer self-center md:self-auto disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <BsSearch aria-hidden="true" className="size-5 shrink-0" />
           </button>
@@ -706,7 +747,9 @@ export default function BuscadorPage({ token }: Props) {
               No encontramos lanchas disponibles
             </h2>
             <p className="text-sm font-normal text-text-secondary leading-5">
-              No hay embarcaciones que coincidan con los filtros seleccionados
+              {horariosDisponibles.length === 0
+                ? "No hay más horarios disponibles para hoy"
+                : "No hay embarcaciones que coincidan con los filtros seleccionados"}
             </p>
           </div>
 
