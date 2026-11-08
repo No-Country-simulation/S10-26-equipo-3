@@ -40,7 +40,7 @@ export default function AsignarViajeButton({
   onAssigned,
 }: Props) {
   const [abierto, setAbierto] = useState(false);
-  const [pasajeros, setPasajeros] = useState(busqueda.cantidadPasajeros);
+  const pasajeros = busqueda.cantidadPasajeros;
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -114,7 +114,6 @@ export default function AsignarViajeButton({
       <button
         type="button"
         onClick={() => {
-          setPasajeros(busqueda.cantidadPasajeros);
           setError(null);
           setAbierto(true);
         }}
@@ -158,29 +157,12 @@ export default function AsignarViajeButton({
                   <label htmlFor="viaje-pasajeros" className="mb-1.5 block text-sm font-medium text-text-primary">
                     Número de pasajeros
                   </label>
-                  <div className="flex h-11 items-center justify-between rounded-lg border border-border-secondary">
-                    <button
-                      type="button"
-                      aria-label="Disminuir pasajeros"
-                      onClick={() => setPasajeros((value) => Math.max(1, value - 1))}
-                      disabled={enviando || pasajeros <= 1}
-                      className="h-full w-11 rounded-l-lg text-lg font-semibold text-text-primary hover:bg-bg-surface-secondary disabled:opacity-40"
-                    >
-                      −
-                    </button>
-                    <output id="viaje-pasajeros" className="font-semibold text-text-primary" aria-live="polite">
-                      {pasajeros}
-                    </output>
-                    <button
-                      type="button"
-                      aria-label="Incrementar pasajeros"
-                      onClick={() => setPasajeros((value) => Math.min(lancha.capacidad, value + 1))}
-                      disabled={enviando || pasajeros >= lancha.capacidad}
-                      className="h-full w-11 rounded-r-lg text-lg font-semibold text-text-primary hover:bg-bg-surface-secondary disabled:opacity-40"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <input
+                    id="viaje-pasajeros"
+                    value={pasajeros}
+                    readOnly
+                    className="h-11 w-full rounded-lg border border-border-secondary bg-bg-surface-primary px-3 text-sm text-text-primary"
+                  />
                   <p className="mt-1 text-xs text-text-secondary">Capacidad máxima: {lancha.capacidad}</p>
                 </div>
                 <div>
