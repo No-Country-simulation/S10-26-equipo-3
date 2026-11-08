@@ -1,6 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
 import { BsXLg } from "react-icons/bs";
-import Notification from "./Notification";
 import { registrarViaje, type ViajeCreado } from "../../services/viajeAdminService";
 
 type Props = {
@@ -45,7 +44,6 @@ export default function AsignarViajeButton({
   const [telefono, setTelefono] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mostrarExito, setMostrarExito] = useState(false);
   const envioEnCurso = useRef(false);
 
   const cerrar = () => {
@@ -105,7 +103,6 @@ export default function AsignarViajeButton({
     setAbierto(false);
     setNombre("");
     setTelefono("");
-    setMostrarExito(true);
     onAssigned?.(trip);
   };
 
@@ -262,16 +259,6 @@ export default function AsignarViajeButton({
               </div>
             </form>
           </section>
-        </div>
-      )}
-      {mostrarExito && (
-        <div className="pointer-events-none fixed right-4 top-4 z-[60]">
-          <Notification
-            kind="success"
-            title="¡Viaje asignado!"
-            message="El viaje fue asignado exitosamente."
-            onClose={() => setMostrarExito(false)}
-          />
         </div>
       )}
     </>

@@ -75,20 +75,8 @@ type HorarioOpcion = {
   etiqueta12h: string;
 };
 
-function obtenerHoraInicial(): string {
-  const ahora = new Date();
-  const horaActual = ahora.getHours();
-  if (horaActual >= 6 && horaActual < 22) {
-    return `${String(horaActual + 1).padStart(2, "0")}:00`;
-  }
-  if (horaActual < 6) {
-    return "06:00";
-  }
-  return "22:00";
-}
-
-// Horarios permitidos de 6:00 AM a 10:00 PM (22:00)
-const HORARIOS_DISPONIBLES: HorarioOpcion[] = Array.from({ length: 17 }, (_, index) => {
+// Catálogo general de horarios (de 6:00 AM a 10:00 PM / 22:00)
+const HORARIOS_CATALOGO: HorarioOpcion[] = Array.from({ length: 20 }, (_, index) => {
   const horaNum = index + 6; // 6 a 22
   const valor24h = `${horaNum.toString().padStart(2, "0")}:00`;
   const periodo = horaNum < 12 ? "AM" : "PM";
@@ -96,6 +84,24 @@ const HORARIOS_DISPONIBLES: HorarioOpcion[] = Array.from({ length: 17 }, (_, ind
   const etiqueta12h = `${hora12}:00 ${periodo}`;
   return { valor24h, etiqueta12h };
 });
+
+function obtenerHorariosDisponibles(): HorarioOpcion[] {
+  const ahora = new Date();
+  const horaActual = ahora.getHours();
+  // No muestra horarios que ya pasaron hoy (ej. si son 7:15 am, horaActual es 7 -> solo se muestran horas estrictamente mayores a 7)
+  return HORARIOS_CATALOGO.filter((h) => {
+    const horaNum = parseInt(h.valor24h.split(":")[0], 10);
+    return horaNum > horaActual;
+  });
+}
+
+function obtenerHoraInicial(): string {
+  const disponibles = obtenerHorariosDisponibles();
+  if (disponibles.length > 0) {
+    return disponibles[0].valor24h;
+  }
+  return "22:00";
+}
 
 type Aviso = {
   id: number;
@@ -113,17 +119,14 @@ export default function BuscadorPage({ token }: Props) {
   const [zonas, setZonas] = useState<Zona[]>(ZONAS_FALLBACK);
   const [origen, setOrigen] = useState<number>(4);
   const [dropdownOrigenAbierto, setDropdownOrigenAbierto] = useState(false);
-  const [tempOrigen, setTempOrigen] = useState<number>(4);
   const dropdownOrigenRef = useRef<HTMLDivElement>(null);
 
   const [destino, setDestino] = useState<number>(1);
   const [dropdownDestinoAbierto, setDropdownDestinoAbierto] = useState(false);
-  const [tempDestino, setTempDestino] = useState<number>(1);
   const dropdownDestinoRef = useRef<HTMLDivElement>(null);
 
   const [hora, setHora] = useState<string>(obtenerHoraInicial);
   const [dropdownHoraAbierto, setDropdownHoraAbierto] = useState(false);
-  const [tempHora, setTempHora] = useState<string>(obtenerHoraInicial);
   const dropdownHoraRef = useRef<HTMLDivElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
 
@@ -189,8 +192,9 @@ export default function BuscadorPage({ token }: Props) {
 
   const zonaOrigenSeleccionada = zonas.find((z) => z.id === origen)?.nombre ?? "Delta";
   const zonaDestinoSeleccionada = zonas.find((z) => z.id === destino)?.nombre ?? "Primera Sección";
+  const horariosDisponibles = obtenerHorariosDisponibles();
   const horaSeleccionadaEtiqueta =
-    HORARIOS_DISPONIBLES.find((h) => h.valor24h === hora)?.etiqueta12h ?? `${hora} hs`;
+    HORARIOS_CATALOGO.find((h) => h.valor24h === hora)?.etiqueta12h ?? `${hora} hs`;
 
   const ejecutarBusqueda = async (
     filtroCapacidad: number,
@@ -251,11 +255,8 @@ export default function BuscadorPage({ token }: Props) {
     setCapacidad(2);
     setTempCapacidad(2);
     setOrigen(4);
-    setTempOrigen(4);
     setDestino(1);
-    setTempDestino(1);
     setHora(horaPorDefecto);
-    setTempHora(horaPorDefecto);
     ejecutarBusqueda(2, 4, 1, horaPorDefecto);
   };
 
@@ -263,9 +264,10 @@ export default function BuscadorPage({ token }: Props) {
     setAviso({
       id: Date.now(),
       kind: "success",
-      title: "Viaje asignado con éxito",
-      message: `Se asignó el viaje #${trip.id} a ${trip.turistaNombreCompleto}.`,
+      title: "¡Viaje asignado!",
+      message: `El viaje #${trip.id} a ${trip.turistaNombreCompleto} fue asignado exitosamente.`,
     });
+    ejecutarBusqueda(capacidad, origen, destino, hora);
   };
 
   const construirUrlWhatsApp = (lancha: LanchaResultado) => {
@@ -281,27 +283,33 @@ export default function BuscadorPage({ token }: Props) {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full -mx-1 sm:-mx-2 lg:-mx-3 pt-2">
-      {/* Notificación flotante */}
-      {aviso && (
-        <Notification
-          kind={aviso.kind}
-          title={aviso.title}
-          message={aviso.message}
-          onClose={() => setAviso(null)}
-        />
-      )}
+    <div className="w-full pt-4 font-inter text-text-primary">
+      <div className="mx-auto w-[96%] max-w-[1400px] flex flex-col gap-6">
+        {/* Notificación flotante fija */}
+        {aviso && (
+          <div className="fixed right-4 top-4 z-[60]">
+            <Notification
+              kind={aviso.kind}
+              title={aviso.title}
+              message={aviso.message}
+              onClose={() => setAviso(null)}
+            />
+          </div>
+        )}
 
-      {/* Título de la página */}
-      <div className="flex flex-col gap-1 w-full">
-        <h1 className="text-2xl sm:text-[28px] font-bold text-text-primary leading-tight">
-          Búsqueda de viajes
-        </h1>
-      </div>
+        {/* Título de la página */}
+        <header className="mb-1">
+          <h1 className="text-xl font-bold leading-6 text-text-primary sm:text-2xl">
+            Búsqueda de viajes
+          </h1>
+        </header>
 
-      {/* Barra de búsqueda de viajes (Figma 1819:4943) */}
-      <div className="flex items-center justify-center w-full">
-        <div ref={searchBarRef} className="w-full max-w-[914px] bg-white rounded-2xl md:rounded-full shadow-[0px_4px_6px_-2px_rgba(12,12,13,0.1),0px_2px_4px_-2px_rgba(12,12,13,0.05)] border border-border-secondary p-3 md:p-2 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-0">
+        {/* Barra de búsqueda de viajes (Figma 1819:4943) */}
+        <div className="flex items-center justify-center w-full">
+          <div
+            ref={searchBarRef}
+            className="w-full max-w-[914px] bg-white rounded-2xl md:rounded-full shadow-[0px_4px_6px_-2px_rgba(12,12,13,0.1),0px_2px_4px_-2px_rgba(12,12,13,0.05)] border border-border-secondary p-3 md:p-2 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-0"
+          >
           {/* Campo Capacidad con Popover / Dropdown (Figma 1582:4658) */}
           <div
             ref={dropdownRef}
@@ -385,7 +393,6 @@ export default function BuscadorPage({ token }: Props) {
             <button
               type="button"
               onClick={() => {
-                setTempOrigen(origen);
                 setDropdownOrigenAbierto((prev) => !prev);
               }}
               className="w-full flex flex-col justify-center px-4 py-2 hover:bg-bg-surface-secondary/50 rounded-xl transition-colors cursor-pointer text-left"
@@ -419,12 +426,21 @@ export default function BuscadorPage({ token }: Props) {
                 {/* Lista de Zonas */}
                 <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
                   {zonas.map((z) => {
-                    const isSelected = tempOrigen === z.id;
+                    const isSelected = origen === z.id;
                     return (
                       <button
                         key={z.id}
                         type="button"
-                        onClick={() => setTempOrigen(z.id)}
+                        onClick={() => {
+                          setOrigen(z.id);
+                          if (destino === z.id) {
+                            const otraZona = zonas.find((item) => item.id !== z.id);
+                            if (otraZona) {
+                              setDestino(otraZona.id);
+                            }
+                          }
+                          setDropdownOrigenAbierto(false);
+                        }}
                         className={`flex items-center justify-between p-1.5 rounded-lg transition-colors cursor-pointer text-left ${
                           isSelected ? "bg-bg-surface-secondary" : "hover:bg-bg-surface-primary"
                         }`}
@@ -453,22 +469,6 @@ export default function BuscadorPage({ token }: Props) {
                     );
                   })}
                 </div>
-
-                {/* Botón Aplicar */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOrigen(tempOrigen);
-                    if (destino === tempOrigen) {
-                      const otraZona = zonas.find((z) => z.id !== tempOrigen);
-                      if (otraZona) setDestino(otraZona.id);
-                    }
-                    setDropdownOrigenAbierto(false);
-                  }}
-                  className="w-full h-10 rounded-full bg-bg-fill-primary hover:bg-bg-fill-primary-hover text-text-invert font-semibold text-sm transition-colors flex items-center justify-center cursor-pointer shadow-sm mt-1"
-                >
-                  Aplicar
-                </button>
               </div>
             )}
           </div>
@@ -480,7 +480,6 @@ export default function BuscadorPage({ token }: Props) {
             <button
               type="button"
               onClick={() => {
-                setTempDestino(destino);
                 setDropdownDestinoAbierto((prev) => !prev);
               }}
               className="w-full flex flex-col justify-center px-4 py-2 hover:bg-bg-surface-secondary/50 rounded-xl transition-colors cursor-pointer text-left"
@@ -514,7 +513,7 @@ export default function BuscadorPage({ token }: Props) {
                 {/* Lista de Zonas */}
                 <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
                   {zonas.map((z) => {
-                    const isSelected = tempDestino === z.id;
+                    const isSelected = destino === z.id;
                     const isDisabled = z.id === origen;
                     return (
                       <button
@@ -527,7 +526,10 @@ export default function BuscadorPage({ token }: Props) {
                             : undefined
                         }
                         onClick={() => {
-                          if (!isDisabled) setTempDestino(z.id);
+                          if (!isDisabled) {
+                            setDestino(z.id);
+                            setDropdownDestinoAbierto(false);
+                          }
                         }}
                         className={`flex items-center justify-between p-1.5 rounded-lg transition-colors text-left ${
                           isDisabled
@@ -571,20 +573,6 @@ export default function BuscadorPage({ token }: Props) {
                     );
                   })}
                 </div>
-
-                {/* Botón Aplicar */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (tempDestino !== origen) {
-                      setDestino(tempDestino);
-                    }
-                    setDropdownDestinoAbierto(false);
-                  }}
-                  className="w-full h-10 rounded-full bg-bg-fill-primary hover:bg-bg-fill-primary-hover text-text-invert font-semibold text-sm transition-colors flex items-center justify-center cursor-pointer shadow-sm mt-1"
-                >
-                  Aplicar
-                </button>
               </div>
             )}
           </div>
@@ -596,7 +584,6 @@ export default function BuscadorPage({ token }: Props) {
             <button
               type="button"
               onClick={() => {
-                setTempHora(hora);
                 setDropdownHoraAbierto((prev) => !prev);
               }}
               className="w-full flex flex-col justify-center px-4 py-2 hover:bg-bg-surface-secondary/50 rounded-xl transition-colors cursor-pointer text-left"
@@ -625,38 +612,35 @@ export default function BuscadorPage({ token }: Props) {
                   </p>
                 </div>
 
-                {/* Grid de horarios (6:00 AM a 10:00 PM) */}
+                {/* Grid de horarios disponibles (solo horas futuras de hoy) */}
                 <div className="grid grid-cols-2 gap-2 max-h-[220px] overflow-y-auto py-1 pr-1">
-                  {HORARIOS_DISPONIBLES.map((h) => {
-                    const isSelected = tempHora === h.valor24h;
-                    return (
-                      <button
-                        key={h.valor24h}
-                        type="button"
-                        onClick={() => setTempHora(h.valor24h)}
-                        className={`h-10 px-3 rounded-full text-xs font-semibold transition-colors flex items-center justify-center cursor-pointer ${
-                          isSelected
-                            ? "bg-bg-fill-primary text-text-invert shadow-xs"
-                            : "bg-bg-fill-secondary text-text-primary hover:bg-bg-surface-tertiary"
-                        }`}
-                      >
-                        {h.etiqueta12h}
-                      </button>
-                    );
-                  })}
+                  {horariosDisponibles.length === 0 ? (
+                    <p className="col-span-2 py-4 text-center text-xs text-text-secondary">
+                      No hay más horarios disponibles para hoy.
+                    </p>
+                  ) : (
+                    horariosDisponibles.map((h) => {
+                      const isSelected = hora === h.valor24h;
+                      return (
+                        <button
+                          key={h.valor24h}
+                          type="button"
+                          onClick={() => {
+                            setHora(h.valor24h);
+                            setDropdownHoraAbierto(false);
+                          }}
+                          className={`h-10 px-3 rounded-full text-xs font-semibold transition-colors flex items-center justify-center cursor-pointer ${
+                            isSelected
+                              ? "bg-bg-fill-primary text-text-invert shadow-xs"
+                              : "bg-bg-fill-secondary text-text-primary hover:bg-bg-surface-tertiary"
+                          }`}
+                        >
+                          {h.etiqueta12h}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
-
-                {/* Botón Aplicar */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHora(tempHora);
-                    setDropdownHoraAbierto(false);
-                  }}
-                  className="w-full h-10 rounded-full bg-bg-fill-primary hover:bg-bg-fill-primary-hover text-text-invert font-semibold text-sm transition-colors flex items-center justify-center cursor-pointer shadow-sm mt-1"
-                >
-                  Aplicar
-                </button>
               </div>
             )}
           </div>
@@ -856,6 +840,7 @@ export default function BuscadorPage({ token }: Props) {
           </div>
         </section>
       )}
+      </div>
     </div>
   );
 }
