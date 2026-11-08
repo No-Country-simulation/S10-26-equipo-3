@@ -76,7 +76,7 @@ type HorarioOpcion = {
 };
 
 // Catálogo general de horarios (de 6:00 AM a 10:00 PM / 22:00)
-const HORARIOS_CATALOGO: HorarioOpcion[] = Array.from({ length: 20 }, (_, index) => {
+const HORARIOS_CATALOGO: HorarioOpcion[] = Array.from({ length: 17 }, (_, index) => {
   const horaNum = index + 6; // 6 a 22
   const valor24h = `${horaNum.toString().padStart(2, "0")}:00`;
   const periodo = horaNum < 12 ? "AM" : "PM";
