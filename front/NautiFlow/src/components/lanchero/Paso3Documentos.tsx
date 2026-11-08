@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ChangeEvent, SyntheticEvent } from "react";
-import { BsCheckCircleFill, BsChevronLeft, BsCloudUpload, BsFileEarmarkImage, BsFileEarmarkPdf, BsXLg, } from "react-icons/bs";
+import {BsCheckCircleFill, BsChevronLeft, BsCloudUpload, BsFileEarmarkImage, BsFileEarmarkPdf,BsXLg,} from "react-icons/bs";
 import type { DatosLanchero } from "./types";
 import Logo from "../Logo";
 import IndicadorPasos from "./IndicadorPasos";
@@ -22,6 +22,8 @@ type Props = {
     onChange: (cambios: Partial<DatosLanchero>) => void;
     onFinalizar: () => void;
     onAtras: () => void;
+    enviando: boolean;
+    errorEnvio: string;
 };
 
 type CampoArchivoProps = {
@@ -51,9 +53,7 @@ function CampoArchivo({ id, etiqueta, archivo, error, onSeleccionar, onQuitar }:
             <span className="text-sm font-semibold leading-[22px] text-text-primary">{etiqueta}</span>
 
             <div className="relative">
-                <label htmlFor={id}
-                    className={`flex h-10 cursor-pointer items-center justify-center gap-2 rounded-m border px-3 text-sm leading-[22px] text-text-primary focus-within:ring-2 focus-within:ring-bg-fill-primary ${estilo}`}
-                >
+                <label htmlFor={id} className={`flex h-10 cursor-pointer items-center justify-center gap-2 rounded-m border px-3 text-sm leading-[22px] text-text-primary focus-within:ring-2 focus-within:ring-bg-fill-primary ${estilo}`}>
                     {archivo ? (
                         <>
                             <IconoArchivo className="h-5 w-5 shrink-0 text-bg-fill-primary" aria-hidden="true" />
@@ -66,7 +66,7 @@ function CampoArchivo({ id, etiqueta, archivo, error, onSeleccionar, onQuitar }:
                             <span className="font-semibold">Subir archivo</span>
                         </>
                     )}
-                    <input id={id} type="file" accept={TIPOS_PERMITIDOS.join(",")} onChange={manejarCambio} className="sr-only" />
+                    <input id={id} type="file" accept={TIPOS_PERMITIDOS.join(",")} onChange={manejarCambio} className="sr-only"/>
                 </label>
 
                 {archivo && (
@@ -87,7 +87,7 @@ function CampoArchivo({ id, etiqueta, archivo, error, onSeleccionar, onQuitar }:
     );
 }
 
-export default function Paso3Documentos({ datos, onChange, onFinalizar, onAtras }: Props) {
+export default function Paso3Documentos({ datos, onChange, onFinalizar, onAtras, enviando, errorEnvio, }: Props) {
     const [errores, setErrores] = useState<Partial<Record<Documento, string>>>({});
 
     const seleccionar = (campo: Documento, archivo: File) => {
@@ -128,7 +128,12 @@ export default function Paso3Documentos({ datos, onChange, onFinalizar, onAtras 
     return (
         <form onSubmit={manejarEnvio} className="flex flex-1 flex-col gap-6 font-inter md:gap-8">
             <header className="flex items-center gap-3 md:gap-4">
-                <button type="button" onClick={onAtras} aria-label="Volver" className="rounded-sm text-text-primary focus-visible:ring-2 focus-visible:ring-bg-fill-primary">
+                <button
+                    type="button"
+                    onClick={onAtras}
+                    aria-label="Volver"
+                    className="rounded-sm text-text-primary focus-visible:ring-2 focus-visible:ring-bg-fill-primary"
+                >
                     <BsChevronLeft className="h-5 w-5" aria-hidden="true" />
                 </button>
                 <Logo className="md:h-16 md:w-auto" />
@@ -158,9 +163,22 @@ export default function Paso3Documentos({ datos, onChange, onFinalizar, onAtras 
                 </div>
             </div>
 
-            <button type="submit" className="mt-auto w-full rounded-full bg-bg-fill-primary py-3 text-base font-semibold leading-[22px] text-text-invert hover:bg-bg-fill-primary-hover md:mx-auto md:mt-0 md:w-80">
-                Finalizar
-            </button>
+            <div className="mt-auto flex flex-col gap-2 md:mx-auto md:mt-0 md:w-80">
+                {errorEnvio && (
+                    <p role="alert" className="text-center text-sm font-semibold text-text-error">
+                        {errorEnvio}
+                    </p>
+                )}
+                {enviando && (
+                    <p className="text-center text-xs leading-4 text-text-secondary">
+                        Esto puede tardar un momento...
+                    </p>
+                )}
+                <button type="submit" disabled={enviando} className="w-full rounded-full bg-bg-fill-primary py-3 text-base font-semibold leading-[22px] text-text-invert hover:bg-bg-fill-primary-hover disabled:cursor-not-allowed disabled:bg-bg-fill-disable disabled:hover:bg-bg-fill-disable"
+                >
+                    {enviando ? "Enviando..." : "Finalizar"}
+                </button>
+            </div>
         </form>
     );
 }
