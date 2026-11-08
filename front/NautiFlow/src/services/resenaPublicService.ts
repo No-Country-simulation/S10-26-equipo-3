@@ -25,15 +25,24 @@ export interface ResenaCreadaRespuesta {
   idResena: number;
   idViaje: number;
   puntuacion: number;
-  comentario?: string;
-  fechaHora: string;
+  comentario: string | null;
+  fecha: string;
+}
+
+export class HttpError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-async function extraerError(response: Response): Promise<Error> {
+async function extraerError(response: Response): Promise<HttpError> {
   let message = `Error al procesar la solicitud (HTTP ${response.status}).`;
   try {
     const body: unknown = await response.json();
@@ -45,7 +54,7 @@ async function extraerError(response: Response): Promise<Error> {
   } catch {
     // conserva mensaje por defecto
   }
-  return new Error(message);
+  return new HttpError(response.status, message);
 }
 
 export async function consultarResenaPorToken(
@@ -113,6 +122,16 @@ export async function enviarCalificacionResena(
     throw new Error("El servidor devolvió una respuesta inválida.");
   }
 
-  return body as unknown as ResenaCreadaRespuesta;
+  if (!isRecord(body) || typeof body.idResena !== "number" || typeof body.fecha !== "string") {
+    throw new Error("El servidor devolvió un formato inesperado de reseña creada.");
+  }
+
+  return {
+    idResena: Number(body.idResena),
+    idViaje: Number(body.idViaje),
+    puntuacion: Number(body.puntuacion),
+    comentario: typeof body.comentario === "string" ? body.comentario : null,
+    fecha: String(body.fecha),
+  };
 }
 

@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { BsPencil, BsStarFill } from "react-icons/bs";
+import { BsExclamationCircleFill, BsPencil, BsStarFill } from "react-icons/bs";
 import Logo from "../../components/Logo";
 import {
   consultarResenaPorToken,
   enviarCalificacionResena,
+  HttpError,
 } from "../../services/resenaPublicService";
 
-type EstadoVista = "cargando" | "formulario" | "enviada" | "no-disponible";
+type EstadoVista = "cargando" | "formulario" | "enviada" | "no-disponible" | "error";
 
 export default function ResenaPage() {
   const { token } = useParams<{ token: string }>();
@@ -19,6 +20,8 @@ export default function ResenaPage() {
   const [comentario, setComentario] = useState<string>("");
   const [enviando, setEnviando] = useState<boolean>(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
+  const [reintentos, setReintentos] = useState<number>(0);
 
   useEffect(() => {
     if (!token) {
@@ -26,7 +29,10 @@ export default function ResenaPage() {
       return;
     }
 
+    setEstado("cargando");
+    setErrorCarga(null);
     const controller = new AbortController();
+
     consultarResenaPorToken(token, controller.signal)
       .then((data) => {
         if (data.resenaRegistrada) {
@@ -35,14 +41,25 @@ export default function ResenaPage() {
           setEstado("formulario");
         }
       })
-      .catch(() => {
-        if (!controller.signal.aborted) {
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        if (
+          err instanceof HttpError &&
+          (err.status === 404 || err.status === 409 || err.status === 410)
+        ) {
           setEstado("no-disponible");
+        } else {
+          setEstado("error");
+          setErrorCarga(
+            err instanceof Error
+              ? err.message
+              : "No se pudo conectar con el servidor. Verifica tu conexión.",
+          );
         }
       });
 
     return () => controller.abort();
-  }, [token]);
+  }, [token, reintentos]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,12 +80,23 @@ export default function ResenaPage() {
       });
       setEstado("enviada");
     } catch (err: unknown) {
+      if (
+        err instanceof HttpError &&
+        (err.status === 404 || err.status === 409 || err.status === 410)
+      ) {
+        setEstado("no-disponible");
+        return;
+      }
       const msg =
         err instanceof Error ? err.message : "No se pudo enviar la calificación. Intenta nuevamente.";
       setErrorEnvio(msg);
     } finally {
       setEnviando(false);
     }
+  };
+
+  const handleReintentar = () => {
+    setReintentos((v) => v + 1);
   };
 
   const handleCerrar = () => {
@@ -145,11 +173,12 @@ export default function ResenaPage() {
                       }}
                       onMouseEnter={() => setHoverPuntuacion(star)}
                       aria-label={`${star} estrella${star > 1 ? "s" : ""}`}
+                      aria-pressed={puntuacion === star}
                       className="size-9 flex items-center justify-center transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bg-fill-primary/30 rounded-md cursor-pointer"
                     >
                       <BsStarFill
                         className={`size-[30px] transition-colors ${
-                          estaRellena ? "text-bg-fill-accent" : "text-[#D5D7DB]"
+                          estaRellena ? "text-bg-fill-accent" : "text-bg-surface-tertiary"
                         }`}
                         aria-hidden="true"
                       />
@@ -164,7 +193,7 @@ export default function ResenaPage() {
                   className="size-5 text-text-secondary mt-0.5 shrink-0"
                   aria-hidden="true"
                 />
-                <textarea
+                <textarea aria-label="Comentario de tu experiencia"
                   value={comentario}
                   onChange={(e) => setComentario(e.target.value)}
                   placeholder="Cuéntanos tu experiencia (opcional)"
@@ -262,6 +291,45 @@ export default function ResenaPage() {
               </button>
             </div>
           </>
+        )}
+
+        {/* Estado Error: Problema de Red / Servidor (con reintento) */}
+        {estado === "error" && (
+          <section
+            role="alert"
+            aria-label="Error al cargar la reseña"
+            className="w-full flex flex-col items-center text-center gap-4 py-4"
+          >
+            <div className="size-16 rounded-full bg-bg-surface-secondary flex items-center justify-center text-bg-error-primary shadow-xs">
+              <BsExclamationCircleFill className="size-8" aria-hidden="true" />
+            </div>
+
+            <div className="flex flex-col gap-2 w-full">
+              <h1 className="text-xl sm:text-2xl font-semibold leading-7 text-text-primary">
+                Error al conectar con el servidor
+              </h1>
+              <p className="text-sm text-text-secondary leading-5">
+                {errorCarga || "Ocurrió un problema de red temporal. Por favor verifica tu conexión e inténtalo nuevamente."}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5 w-full pt-2">
+              <button
+                type="button"
+                onClick={handleReintentar}
+                className="w-full h-12 rounded-full bg-bg-fill-primary text-text-invert text-lg font-semibold flex items-center justify-center hover:bg-bg-fill-primary-hover transition-colors shadow-sm cursor-pointer"
+              >
+                Reintentar
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="w-full h-11 rounded-full border border-border-secondary text-text-secondary text-sm font-semibold flex items-center justify-center hover:bg-bg-surface-secondary hover:text-text-primary transition-colors cursor-pointer"
+              >
+                Volver al inicio
+              </button>
+            </div>
+          </section>
         )}
       </div>
     </main>
