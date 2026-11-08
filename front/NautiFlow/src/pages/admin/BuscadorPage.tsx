@@ -125,6 +125,7 @@ export default function BuscadorPage({ token }: Props) {
   const [dropdownHoraAbierto, setDropdownHoraAbierto] = useState(false);
   const [tempHora, setTempHora] = useState<string>(obtenerHoraInicial);
   const dropdownHoraRef = useRef<HTMLDivElement>(null);
+  const searchBarRef = useRef<HTMLDivElement>(null);
 
   const [lanchas, setLanchas] = useState<LanchaResultado[]>([]);
   const [cargandoLanchas, setCargandoLanchas] = useState(false);
@@ -240,6 +241,24 @@ export default function BuscadorPage({ token }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleModificarBusqueda = () => {
+    searchBarRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setDropdownCapacidadAbierto(true);
+  };
+
+  const handleLimpiarFiltros = () => {
+    const horaPorDefecto = obtenerHoraInicial();
+    setCapacidad(2);
+    setTempCapacidad(2);
+    setOrigen(4);
+    setTempOrigen(4);
+    setDestino(1);
+    setTempDestino(1);
+    setHora(horaPorDefecto);
+    setTempHora(horaPorDefecto);
+    ejecutarBusqueda(2, 4, 1, horaPorDefecto);
+  };
+
   const handleViajeAsignado = (trip: ViajeCreado) => {
     setAviso({
       id: Date.now(),
@@ -282,7 +301,7 @@ export default function BuscadorPage({ token }: Props) {
 
       {/* Barra de búsqueda de viajes (Figma 1819:4943) */}
       <div className="flex items-center justify-center w-full">
-        <div className="w-full max-w-[914px] bg-white rounded-2xl md:rounded-full shadow-[0px_4px_6px_-2px_rgba(12,12,13,0.1),0px_2px_4px_-2px_rgba(12,12,13,0.05)] border border-border-secondary p-3 md:p-2 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-0">
+        <div ref={searchBarRef} className="w-full max-w-[914px] bg-white rounded-2xl md:rounded-full shadow-[0px_4px_6px_-2px_rgba(12,12,13,0.1),0px_2px_4px_-2px_rgba(12,12,13,0.05)] border border-border-secondary p-3 md:p-2 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-0">
           {/* Campo Capacidad con Popover / Dropdown (Figma 1582:4658) */}
           <div
             ref={dropdownRef}
@@ -654,50 +673,90 @@ export default function BuscadorPage({ token }: Props) {
         </div>
       </div>
 
-      {/* Contenedor de Resultados (Figma 1819:4957) */}
-      <section
-        aria-labelledby="resultados-titulo"
-        className="bg-white rounded-xl border border-border-secondary p-4 sm:p-6 shadow-sm flex flex-col gap-4 w-full"
-      >
-        {/* Encabezado de resultados */}
-        <div className="flex flex-col gap-1 border-b border-border-primary pb-3">
-          <h2
-            id="resultados-titulo"
-            className="text-lg sm:text-xl font-semibold text-text-primary leading-tight"
-          >
-            Resultados encontrados
-          </h2>
+    
+      {cargandoLanchas ? (
+        <section className="bg-white rounded-xl border border-border-secondary p-8 sm:p-12 shadow-sm flex flex-col items-center justify-center gap-3 w-full">
+          <div className="size-8 rounded-full border-2 border-bg-fill-primary border-t-transparent animate-spin" />
+          <span className="text-text-secondary text-sm font-medium animate-pulse">
+            Buscando embarcaciones disponibles…
+          </span>
+        </section>
+      ) : errorBusqueda ? (
+        <section className="bg-white rounded-xl border border-border-secondary p-8 shadow-sm flex flex-col items-center justify-center text-center gap-3 w-full">
+          <p className="text-base font-semibold text-text-error">{errorBusqueda}</p>
           <p className="text-sm text-text-secondary">
-            Viajes disponibles según los filtros seleccionados
+            Prueba cambiando la hora o los filtros seleccionados.
           </p>
-        </div>
+          <button
+            type="button"
+            onClick={handleLimpiarFiltros}
+            className="mt-2 h-10 px-5 rounded-full bg-bg-fill-secondary text-text-primary hover:bg-bg-fill-secondary-hover font-medium text-sm transition-colors cursor-pointer"
+          >
+            Restablecer filtros
+          </button>
+        </section>
+      ) : lanchas.length === 0 ? (
+        /* Estado Sin Resultados (Figma 2014:5607) */
+        <section
+          aria-label="No encontramos lanchas disponibles"
+          className="bg-white rounded-xl border border-border-secondary shadow-sm flex flex-col items-center justify-center p-6 sm:p-8 gap-4 w-full"
+        >
+          {/* Encabezado de resultados */}
+          <div className="flex flex-col items-center text-center gap-2 max-w-[500px] px-6 py-2.5">
+            <h2 className="text-xl sm:text-[20px] font-semibold text-black leading-6">
+              No encontramos lanchas disponibles
+            </h2>
+            <p className="text-sm font-normal text-text-secondary leading-5">
+              No hay embarcaciones que coincidan con los filtros seleccionados
+            </p>
+          </div>
 
-        {/* Lista de viajes (Figma 1819:4961) */}
-        {cargandoLanchas ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <span className="text-text-secondary text-base animate-pulse">
-              Buscando embarcaciones disponibles…
-            </span>
+          {/* Contenido - Sin resultados (Ilustración) */}
+          <div className="flex items-center justify-center w-full max-w-[1064px] py-2 sm:py-4">
+            <img
+              src="/solicitudes/sinresultados.png"
+              alt="No encontramos lanchas disponibles"
+              className="h-auto w-full max-w-[560px] sm:max-w-[760px] md:max-w-[900px] lg:max-w-[1064px] object-contain select-none pointer-events-none"
+            />
           </div>
-        ) : errorBusqueda ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-base font-semibold text-text-error">
-              {errorBusqueda}
-            </p>
-            <p className="text-sm text-text-secondary mt-1">
-              Prueba cambiando la hora o los filtros seleccionados.
+
+          {/* Botones de acción */}
+          <div className="flex flex-col items-center gap-2 w-full">
+            <button
+              type="button"
+              onClick={handleModificarBusqueda}
+              className="h-10 w-[165px] rounded-full bg-bg-fill-primary text-text-invert hover:bg-bg-fill-primary-hover font-medium text-sm flex items-center justify-center transition-colors cursor-pointer shadow-sm"
+            >
+              Modificar búsqueda
+            </button>
+            <button
+              type="button"
+              onClick={handleLimpiarFiltros}
+              className="h-10 w-[165px] rounded-full bg-bg-fill-secondary text-text-primary hover:bg-bg-fill-secondary-hover font-medium text-sm flex items-center justify-center transition-colors cursor-pointer"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        </section>
+      ) : (
+        /* Contenedor de Resultados con lanchas disponibles (Figma 1819:4957) */
+        <section
+          aria-labelledby="resultados-titulo"
+          className="bg-white rounded-xl border border-border-secondary p-4 sm:p-6 shadow-sm flex flex-col gap-4 w-full"
+        >
+          {/* Encabezado de resultados */}
+          <div className="flex flex-col gap-1 border-b border-border-primary pb-3">
+            <h2
+              id="resultados-titulo"
+              className="text-lg sm:text-xl font-semibold text-text-primary leading-tight"
+            >
+              Resultados encontrados
+            </h2>
+            <p className="text-sm text-text-secondary">
+              Viajes disponibles según los filtros seleccionados
             </p>
           </div>
-        ) : lanchas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-base font-semibold text-text-primary">
-              No se encontraron lanchas disponibles
-            </p>
-            <p className="text-sm text-text-secondary mt-1">
-              Prueba cambiando la capacidad o las zonas seleccionadas.
-            </p>
-          </div>
-        ) : (
+
           <div className="flex flex-col gap-4 w-full">
             {lanchas.map((lancha) => (
               <article
@@ -795,8 +854,8 @@ export default function BuscadorPage({ token }: Props) {
               </article>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }
