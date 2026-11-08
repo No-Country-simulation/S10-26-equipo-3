@@ -85,10 +85,22 @@ const HORARIOS_CATALOGO: HorarioOpcion[] = Array.from({ length: 17 }, (_, index)
   return { valor24h, etiqueta12h };
 });
 
-function obtenerHorariosDisponibles(): HorarioOpcion[] {
+const ZONA_NEGOCIO = "America/Bogota";
+
+function obtenerHoraActualNegocio(): number {
   const ahora = new Date();
-  const horaActual = ahora.getHours();
-  // No muestra horarios que ya pasaron hoy (ej. si son 7:15 am, horaActual es 7 -> solo se muestran horas estrictamente mayores a 7)
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: ZONA_NEGOCIO,
+    hour: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(ahora);
+  const parteHora = partes.find((p) => p.type === "hour");
+  return parteHora ? parseInt(parteHora.value, 10) : ahora.getHours();
+}
+
+function obtenerHorariosDisponibles(): HorarioOpcion[] {
+  const horaActual = obtenerHoraActualNegocio();
+  // No muestra horarios que ya pasaron hoy según la zona horaria del negocio (America/Bogota)
   return HORARIOS_CATALOGO.filter((h) => {
     const horaNum = parseInt(h.valor24h.split(":")[0], 10);
     return horaNum > horaActual;
