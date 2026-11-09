@@ -1,5 +1,6 @@
 package com.nautiflow.service;
 
+import com.nautiflow.dto.ActividadMensualDTO;
 import com.nautiflow.dto.SolicitudDetalleDTO;
 import com.nautiflow.model.Documento;
 import com.nautiflow.model.EstadoOperativoLanchero;
@@ -10,9 +11,12 @@ import com.nautiflow.model.Zona;
 import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
+import com.nautiflow.repository.TrayectoRetornoVacioRepository;
+import com.nautiflow.repository.ViajeRepository;
+import com.nautiflow.util.ZonaNegocio;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,6 +25,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -44,21 +50,57 @@ class AdminServiceTest {
     private DocumentoRepository documentoRepository;
     @Mock
     private ArchivoLancheroStorage archivoStorage;
+    @Mock
+    private TrayectoRetornoVacioRepository tramoRepository;
+    @Mock
+    private ViajeRepository viajeRepository;
 
-    @InjectMocks
+    private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T15:00:00Z"), ZonaNegocio.ZONA);
+
     private AdminService adminService;
 
+    @BeforeEach
+    void setUp() {
+        adminService = new AdminService(
+                lancheroRepository,
+                lanchaRepository,
+                documentoRepository,
+                archivoStorage,
+                tramoRepository,
+                viajeRepository,
+                clock
+        );
+    }
+
     @Test
-    void dashboardCalculaLosTresIndicadoresConConsultasDeConteo() {
+    void dashboardCalculaLosIndicadoresYLaActividadDeLosUltimosSeisMeses() {
         when(lancheroRepository.countByEstadoSolicitud(EstadoSolicitud.PENDIENTE)).thenReturn(12L);
         when(lanchaRepository.countByLanchero_EstadoSolicitud(EstadoSolicitud.APROBADO)).thenReturn(28L);
         when(lancheroRepository.countByEstadoViaje(EstadoOperativoLanchero.EN_VIAJE)).thenReturn(4L);
+        OffsetDateTime inicioDeHoy = OffsetDateTime.parse("2026-11-09T00:00:00-03:00");
+        when(tramoRepository.countByEstadoAndFechaHoraRetornoGreaterThanEqual("ACTIVO", inicioDeHoy)).thenReturn(3L);
+        OffsetDateTime inicioDeJunio = OffsetDateTime.parse("2026-06-01T00:00:00-03:00");
+        when(viajeRepository.findFechasInicioDesde(inicioDeJunio)).thenReturn(List.of(
+                OffsetDateTime.parse("2026-06-10T12:00:00Z"),
+                OffsetDateTime.parse("2026-11-01T02:00:00Z"),
+                OffsetDateTime.parse("2026-11-05T18:00:00Z"),
+                OffsetDateTime.parse("2026-09-15T10:00:00Z")
+        ));
 
         var dashboard = adminService.obtenerDashboard();
 
         assertEquals(12L, dashboard.solicitudesPendientes());
         assertEquals(28L, dashboard.lanchasVerificadas());
         assertEquals(4L, dashboard.viajesActivos());
+        assertEquals(3L, dashboard.tramosVacios());
+        assertEquals(List.of(
+                new ActividadMensualDTO("2026-06", 1),
+                new ActividadMensualDTO("2026-07", 0),
+                new ActividadMensualDTO("2026-08", 0),
+                new ActividadMensualDTO("2026-09", 1),
+                new ActividadMensualDTO("2026-10", 1),
+                new ActividadMensualDTO("2026-11", 1)
+        ), dashboard.actividadMensual());
     }
 
     @Test

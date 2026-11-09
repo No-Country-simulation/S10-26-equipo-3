@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,4 +70,7 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
     Optional<Viaje> findFirstByLancha_IdLanchaAndFechaHoraFinIsNotNullOrderByFechaHoraFinDescIdViajeDesc(
             Long idLancha
     );
+
+    @Query("select v.fechaHoraInicio from Viaje v where v.fechaHoraInicio >= :desde")
+    List<OffsetDateTime> findFechasInicioDesde(@Param("desde") OffsetDateTime desde);
 }

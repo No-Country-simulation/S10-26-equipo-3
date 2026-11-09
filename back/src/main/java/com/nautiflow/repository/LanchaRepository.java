@@ -95,6 +95,7 @@ public interface LanchaRepository extends JpaRepository<Lancha, Long> {
               and not exists (
                     select t from TrayectoRetornoVacio t
                     where t.viaje.lancha = l and t.estado = 'ACTIVO'
+                      and t.fechaHoraRetorno > :fechaHoraConsulta
               )
             """)
     List<Lancha> buscarDisponibles(

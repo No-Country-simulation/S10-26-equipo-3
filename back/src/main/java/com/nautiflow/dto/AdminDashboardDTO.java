@@ -1,5 +1,7 @@
 package com.nautiflow.dto;
 
+import java.util.List;
+
 /**
  * Resumen de métricas del panel administrativo: solicitudes pendientes, lanchas verificadas y viajes activos.
  *
@@ -10,6 +12,11 @@ package com.nautiflow.dto;
 public record AdminDashboardDTO(
         long solicitudesPendientes,
         long lanchasVerificadas,
-        long viajesActivos
+        long viajesActivos,
+        long tramosVacios,
+        List<ActividadMensualDTO> actividadMensual
 ) {
+    public AdminDashboardDTO(long solicitudesPendientes, long lanchasVerificadas, long viajesActivos) {
+        this(solicitudesPendientes, lanchasVerificadas, viajesActivos, 0, List.of());
+    }
 }

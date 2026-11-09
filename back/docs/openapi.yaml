@@ -9,6 +9,7 @@ tags:
   - name: Solicitudes
   - name: Lancheros
   - name: Viajes
+  - name: Tramos vacíos
   - name: Reseñas
   - name: Reseñas públicas
   - name: Zonas
@@ -615,6 +616,94 @@ paths:
           description: Recurso no encontrado.
         "409":
           description: Conflicto.
+  /admin/viajes/{id}/retorno-vacio:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+    post:
+      operationId: publicarRetornoVacio
+      tags: [Tramos vacíos]
+      summary: Publicar el retorno vacío de un viaje
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearTramoVacio"
+      responses:
+        "201":
+          description: Tramo vacío publicado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TramoVacio"
+        "400":
+          description: Datos inválidos.
+        "401":
+          description: No autenticado.
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          description: Sin permiso.
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Viaje no encontrado.
+        "409":
+          description: El viaje ya tiene un retorno vacío publicado.
+  /admin/tramos-vacios:
+    get:
+      operationId: listarTramosVacios
+      tags: [Tramos vacíos]
+      summary: Listar los tramos vacíos de hoy en adelante, ordenados por hora
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Solicitud procesada correctamente.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TramoVacio"
+        "401":
+          description: No autenticado.
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          description: Sin permiso.
+          $ref: "#/components/responses/SinPermiso"
+  /admin/tramos-vacios/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+    delete:
+      operationId: quitarTramoVacio
+      tags: [Tramos vacíos]
+      summary: Quitar un tramo vacío
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Tramo quitado.
+        "401":
+          description: No autenticado.
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          description: Sin permiso.
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Tramo no encontrado.
   /admin/viajes/seguimiento:
     get:
       operationId: listarSeguimientoViajes
@@ -867,7 +956,7 @@ components:
           example: Sesión cerrada correctamente
     AdminDashboard:
       type: object
-      required: [solicitudesPendientes, lanchasVerificadas, viajesActivos]
+      required: [solicitudesPendientes, lanchasVerificadas, viajesActivos, tramosVacios, actividadMensual]
       properties:
         solicitudesPendientes:
           type: integer
@@ -878,6 +967,56 @@ components:
         viajesActivos:
           type: integer
           format: int64
+        tramosVacios:
+          type: integer
+          format: int64
+        actividadMensual:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActividadMensual"
+    ActividadMensual:
+      type: object
+      required: [mes, viajes]
+      properties:
+        mes:
+          type: string
+          example: "2026-11"
+        viajes:
+          type: integer
+          format: int64
+    CrearTramoVacio:
+      type: object
+      required: [horaRetorno]
+      properties:
+        horaRetorno:
+          type: string
+          example: "18:30"
+    TramoVacio:
+      type: object
+      required: [id, idViaje, idLancha, nombreEmbarcacion, capacidad, zonaOrigen, zonaDestino, fechaHoraRetorno, mensaje]
+      properties:
+        id:
+          type: integer
+          format: int64
+        idViaje:
+          type: integer
+          format: int64
+        idLancha:
+          type: integer
+          format: int64
+        nombreEmbarcacion:
+          type: string
+        capacidad:
+          type: integer
+        zonaOrigen:
+          type: string
+        zonaDestino:
+          type: string
+        fechaHoraRetorno:
+          type: string
+          format: date-time
+        mensaje:
+          type: string
     PaginaSolicitudes:
       type: object
       required: [content, page, size, totalElements, totalPages]

@@ -1,5 +1,6 @@
 package com.nautiflow.service;
 
+import com.nautiflow.dto.ActividadMensualDTO;
 import com.nautiflow.dto.AdminDashboardDTO;
 import com.nautiflow.dto.PaginaSolicitudesDTO;
 import com.nautiflow.dto.SolicitudDetalleDTO;
@@ -11,6 +12,8 @@ import com.nautiflow.model.Lanchero;
 import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
+import com.nautiflow.repository.TrayectoRetornoVacioRepository;
+import com.nautiflow.repository.ViajeRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -19,8 +22,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import com.nautiflow.util.ZonaNegocio;
 
 /**
@@ -32,6 +42,9 @@ public class AdminService {
     private final LanchaRepository lanchaRepository;
     private final DocumentoRepository documentoRepository;
     private final ArchivoLancheroStorage archivoStorage;
+    private final TrayectoRetornoVacioRepository tramoRepository;
+    private final ViajeRepository viajeRepository;
+    private final Clock clock;
 
     /**
      * Inyecta los repositorios y el servicio de archivos usados por el panel.
@@ -40,12 +53,18 @@ public class AdminService {
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
             DocumentoRepository documentoRepository,
-            ArchivoLancheroStorage archivoStorage
+            ArchivoLancheroStorage archivoStorage,
+            TrayectoRetornoVacioRepository tramoRepository,
+            ViajeRepository viajeRepository,
+            Clock clock
     ) {
         this.lancheroRepository = lancheroRepository;
         this.lanchaRepository = lanchaRepository;
         this.documentoRepository = documentoRepository;
         this.archivoStorage = archivoStorage;
+        this.tramoRepository = tramoRepository;
+        this.viajeRepository = viajeRepository;
+        this.clock = clock;
     }
 
     /**
@@ -53,11 +72,32 @@ public class AdminService {
      */
     @Transactional(readOnly = true)
     public AdminDashboardDTO obtenerDashboard() {
+        LocalDate hoy = LocalDate.now(clock.withZone(ZonaNegocio.ZONA));
         return new AdminDashboardDTO(
                 lancheroRepository.countByEstadoSolicitud(EstadoSolicitud.PENDIENTE),
                 lanchaRepository.countByLanchero_EstadoSolicitud(EstadoSolicitud.APROBADO),
-                lancheroRepository.countByEstadoViaje(EstadoOperativoLanchero.EN_VIAJE)
+                lancheroRepository.countByEstadoViaje(EstadoOperativoLanchero.EN_VIAJE),
+                tramoRepository.countByEstadoAndFechaHoraRetornoGreaterThanEqual(
+                        TramoVacioService.ACTIVO,
+                        hoy.atStartOfDay(ZonaNegocio.ZONA).toOffsetDateTime()
+                ),
+                actividadMensual(YearMonth.from(hoy))
         );
+    }
+
+    private List<ActividadMensualDTO> actividadMensual(YearMonth mesActual) {
+        YearMonth primerMes = mesActual.minusMonths(5);
+        OffsetDateTime desde = primerMes.atDay(1).atStartOfDay(ZonaNegocio.ZONA).toOffsetDateTime();
+        Map<YearMonth, Long> viajesPorMes = viajeRepository.findFechasInicioDesde(desde).stream()
+                .collect(Collectors.groupingBy(
+                        fecha -> YearMonth.from(fecha.atZoneSameInstant(ZonaNegocio.ZONA)),
+                        Collectors.counting()
+                ));
+        List<ActividadMensualDTO> actividad = new ArrayList<>();
+        for (YearMonth mes = primerMes; !mes.isAfter(mesActual); mes = mes.plusMonths(1)) {
+            actividad.add(new ActividadMensualDTO(mes.toString(), viajesPorMes.getOrDefault(mes, 0L)));
+        }
+        return actividad;
     }
 
     /**
