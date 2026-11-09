@@ -15,7 +15,7 @@ function horaYDia(value: string): { hora: string; dia: string } {
   const fecha = new Date(value);
   if (Number.isNaN(fecha.getTime())) return { hora: value, dia: "" };
   return {
-    hora: new Intl.DateTimeFormat("es-AR", { timeZone: ZONA_HORARIA, hour: "2-digit", minute: "2-digit" }).format(fecha),
+    hora: new Intl.DateTimeFormat("es-AR", { timeZone: ZONA_HORARIA, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(fecha),
     dia: new Intl.DateTimeFormat("es-AR", { timeZone: ZONA_HORARIA, weekday: "short", day: "numeric", month: "short" }).format(fecha),
   };
 }
