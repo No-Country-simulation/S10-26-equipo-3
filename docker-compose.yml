@@ -12,6 +12,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./back/init/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./back/init/02-zonas.sql:/docker-entrypoint-initdb.d/02-zonas.sql
 
 volumes:
   pgdata:
