@@ -15,6 +15,7 @@ import {
   buscarLanchasDisponibles,
   type LanchaDisponible,
 } from "../../services/lancheroAdminService";
+import { ZONA_HORARIA } from "../../config/api";
 
 type Props = {
   token: string;
@@ -85,7 +86,7 @@ const HORARIOS_CATALOGO: HorarioOpcion[] = Array.from({ length: 17 }, (_, index)
   return { valor24h, etiqueta12h };
 });
 
-const ZONA_NEGOCIO = "America/Bogota";
+const ZONA_NEGOCIO = ZONA_HORARIA;
 
 function obtenerHoraActualNegocio(): number {
   const ahora = new Date();
@@ -100,7 +101,7 @@ function obtenerHoraActualNegocio(): number {
 
 function obtenerHorariosDisponibles(): HorarioOpcion[] {
   const horaActual = obtenerHoraActualNegocio();
-  // No muestra horarios que ya pasaron hoy según la zona horaria del negocio (America/Bogota)
+  // No muestra horarios que ya pasaron hoy según la zona horaria del negocio
   return HORARIOS_CATALOGO.filter((h) => {
     const horaNum = parseInt(h.valor24h.split(":")[0], 10);
     return horaNum > horaActual;

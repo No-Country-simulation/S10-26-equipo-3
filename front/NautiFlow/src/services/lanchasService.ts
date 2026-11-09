@@ -1,5 +1,4 @@
-const BASE_URL: string =
-  import.meta.env.VITE_API_URL ?? "http://localhost:3000/api";
+import { API_BASE_URL } from "../config/api";
 
 /** Una reseña individual devuelta por el backend */
 export interface ResenaLancha {
@@ -45,7 +44,7 @@ async function getLanchasDestacadas(
   let res: Response;
   try {
     res = await fetch(
-      `${BASE_URL}/lanchas/destacadas?page=${page}&size=${size}`
+      `${API_BASE_URL}/lanchas/destacadas?page=${page}&size=${size}`
     );
   } catch {
     throw new Error("No se pudo conectar con el servidor.");
@@ -77,11 +76,10 @@ async function getResenasByLanchero(
   page = 0,
   size = 10
 ): Promise<ResenasResponse> {
-  const RESENAS_BASE = "https://s10-26-equipo-3.onrender.com";
   let res: Response;
   try {
     res = await fetch(
-      `${RESENAS_BASE}/lancheros/${idLanchero}/resenas?page=${page}&size=${size}`
+      `${API_BASE_URL}/lancheros/${idLanchero}/resenas?page=${page}&size=${size}`
     );
   } catch {
     throw new Error("No se pudo conectar con el servidor.");

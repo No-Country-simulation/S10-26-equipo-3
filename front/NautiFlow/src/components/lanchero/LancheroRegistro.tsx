@@ -8,7 +8,7 @@ import Paso3Documentos from "./Paso3Documentos";
 import LancheroConfirmacion from "../LancheroConfirmacion/LancheroConfirmacion";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "https://s10-26-equipo-3.onrender.com";
+import { API_BASE_URL } from "../../config/api";
 
 const ZONAS_IDS: Record<string, number> = {
     "Primera sección": 1,
@@ -53,7 +53,7 @@ export default function LancheroRegistro() {
             formData.append("antecedentes", datos.antecedentes);
             datos.imagenes.forEach((foto) => formData.append("fotos", foto));
 
-            const respuesta = await fetch(`${API_URL}/lancheros/registrar`, {
+            const respuesta = await fetch(`${API_BASE_URL}/lancheros/registrar`, {
                 method: "POST",
                 body: formData,
             });

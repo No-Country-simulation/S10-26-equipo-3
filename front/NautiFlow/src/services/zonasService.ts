@@ -1,6 +1,4 @@
-const API_BASE_URL: string = (
-  import.meta.env.VITE_API_URL ?? "https://s10-26-equipo-3.onrender.com"
-).replace(/\/+$/, "");
+import { API_BASE_URL } from "../config/api";
 
 export interface Zona {
   id: number;

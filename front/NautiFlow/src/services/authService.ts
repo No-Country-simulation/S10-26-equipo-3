@@ -1,5 +1,4 @@
-const BASE_URL: string =
-  import.meta.env.VITE_API_URL ?? "http://localhost:3000/api";
+import { API_BASE_URL } from "../config/api";
  
 const TOKEN_KEY = "token";
  
@@ -18,7 +17,7 @@ async function login(credentials: LoginRequest): Promise<LoginResponse> {
   let res: Response;
   try {
     // Cambia "/auth/login" si tu endpoint es distinto
-    res = await fetch(`${BASE_URL}/login`, {
+    res = await fetch(`${API_BASE_URL}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(credentials),
