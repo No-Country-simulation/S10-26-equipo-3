@@ -9,16 +9,21 @@ import EstadoBadge from "../../components/solicitudes/EstadoBadge";
 import { listarSeguimientoViajes, type ViajeSeguimiento } from "../../services/adminDashboardService";
 import { finalizarViaje, type ViajeFinalizado } from "../../services/viajeAdminService";
 import ModalSolicitarResena from "../../components/Admin/ModalSolicitarResena";
+import ModalPublicarRetorno from "../../components/Admin/ModalPublicarRetorno";
+import ModalMensajeTramo from "../../components/Admin/ModalMensajeTramo";
+import TramosVacios from "../../components/Admin/TramosVacios";
+import type { TramoVacio } from "../../services/tramoVacioService";
+import { ZONA_HORARIA } from "../../config/api";
 
 type Props = { token: string };
 
 function fechaYHora(value: string): { date: string; time: string } {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return { date: value, time: "" };
-  const options = { timeZone: "America/Bogota" };
+  const options = { timeZone: ZONA_HORARIA };
   return {
-    date: new Intl.DateTimeFormat("es-CO", { ...options, day: "numeric", month: "short", year: "numeric" }).format(parsed),
-    time: new Intl.DateTimeFormat("es-CO", { ...options, hour: "2-digit", minute: "2-digit" }).format(parsed),
+    date: new Intl.DateTimeFormat("es-AR", { ...options, day: "numeric", month: "short", year: "numeric" }).format(parsed),
+    time: new Intl.DateTimeFormat("es-AR", { ...options, hour: "2-digit", minute: "2-digit" }).format(parsed),
   };
 }
 
@@ -43,19 +48,18 @@ function BotonCompletar({ onClick, finishing }: { onClick: () => void; finishing
   </button>;
 }
 
-function BotonPublicarRetorno({ allowed }: { allowed: boolean }) {
+function BotonPublicarRetorno({ onClick }: { onClick: () => void }) {
   return <button
     type="button"
-    disabled
-    title={allowed ? "La publicación de retornos aún no tiene un endpoint disponible." : "Solo se puede publicar un retorno cuando el viaje finaliza."}
-    className="inline-flex h-9 w-full cursor-not-allowed items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border-secondary bg-bg-surface-primary px-3 text-xs font-semibold text-text-disable"
+    onClick={onClick}
+    className="inline-flex h-9 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border-secondary bg-white px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bg-fill-primary"
   >
     <BsArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
     Publicar retorno
   </button>;
 }
 
-function ViajeCard({ trip, index, onFinish, finishing }: { trip: ViajeSeguimiento; index: number; onFinish: () => void; finishing: boolean }) {
+function ViajeCard({ trip, index, onFinish, onPublicarRetorno, finishing }: { trip: ViajeSeguimiento; index: number; onFinish: () => void; onPublicarRetorno: () => void; finishing: boolean }) {
   const departure = fechaYHora(trip.fechaHoraInicio);
   return <article className="rounded-[11px] border border-border-secondary bg-white p-4">
     <div className="flex items-start justify-between gap-3">
@@ -72,7 +76,7 @@ function ViajeCard({ trip, index, onFinish, finishing }: { trip: ViajeSeguimient
       <div><dt className="text-xs text-text-secondary">Última ubicación</dt><dd className="mt-1 break-words text-text-primary">{trip.ultimaUbicacionConfirmada ?? "—"}</dd></div>
       <div><dt className="text-xs text-text-secondary">Fecha y hora</dt><dd className="mt-1 text-text-primary">{departure.date} {departure.time}</dd></div>
     </dl>
-    {(trip.estado === "EN_VIAJE" || trip.estado === "FINALIZADO") && <div className="mt-3 border-t border-border-secondary pt-3"><p className="mb-2 text-xs font-semibold text-text-secondary">Acciones</p><div className="flex flex-col gap-2">{trip.estado === "EN_VIAJE" && <BotonCompletar onClick={onFinish} finishing={finishing} />}{trip.estado === "FINALIZADO" && <BotonPublicarRetorno allowed />}</div></div>}
+    {(trip.estado === "EN_VIAJE" || trip.estado === "FINALIZADO") && <div className="mt-3 border-t border-border-secondary pt-3"><p className="mb-2 text-xs font-semibold text-text-secondary">Acciones</p><div className="flex flex-col gap-2">{trip.estado === "EN_VIAJE" && <BotonCompletar onClick={onFinish} finishing={finishing} />}<BotonPublicarRetorno onClick={onPublicarRetorno} /></div></div>}
   </article>;
 }
 
@@ -89,6 +93,9 @@ export default function ViajesPage({ token }: Props) {
   const [finishing, setFinishing] = useState(false);
   const [notice, setNotice] = useState<{ id: number; kind: NotificationKind; title: string; message: string } | null>(null);
   const [viajeFinalizadoReciente, setViajeFinalizadoReciente] = useState<ViajeFinalizado | null>(null);
+  const [viajeRetorno, setViajeRetorno] = useState<ViajeSeguimiento | null>(null);
+  const [tramoPublicado, setTramoPublicado] = useState<TramoVacio | null>(null);
+  const avisar = (kind: NotificationKind, title: string, message: string) => setNotice({ id: Date.now(), kind, title, message });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -144,19 +151,15 @@ export default function ViajesPage({ token }: Props) {
       </nav>}
       {activeTab === "tramos-vacios" ? (
         <section role="tabpanel" id="panel-tramos-vacios" aria-labelledby="tab-tramos-vacios" className="overflow-visible rounded-none border-0 bg-transparent lg:overflow-hidden lg:rounded-[9px] lg:border lg:border-border-secondary lg:bg-white">
-          <div className="flex min-h-[300px] flex-col items-center rounded-[11px] border border-border-secondary bg-white px-5 pb-6 pt-7 text-center sm:min-h-[540px] sm:pt-12 lg:min-h-[480px] lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:pb-10 lg:pt-10 2xl:min-h-[540px] 2xl:pt-12">
-            <h2 className="text-xl font-semibold text-text-primary">Sin tramos vacíos</h2>
-            <p className="mt-2 text-sm text-text-secondary">No hay tramos vacíos para mostrar</p>
-            <img src="/solicitudes/sinresultados.png" alt="Ilustración que indica que no hay tramos vacíos" className="mt-5 h-auto w-full max-w-[560px] object-contain sm:mt-8 md:max-w-[760px] lg:max-w-[900px]" />
-          </div>
+          <TramosVacios token={token} onNotice={avisar} />
         </section>
       ) : <section role="tabpanel" id="panel-viajes" aria-labelledby="tab-viajes" className="overflow-visible rounded-none border-0 bg-transparent lg:overflow-hidden lg:rounded-[9px] lg:border lg:border-border-secondary lg:bg-white">
         {loading ? <div role="status" className="flex items-center justify-center gap-3 bg-white px-4 py-8 text-sm text-text-secondary lg:bg-transparent lg:py-12"><span className="h-5 w-5 animate-spin rounded-full border-2 border-bg-fill-secondary border-t-bg-fill-primary" />Cargando viajes…</div>
           : error ? <div className="rounded-[11px] bg-white px-4 py-8 text-center lg:bg-transparent"><p role="alert" className="text-sm text-text-error">{error}</p><button type="button" onClick={retry} className="mt-4 rounded-full bg-bg-fill-primary px-5 py-2.5 text-sm font-semibold text-text-invert">Reintentar</button></div>
             : ordered.length === 0 ? <div className="flex min-h-[300px] flex-col items-center rounded-[11px] border border-border-secondary bg-white px-5 pb-6 pt-7 text-center lg:min-h-[440px] lg:rounded-none lg:border-0 lg:bg-transparent lg:pt-10"><h2 className="text-xl font-semibold">Sin viajes asignados</h2><p className="mt-2 text-sm text-text-secondary">No hay viajes asignados para mostrar</p><img src="/solicitudes/sinresultados.png" alt="No hay resultados" className="mt-5 h-auto w-full max-w-[560px] object-contain" /></div>
               : <>
-                <div className="grid gap-3 md:hidden">{ordered.map((trip, index) => <ViajeCard key={trip.id} trip={trip} index={page * 10 + index + 1} onFinish={() => setSelected(trip)} finishing={finishing && selected?.id === trip.id} />)}</div>
-                <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[1160px] table-fixed border-collapse text-left text-sm"><colgroup><col className="w-[4%]" /><col className="w-[11%]" /><col className="w-[15%]" /><col className="w-[10%]" /><col className="w-[14%]" /><col className="w-[12%]" /><col className="w-[12%]" /><col className="w-[8%]" /><col className="w-[14%]" /></colgroup><thead className="bg-bg-surface-primary text-xs font-semibold text-text-secondary"><tr>{["Nro", "Lancha", "Turista", "WhatsApp", "Ruta", "Última ubicación", "Fecha y hora", "Estado", "Acciones"].map((label) => <th key={label} scope="col" className="border-b border-border-secondary px-2.5 py-2.5 text-left font-semibold sm:px-3">{label}</th>)}</tr></thead><tbody>{ordered.map((trip, index) => { const departure = fechaYHora(trip.fechaHoraInicio); const isFinishing = finishing && selected?.id === trip.id; return <tr key={trip.id} className="border-b border-border-secondary text-text-primary transition-colors last:border-0 hover:bg-bg-surface-primary"><td className="whitespace-nowrap px-2.5 py-2.5 text-text-secondary sm:px-3">{page * 10 + index + 1}</td><td className="px-2.5 py-2.5 font-semibold sm:px-3">{trip.nombreEmbarcacion}</td><td className="break-words px-2.5 py-2.5 sm:px-3">{trip.turistaNombreCompleto}</td><td className="whitespace-nowrap px-2.5 py-2.5 text-sm sm:px-3">{trip.turistaWhatsapp}</td><td className="px-2.5 py-2.5 sm:px-3"><Ruta trip={trip} /></td><td className="break-words px-2.5 py-2.5 text-sm sm:px-3">{trip.ultimaUbicacionConfirmada ?? "—"}</td><td className="px-2.5 py-2.5 sm:px-3"><span className="block whitespace-nowrap font-medium">{departure.date}</span>{departure.time && <span className="mt-0.5 block text-xs text-text-secondary">{departure.time}</span>}</td><td className="px-2.5 py-2.5 text-center sm:px-3"><EstadoBadge estado={trip.estado} /></td><td className="px-2.5 py-2.5 sm:px-3">{trip.estado === "EN_VIAJE" ? <div className="flex flex-col gap-1.5"><BotonCompletar onClick={() => setSelected(trip)} finishing={isFinishing} /><BotonPublicarRetorno allowed={false} /></div> : trip.estado === "FINALIZADO" ? <BotonPublicarRetorno allowed /> : <span className="text-text-secondary">—</span>}</td></tr>; })}</tbody></table></div>
+                <div className="grid gap-3 md:hidden">{ordered.map((trip, index) => <ViajeCard key={trip.id} trip={trip} index={page * 10 + index + 1} onFinish={() => setSelected(trip)} onPublicarRetorno={() => setViajeRetorno(trip)} finishing={finishing && selected?.id === trip.id} />)}</div>
+                <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[1160px] table-fixed border-collapse text-left text-sm"><colgroup><col className="w-[4%]" /><col className="w-[11%]" /><col className="w-[15%]" /><col className="w-[10%]" /><col className="w-[14%]" /><col className="w-[12%]" /><col className="w-[12%]" /><col className="w-[8%]" /><col className="w-[14%]" /></colgroup><thead className="bg-bg-surface-primary text-xs font-semibold text-text-secondary"><tr>{["Nro", "Lancha", "Turista", "WhatsApp", "Ruta", "Última ubicación", "Fecha y hora", "Estado", "Acciones"].map((label) => <th key={label} scope="col" className="border-b border-border-secondary px-2.5 py-2.5 text-left font-semibold sm:px-3">{label}</th>)}</tr></thead><tbody>{ordered.map((trip, index) => { const departure = fechaYHora(trip.fechaHoraInicio); const isFinishing = finishing && selected?.id === trip.id; return <tr key={trip.id} className="border-b border-border-secondary text-text-primary transition-colors last:border-0 hover:bg-bg-surface-primary"><td className="whitespace-nowrap px-2.5 py-2.5 text-text-secondary sm:px-3">{page * 10 + index + 1}</td><td className="px-2.5 py-2.5 font-semibold sm:px-3">{trip.nombreEmbarcacion}</td><td className="break-words px-2.5 py-2.5 sm:px-3">{trip.turistaNombreCompleto}</td><td className="whitespace-nowrap px-2.5 py-2.5 text-sm sm:px-3">{trip.turistaWhatsapp}</td><td className="px-2.5 py-2.5 sm:px-3"><Ruta trip={trip} /></td><td className="break-words px-2.5 py-2.5 text-sm sm:px-3">{trip.ultimaUbicacionConfirmada ?? "—"}</td><td className="px-2.5 py-2.5 sm:px-3"><span className="block whitespace-nowrap font-medium">{departure.date}</span>{departure.time && <span className="mt-0.5 block text-xs text-text-secondary">{departure.time}</span>}</td><td className="px-2.5 py-2.5 text-center sm:px-3"><EstadoBadge estado={trip.estado} /></td><td className="px-2.5 py-2.5 sm:px-3">{trip.estado === "EN_VIAJE" ? <div className="flex flex-col gap-1.5"><BotonCompletar onClick={() => setSelected(trip)} finishing={isFinishing} /><BotonPublicarRetorno onClick={() => setViajeRetorno(trip)} /></div> : trip.estado === "FINALIZADO" ? <BotonPublicarRetorno onClick={() => setViajeRetorno(trip)} /> : <span className="text-text-secondary">—</span>}</td></tr>; })}</tbody></table></div>
               </>}
       </section>}
       {activeTab === "viajes" && !loading && !error && ordered.length > 0 && <SolicitudesPaginacion page={page} totalPages={totalPages} onChange={(nextPage) => { setLoading(true); setPage(nextPage); }} />}
@@ -168,6 +171,19 @@ export default function ViajesPage({ token }: Props) {
         onClose={() => setViajeFinalizadoReciente(null)}
       />
     )}
+    {viajeRetorno && (
+      <ModalPublicarRetorno
+        token={token}
+        viaje={viajeRetorno}
+        onClose={() => setViajeRetorno(null)}
+        onPublicado={(tramo) => {
+          setViajeRetorno(null);
+          setTramoPublicado(tramo);
+          avisar("success", "Retorno publicado", `El tramo de ${tramo.nombreEmbarcacion} ya figura en Tramos vacíos.`);
+        }}
+      />
+    )}
+    {tramoPublicado && <ModalMensajeTramo tramo={tramoPublicado} titulo="Retorno publicado" onClose={() => setTramoPublicado(null)} />}
     {notice && <div className="pointer-events-none fixed right-4 top-4 z-[60]"><Notification key={notice.id} kind={notice.kind} title={notice.title} message={notice.message} onClose={() => setNotice(null)} /></div>}
   </div>;
 }

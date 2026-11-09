@@ -8,16 +8,18 @@ import {
   type PaginaSeguimientoViajes,
   type ViajeSeguimiento,
 } from "../../services/adminDashboardService";
+import ActividadViajesChart from "../../components/Admin/ActividadViajesChart";
+import { ZONA_HORARIA } from "../../config/api";
 
 type Props = { token: string };
 
 function formatDeparture(value: string): { date: string; time: string } {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return { date: "—", time: "" };
-  const options = { timeZone: "America/Bogota" };
+  const options = { timeZone: ZONA_HORARIA };
   return {
-    date: new Intl.DateTimeFormat("es-CO", { ...options, day: "numeric", month: "short", year: "numeric" }).format(date),
-    time: new Intl.DateTimeFormat("es-CO", { ...options, hour: "2-digit", minute: "2-digit" }).format(date),
+    date: new Intl.DateTimeFormat("es-AR", { ...options, day: "numeric", month: "short", year: "numeric" }).format(date),
+    time: new Intl.DateTimeFormat("es-AR", { ...options, hour: "2-digit", minute: "2-digit" }).format(date),
   };
 }
 
@@ -42,7 +44,7 @@ function MetricCard(props: { title: string; value: number | null; icon: string; 
       </div>
       <div className="mt-3 flex min-w-0 items-end justify-between gap-2">
         <p className="text-3xl font-bold leading-none tracking-tight text-text-primary sm:text-4xl">
-          {props.value === null ? "—" : props.value.toLocaleString("es-CO")}
+          {props.value === null ? "—" : props.value.toLocaleString("es-AR")}
         </p>
       </div>
     </article>
@@ -162,7 +164,7 @@ export default function DashboardPage({ token }: Props) {
           <MetricCard title="Lanchas verificadas" value={metrics?.lanchasVerificadas ?? null} icon="/icons/barco.svg" accent="bg-emerald-50 text-emerald-700" />
           <MetricCard title="Solicitudes pendientes" value={metrics?.solicitudesPendientes ?? null} icon="/icons/documentos.svg" accent="bg-amber-50 text-amber-700" />
           <MetricCard title="Viajes activos" value={metrics?.viajesActivos ?? null} icon="/icons/route.svg" accent="bg-sky-50 text-sky-700" />
-          <MetricCard title="Tramos vacíos" value={null} icon="/icons/ubicacion.svg" accent="bg-violet-50 text-violet-700" />
+          <MetricCard title="Tramos vacíos" value={metrics?.tramosVacios ?? null} icon="/icons/ubicacion.svg" accent="bg-violet-50 text-violet-700" />
         </div>
         {metricsError && (
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-text-error">
@@ -171,6 +173,8 @@ export default function DashboardPage({ token }: Props) {
           </div>
         )}
       </section>
+
+      <ActividadViajesChart actividad={metricsError ? [] : metrics?.actividadMensual ?? null} />
 
       <section aria-labelledby="tracking-section-title" className="space-y-2.5">
         <div>

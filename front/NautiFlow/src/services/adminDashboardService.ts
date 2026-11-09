@@ -1,9 +1,15 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
+import { API_BASE_URL } from "../config/api";
 
+export interface ActividadMensual {
+  mes: string;
+  viajes: number;
+}
 export interface AdminDashboardMetrics {
   solicitudesPendientes: number;
   lanchasVerificadas: number;
   viajesActivos: number;
+  tramosVacios: number;
+  actividadMensual: ActividadMensual[];
 }
 export interface ViajeSeguimiento {
   id: number;
@@ -59,10 +65,16 @@ export async function obtenerAdminDashboard(token: string, signal: AbortSignal):
       typeof body.lanchasVerificadas !== "number" || typeof body.viajesActivos !== "number") {
     throw new Error("El servidor devolvió métricas de Dashboard inválidas.");
   }
+  const actividad = Array.isArray(body.actividadMensual)
+    ? body.actividadMensual.filter((item): item is ActividadMensual =>
+      esRegistro(item) && typeof item.mes === "string" && typeof item.viajes === "number")
+    : [];
   return {
     solicitudesPendientes: body.solicitudesPendientes,
     lanchasVerificadas: body.lanchasVerificadas,
     viajesActivos: body.viajesActivos,
+    tramosVacios: typeof body.tramosVacios === "number" ? body.tramosVacios : 0,
+    actividadMensual: actividad,
   };
 }
 export async function listarSeguimientoViajes(
