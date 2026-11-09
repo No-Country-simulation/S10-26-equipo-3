@@ -2,8 +2,8 @@ package com.nautiflow.service;
 
 import com.nautiflow.dto.CrearViajeRequest;
 import com.nautiflow.dto.EstadoOperativoRequest;
-import com.nautiflow.model.Lanchero;
 import com.nautiflow.model.Lancha;
+import com.nautiflow.model.Lanchero;
 import com.nautiflow.model.Viaje;
 import com.nautiflow.model.Zona;
 import com.nautiflow.model.EstadoOperativoLanchero;
@@ -77,6 +77,44 @@ class AdminWorkflowServiceTest {
         assertNotNull(lanchero.getFechaDecision());
         verify(lancheroRepository).saveAndFlush(lanchero);
         verify(notificacionService).enviarDecisionAprobada(12L, "Ana Pérez", "ana@example.com");
+    }
+
+    @Test
+    void listadoIncluyeWhatsAppYLanchaDesdeEntidadesYConservaPaginacion() {
+        Lanchero lanchero = pendiente();
+        lanchero.setWhatsapp("+573001234567");
+        Lancha lancha = new Lancha();
+        lancha.setNombre("La Aurora");
+        lanchero.setLancha(lancha);
+        when(lancheroRepository.findByEstadoSolicitudWithLancha(eq(EstadoSolicitud.PENDIENTE), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(lanchero), PageRequest.of(1, 5), 6));
+
+        var pagina = service.listarLancheros(EstadoSolicitud.PENDIENTE, 1, 5);
+
+        var dto = pagina.content().getFirst();
+        assertEquals("+573001234567", dto.whatsapp());
+        assertEquals("La Aurora", dto.nombreLancha());
+        assertEquals("PENDIENTE", dto.estadoSolicitud());
+        assertEquals("INACTIVO", dto.estadoViaje());
+        assertEquals(1, pagina.page());
+        assertEquals(5, pagina.size());
+        assertEquals(6, pagina.totalElements());
+        assertEquals(2, pagina.totalPages());
+        verify(lancheroRepository).findByEstadoSolicitudWithLancha(eq(EstadoSolicitud.PENDIENTE), any(Pageable.class));
+    }
+
+    @Test
+    void listadoSinLanchaDevuelveNombreLanchaNulo() {
+        Lanchero lanchero = pendiente();
+        lanchero.setWhatsapp("3001234567");
+        when(lancheroRepository.findAllWithLancha(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(lanchero), PageRequest.of(0, 10), 1));
+
+        var pagina = service.listarLancheros(null, 0, 10);
+
+        assertNull(pagina.content().getFirst().nombreLancha());
+        assertEquals("3001234567", pagina.content().getFirst().whatsapp());
+        verify(lancheroRepository).findAllWithLancha(any(Pageable.class));
     }
 
     @Test
@@ -452,7 +490,7 @@ class AdminWorkflowServiceTest {
         ))
                 .thenReturn(List.of(lancha));
 
-        var resultado = servicio.buscarDisponibles(5, "DELTA", "PRIMERA_SECCION", LocalTime.of(18, 0));
+        var resultado = servicio.buscarDisponibles(5, "DELTA", "PRIMERA_SECCION", LocalTime.of(20, 0));
 
         assertEquals(1, resultado.size());
         assertEquals(34L, resultado.getFirst().id());
@@ -466,7 +504,7 @@ class AdminWorkflowServiceTest {
                 eq(5), eq(2L), eq(3L), eq(EstadoSolicitud.APROBADO),
                 eq(EstadoOperativoLanchero.ACTIVO), fechaConsulta.capture()
         );
-        assertEquals(OffsetDateTime.parse("2026-11-02T18:00:00-05:00"), fechaConsulta.getValue());
+        assertEquals(OffsetDateTime.parse("2026-11-02T20:00:00-03:00"), fechaConsulta.getValue());
         assertEquals(OffsetDateTime.parse("2026-11-02T23:00:00Z").toInstant(), fechaConsulta.getValue().toInstant());
     }
 
@@ -534,7 +572,7 @@ class AdminWorkflowServiceTest {
         finalizado.setZonaDestino(destinoAnterior);
         finalizado.setFechaHoraInicio(OffsetDateTime.parse("2026-11-01T14:00:00Z"));
         finalizado.setFechaHoraFin(OffsetDateTime.parse("2026-11-01T14:30:00Z"));
-        when(viajeRepository.findAllForSeguimiento(any(Pageable.class)))
+        when(viajeRepository.findForSeguimiento(eq("TODOS"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(activo, finalizado), PageRequest.of(0, 10), 2));
         when(viajeRepository.findFirstByLancha_IdLanchaAndFechaHoraFinIsNotNullOrderByFechaHoraFinDescIdViajeDesc(34L))
                 .thenReturn(Optional.of(finalizado));

@@ -3,6 +3,7 @@ package com.nautiflow.service;
 import com.nautiflow.dto.DecisionSolicitudDTO;
 import com.nautiflow.dto.EstadoOperativoRequest;
 import com.nautiflow.dto.LancheroAdminDTO;
+import com.nautiflow.dto.LancheroListadoAdminDTO;
 import com.nautiflow.dto.PaginaLancherosDTO;
 import com.nautiflow.dto.RechazoSolicitudDTO;
 import com.nautiflow.model.Lanchero;
@@ -96,10 +97,10 @@ public class AdminWorkflowService {
                 .and(Sort.by(Sort.Direction.DESC, "idLanchero"));
         PageRequest request = PageRequest.of(page, size, sort);
         Page<Lanchero> resultados = estado == null
-                ? lancheroRepository.findAll(request)
-                : lancheroRepository.findByEstadoSolicitud(estado, request);
-        List<LancheroAdminDTO> content = resultados.getContent().stream()
-                .map(this::toAdminDTO)
+                ? lancheroRepository.findAllWithLancha(request)
+                : lancheroRepository.findByEstadoSolicitudWithLancha(estado, request);
+        List<LancheroListadoAdminDTO> content = resultados.getContent().stream()
+                .map(this::toListadoAdminDTO)
                 .toList();
         return new PaginaLancherosDTO(
                 content,
@@ -157,6 +158,19 @@ public class AdminWorkflowService {
         return new LancheroAdminDTO(
                 lanchero.getIdLanchero(),
                 lanchero.getNombreCompleto(),
+                lanchero.getFechaRegistro(),
+                lanchero.getEstadoSolicitud().name(),
+                lanchero.getEstadoViaje().name()
+        );
+    }
+
+    /** Convierte un lanchero con su lancha opcional en el DTO del listado administrativo. */
+    private LancheroListadoAdminDTO toListadoAdminDTO(Lanchero lanchero) {
+        return new LancheroListadoAdminDTO(
+                lanchero.getIdLanchero(),
+                lanchero.getNombreCompleto(),
+                lanchero.getWhatsapp(),
+                lanchero.getLancha() == null ? null : lanchero.getLancha().getNombre(),
                 lanchero.getFechaRegistro(),
                 lanchero.getEstadoSolicitud().name(),
                 lanchero.getEstadoViaje().name()

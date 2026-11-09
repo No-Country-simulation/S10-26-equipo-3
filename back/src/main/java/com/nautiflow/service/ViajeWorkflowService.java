@@ -19,6 +19,7 @@ import com.nautiflow.repository.LanchaRepository;
 import com.nautiflow.repository.ViajeRepository;
 import com.nautiflow.repository.ZonaRepository;
 import com.nautiflow.util.FechaHoraUtc;
+import com.nautiflow.util.ZonaNegocio;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -34,9 +35,9 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Servicio que crea, consulta, busca disponibilidad y finaliza viajes, manteniendo sincronizado el estado del lanchero.
@@ -44,7 +45,6 @@ import java.util.List;
 @Service
 public class ViajeWorkflowService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final ZoneId ZONA_NEGOCIO = ZoneId.of("America/Bogota");
 
     private final LancheroRepository lancheroRepository;
     private final LanchaRepository lanchaRepository;
@@ -159,9 +159,9 @@ public class ViajeWorkflowService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La capacidad debe ser mayor que cero.");
         }
 
-        Clock clockNegocio = clock.withZone(ZONA_NEGOCIO);
+        Clock clockNegocio = clock.withZone(ZonaNegocio.ZONA);
         LocalDateTime fechaHoraLocal = LocalDateTime.of(LocalDate.now(clockNegocio), hora);
-        OffsetDateTime fechaHoraConsulta = fechaHoraLocal.atZone(ZONA_NEGOCIO).toOffsetDateTime();
+        OffsetDateTime fechaHoraConsulta = fechaHoraLocal.atZone(ZonaNegocio.ZONA).toOffsetDateTime();
         if (fechaHoraConsulta.isBefore(OffsetDateTime.now(clockNegocio))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La hora seleccionada ya pasó para la fecha actual.");
         }
@@ -188,11 +188,20 @@ public class ViajeWorkflowService {
      */
     @Transactional(readOnly = true)
     public PaginaSeguimientoViajesDTO listarSeguimiento(int page, int size) {
+        return listarSeguimiento(page, size, "TODOS");
+    }
+
+    @Transactional(readOnly = true)
+    public PaginaSeguimientoViajesDTO listarSeguimiento(int page, int size, String estado) {
         PaginacionValidator.validar(page, size);
+        String filtro = estado == null ? "TODOS" : estado.toUpperCase(Locale.ROOT);
+        if (!List.of("TODOS", "EN_VIAJE", "FINALIZADO").contains(filtro)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado no válido. Valores permitidos: TODOS, EN_VIAJE, FINALIZADO.");
+        }
         Sort sort = Sort.by(Sort.Direction.DESC, "fechaHoraInicio")
                 .and(Sort.by(Sort.Direction.DESC, "idViaje"));
         Page<ViajeSeguimientoDTO> resultados = viajeRepository
-                .findAllForSeguimiento(PageRequest.of(page, size, sort))
+                .findForSeguimiento(filtro, PageRequest.of(page, size, sort))
                 .map(this::toViajeSeguimientoDTO);
         return new PaginaSeguimientoViajesDTO(
                 resultados.getContent(),
@@ -393,6 +402,8 @@ public class ViajeWorkflowService {
         return new ViajeSeguimientoDTO(
                 viaje.getIdViaje(),
                 viaje.getLancha().getNombre(),
+                viaje.getTuristaNombreCompleto(),
+                viaje.getTuristaWhatsapp(),
                 viaje.getZonaOrigen().getNombre(),
                 viaje.getZonaDestino().getNombre(),
                 viaje.getFechaHoraInicio(),
