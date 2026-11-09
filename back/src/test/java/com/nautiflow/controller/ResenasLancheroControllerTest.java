@@ -58,7 +58,7 @@ class ResenasLancheroControllerTest {
                 .andExpect(jsonPath("$.content[0].idResena").value(25))
                 .andExpect(jsonPath("$.content[0].puntuacion").value(5))
                 .andExpect(jsonPath("$.content[0].comentario").value("Excelente experiencia."))
-                .andExpect(jsonPath("$.content[0].fecha").value("2026-11-03T18:20:00.000000Z"))
+                .andExpect(jsonPath("$.content[0].fecha").value("2026-11-03T15:20:00.000000-03:00"))
                 .andExpect(jsonPath("$.content[0].turistaNombreCompleto").doesNotExist())
                 .andExpect(jsonPath("$.content[0].turistaWhatsapp").doesNotExist())
                 .andExpect(jsonPath("$.content[0].correo").doesNotExist())

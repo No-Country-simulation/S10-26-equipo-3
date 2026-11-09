@@ -59,8 +59,8 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
      * Lista todos los viajes con lancha, lanchero y zonas cargados para seguimiento.
      */
     @EntityGraph(attributePaths = {"lancha", "lancha.lanchero", "zonaOrigen", "zonaDestino"})
-    @Query("select v from Viaje v")
-    Page<Viaje> findAllForSeguimiento(Pageable pageable);
+    @Query("select v from Viaje v where (:estado = 'TODOS' or (:estado = 'EN_VIAJE' and v.fechaHoraFin is null) or (:estado = 'FINALIZADO' and v.fechaHoraFin is not null))")
+    Page<Viaje> findForSeguimiento(@Param("estado") String estado, Pageable pageable);
 
     /**
      * Obtiene el último viaje finalizado de una lancha para mostrar su última ubicación conocida.
