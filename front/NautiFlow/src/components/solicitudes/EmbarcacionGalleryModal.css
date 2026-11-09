@@ -1,0 +1,317 @@
+.embarcacion-gallery__backdrop {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(16 23 23 / 72%);
+}
+
+.embarcacion-gallery__dialog {
+  position: relative;
+  display: flex;
+  width: min(1120px, 100%);
+  height: min(820px, 90vh);
+  min-height: 320px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgb(16 23 23 / 32%);
+}
+
+.embarcacion-gallery__dialog--fullscreen,
+.embarcacion-gallery__dialog:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+}
+
+.embarcacion-gallery__viewport {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  background: #fff;
+  overscroll-behavior: contain;
+  scrollbar-color: #9da5ad transparent;
+  scrollbar-width: thin;
+}
+
+.embarcacion-gallery__viewport--zoomed {
+  cursor: grab;
+}
+
+.embarcacion-gallery__viewport--dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.embarcacion-gallery__stage {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  min-width: 100%;
+  min-height: 100%;
+  margin: auto;
+}
+
+.embarcacion-gallery__image {
+  display: block;
+  max-width: none;
+  flex: 0 0 auto;
+  object-fit: contain;
+  user-select: none;
+}
+
+.embarcacion-gallery__image--loading {
+  visibility: hidden;
+}
+
+.embarcacion-gallery__close,
+.embarcacion-gallery__navigation,
+.embarcacion-gallery__controls {
+  position: absolute;
+  z-index: 2;
+}
+
+.embarcacion-gallery__close {
+  top: 16px;
+  right: 16px;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgb(28 29 31 / 12%);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 94%);
+  color: #1c1d1f;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 12%);
+}
+
+.embarcacion-gallery__close:hover {
+  background: #f0f3f7;
+}
+
+.embarcacion-gallery__close svg {
+  width: 21px;
+  height: 21px;
+}
+
+.embarcacion-gallery__navigation {
+  top: 50%;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid rgb(28 29 31 / 12%);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 94%);
+  color: #1c1d1f;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 12%);
+}
+
+.embarcacion-gallery__navigation:hover {
+  background: #f0f3f7;
+}
+
+.embarcacion-gallery__navigation span {
+  margin-top: -4px;
+  font-size: 38px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.embarcacion-gallery__navigation--previous {
+  left: 18px;
+}
+
+.embarcacion-gallery__navigation--next {
+  right: 18px;
+}
+
+.embarcacion-gallery__position {
+  position: absolute;
+  z-index: 2;
+  bottom: 18px;
+  left: 18px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgb(28 29 31 / 76%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.embarcacion-gallery__controls {
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgb(28 29 31 / 12%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 12%);
+}
+
+.embarcacion-gallery__controls button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #1c1d1f;
+  cursor: pointer;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.embarcacion-gallery__controls button:hover:not(:disabled) {
+  background: #edf1f3;
+}
+
+.embarcacion-gallery__controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.embarcacion-gallery__controls button svg {
+  width: 19px;
+  height: 19px;
+}
+
+.embarcacion-gallery__zoom-value {
+  min-width: 48px;
+  color: #34383c;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.embarcacion-gallery__loading,
+.embarcacion-gallery__error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  color: #606266;
+  font-size: 14px;
+  text-align: center;
+}
+
+.embarcacion-gallery__error {
+  color: #80202d;
+}
+
+.embarcacion-gallery__spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #d5d8de;
+  border-top-color: #225b6a;
+  border-radius: 50%;
+  animation: embarcacion-gallery-spin 0.8s linear infinite;
+}
+
+.embarcacion-gallery__dialog :where(button):focus-visible {
+  outline: 3px solid #85bac8;
+  outline-offset: 2px;
+}
+
+@keyframes embarcacion-gallery-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .embarcacion-gallery__backdrop {
+    padding: 0;
+  }
+
+  .embarcacion-gallery__dialog {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    border-radius: 0;
+  }
+
+  .embarcacion-gallery__close {
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .embarcacion-gallery__navigation {
+    width: 42px;
+    height: 42px;
+  }
+
+  .embarcacion-gallery__navigation--previous {
+    left: 10px;
+  }
+
+  .embarcacion-gallery__navigation--next {
+    right: 10px;
+  }
+
+  .embarcacion-gallery__position {
+    bottom: 14px;
+    left: 12px;
+  }
+
+  .embarcacion-gallery__controls {
+    right: 10px;
+    bottom: 10px;
+    gap: 0;
+    padding: 4px;
+  }
+
+  .embarcacion-gallery__controls button {
+    width: 32px;
+    height: 34px;
+    flex-basis: 32px;
+  }
+
+  .embarcacion-gallery__zoom-value {
+    min-width: 40px;
+  }
+}
+
+@media (max-width: 360px) {
+  .embarcacion-gallery__controls {
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .embarcacion-gallery__controls button {
+    width: 29px;
+    flex-basis: 29px;
+  }
+
+  .embarcacion-gallery__zoom-value {
+    min-width: 34px;
+    font-size: 11px;
+  }
+}

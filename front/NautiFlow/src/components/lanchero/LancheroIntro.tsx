@@ -1,0 +1,53 @@
+import Logo from "../Logo";
+import { BsChevronLeft, BsExclamationCircle } from "react-icons/bs";
+import { useNavigate } from "react-router-dom";
+
+type Props = { onContinuar: () => void; };
+
+export default function LancheroIntro({ onContinuar }: Props) {
+    const navigate = useNavigate();
+    return (
+        <section className="flex flex-1 flex-col justify-between font-inter md:justify-start md:gap-8">
+            <header className="flex items-center gap-3 md:gap-4">
+                <button type="button" onClick={() => navigate("/")} aria-label="Volver al inicio" className="rounded-sm text-text-primary focus-visible:ring-2 focus-visible:ring-bg-fill-primary">
+                    <BsChevronLeft className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <Logo className="md:h-16 md:w-auto" />
+                <span className="hidden text-2xl font-medium leading-8 text-text-primary md:block">
+                    NautiFlow
+                </span>
+            </header>
+
+            <div className="flex flex-col gap-4 md:mx-auto md:mt-auto md:w-full md:max-w-xl">
+                <p className="text-xs font-semibold uppercase leading-4 text-text-secondary">
+                    Registro de lancheros
+                </p>
+
+                <h1 className="text-2xl font-bold leading-[30px] text-text-primary">
+                    Registra tu lancha y comienza a recibir solicitudes
+                </h1>
+
+                <p className="text-sm leading-[22px] text-text-primary">
+                    Completa tus datos y los de tu embarcación para que los turistas
+                    puedan encontrar tus servicios.
+                </p>
+
+                <div className="flex items-start gap-3 rounded-m bg-bg-surface-tertiary p-3">
+                    <BsExclamationCircle aria-hidden="true" className="h-5 w-5 shrink-0 text-bg-fill-primary" />
+                    <p className="text-xs font-semibold leading-4 text-text-primary">
+                        Ten tus documentos a mano antes de comenzar (Fotos, licencia,
+                        seguro y antecedentes penales)
+                    </p>
+                </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-4 md:mx-auto md:mb-auto md:w-80">
+                <button type="button" onClick={onContinuar}
+                    className="w-full rounded-full bg-bg-fill-primary py-3 text-base font-semibold leading-[22px] text-text-invert hover:bg-bg-fill-primary-hover"
+                >
+                    Continuar
+                </button>
+            </div>
+        </section>
+    );
+}
