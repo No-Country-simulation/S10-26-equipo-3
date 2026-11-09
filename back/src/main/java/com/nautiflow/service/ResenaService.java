@@ -83,6 +83,7 @@ public class ResenaService {
         }
 
         Lanchero lanchero = viaje.getLancha().getLanchero();
+        Double promedio = resenaRepository.promedioPorLancha(viaje.getLancha().getIdLancha());
         notificacionService.notificarResena(
                 lanchero.getIdLanchero(),
                 lanchero.getCorreo(),
@@ -90,7 +91,8 @@ public class ResenaService {
                 resena.getEstrellas(),
                 viaje.getZonaOrigen().getNombre(),
                 viaje.getZonaDestino().getNombre(),
-                resena.getComentario()
+                resena.getComentario(),
+                promedio == null ? null : Math.round(promedio * 10) / 10.0
         );
         return new ResenaCreadaDTO(
                 resena.getIdResena(),

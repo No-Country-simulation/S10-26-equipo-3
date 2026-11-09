@@ -24,6 +24,9 @@ public interface ResenaRepository extends JpaRepository<Resena, Long> {
      */
     boolean existsByViaje_IdViaje(Long idViaje);
 
+    @Query("select avg(r.estrellas) from Resena r where r.viaje.lancha.idLancha = :idLancha")
+    Double promedioPorLancha(@Param("idLancha") Long idLancha);
+
     @Query(
             value = """
                     select new com.nautiflow.dto.ResenaPublicaDTO(

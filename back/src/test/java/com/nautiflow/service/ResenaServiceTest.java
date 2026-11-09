@@ -44,6 +44,7 @@ class ResenaServiceTest {
             resena.setIdResena(45L);
             return resena;
         });
+        when(resenaRepository.promedioPorLancha(any())).thenReturn(4.666);
 
         var resultado = service.crear(new CrearResenaRequest(5, "Excelente"), "token-unico");
 
@@ -53,7 +54,7 @@ class ResenaServiceTest {
         verify(resenaRepository).saveAndFlush(captor.capture());
         assertEquals(5, captor.getValue().getEstrellas());
         verify(notificacionService).notificarResena(
-                12L, "ana@example.com", "Ana Pérez", 5, "Zona origen", "Zona destino", "Excelente"
+                12L, "ana@example.com", "Ana Pérez", 5, "Zona origen", "Zona destino", "Excelente", 4.7
         );
     }
 
@@ -66,13 +67,14 @@ class ResenaServiceTest {
             resena.setIdResena(46L);
             return resena;
         });
+        when(resenaRepository.promedioPorLancha(any())).thenReturn(null);
 
         var resultado = service.crear(new CrearResenaRequest(1, null), "token-unico");
 
         assertEquals(1, resultado.puntuacion());
         assertNull(resultado.comentario());
         verify(notificacionService).notificarResena(
-                12L, "ana@example.com", "Ana Pérez", 1, "Zona origen", "Zona destino", null
+                12L, "ana@example.com", "Ana Pérez", 1, "Zona origen", "Zona destino", null, null
         );
     }
 

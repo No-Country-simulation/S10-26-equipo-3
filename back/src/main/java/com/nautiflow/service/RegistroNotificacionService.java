@@ -34,7 +34,8 @@ public interface RegistroNotificacionService {
             int estrellas,
             String zonaOrigen,
             String zonaDestino,
-            String comentario
+            String comentario,
+            Double promedio
     );
 
     /**

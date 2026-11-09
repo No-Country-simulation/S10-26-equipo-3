@@ -168,8 +168,24 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
             int estrellas,
             String zonaOrigen,
             String zonaDestino,
-            String comentario
+            String comentario,
+            Double promedio
     ) {
+        String promedioTexto = promedio == null
+                ? null
+                : String.format(Locale.forLanguageTag("es-AR"), "%.1f", promedio);
+        String promedioPlano = promedioTexto == null
+                ? ""
+                : "\n\nTu promedio actualizado es de " + promedioTexto + " estrellas.";
+        String promedioHtml = promedioTexto == null
+                ? ""
+                : """
+                <tr>
+                  <td style="padding:12px">
+                    Tu promedio actualizado es de <strong>%s estrellas</strong>.
+                  </td>
+                </tr>
+                """.formatted(promedioTexto);
         String comentarioPlano = comentario != null && !comentario.isBlank()
                 ? "\n\nComentario del pasajero:\n\n" + comentario
                 : "";
@@ -186,10 +202,10 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
         String texto = """
                 ⭐ ¡Nueva reseña en NautiFlow!
 
-                %s ha calificado con %s estrellas su viaje desde %s hasta %s.%s
+                %s ha calificado con %s estrellas su viaje desde %s hasta %s.%s%s
 
                 El equipo de NautiFlow
-                """.formatted(nombreTurista, estrellas, zonaOrigen, zonaDestino, comentarioPlano);
+                """.formatted(nombreTurista, estrellas, zonaOrigen, zonaDestino, comentarioPlano, promedioPlano);
         String html = """
                 <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0"
                        style="width:100%%;border-collapse:collapse">
@@ -200,13 +216,15 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
                     </td>
                   </tr>
                   %s
+                  %s
                 </table>
                 """.formatted(
                 CorreoHtmlTemplate.escapar(nombreTurista),
                 estrellas,
                 CorreoHtmlTemplate.escapar(zonaOrigen),
                 CorreoHtmlTemplate.escapar(zonaDestino),
-                comentarioHtml
+                comentarioHtml,
+                promedioHtml
         );
         enviarNotificacionEstrictaHtml(
                 idLanchero,
