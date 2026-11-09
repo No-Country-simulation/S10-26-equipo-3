@@ -22,7 +22,7 @@ export interface LanchaDestacada {
   idLanchero?: number;
   nombreEmbarcacion: string;
   lancheroNombreCompleto: string;
-  fotoPrincipalUrl: string;
+  fotoPrincipalUrl: string | null;
   promedioCalificacion: number;
   totalResenas: number;
   verificada: boolean;

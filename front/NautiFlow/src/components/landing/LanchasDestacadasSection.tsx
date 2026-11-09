@@ -125,7 +125,7 @@ export default function LanchasDestacadasSection() {
                   reseñas={lancha.totalResenas}
                   verificado={lancha.verificada}
                   esNuevo={lancha.totalResenas === 0}
-                  imagen={lancha.fotoPrincipalUrl}
+                  imagen={lancha.fotoPrincipalUrl ?? undefined}
                   onVerDetalle={() =>
                     setLanchaModal({
                       idLanchero: lancha.idLanchero ?? lancha.idLancha,
@@ -134,7 +134,7 @@ export default function LanchasDestacadasSection() {
                       rating: lancha.promedioCalificacion,
                       totalReseñas: lancha.totalResenas,
                       verificado: lancha.verificada,
-                      imagen: lancha.fotoPrincipalUrl,
+                      imagen: lancha.fotoPrincipalUrl ?? undefined,
                     })
                   }
                 />

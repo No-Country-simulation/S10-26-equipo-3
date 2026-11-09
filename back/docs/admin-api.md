@@ -12,6 +12,8 @@ $env:NAUTIFLOW_JWT_SECRET = [Convert]::ToBase64String($bytes)
 
 Configúrela en el entorno del proceso del backend. Los tokens duran 12 horas. Las credenciales del administrador se configuran con `NAUTIFLOW_ADMIN_EMAIL` y `NAUTIFLOW_ADMIN_PASSWORD`; si falta alguna, `POST /login` rechaza todas las solicitudes.
 
+Con `NAUTIFLOW_SEED_DEMO=true` el backend carga al arrancar los datos de demo de `src/main/resources/db/demo-data.sql` (lancheros, lanchas, viajes de los últimos seis meses, reseñas y un tramo vacío). Solo se cargan si la tabla `lanchero` está vacía, así que la variable puede quedar activada.
+
 El indicador `viajesActivos` cuenta lancheros cuyo `estado_viaje` es `EN_VIAJE`. La tabla `viaje` no tiene un campo de estado.
 
 No ejecutar de nuevo `back/init/01-schema.sql` sobre una base que se quiera conservar: ese script elimina y vuelve a crear `delta_tigre_db`.
