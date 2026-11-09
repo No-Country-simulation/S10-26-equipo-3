@@ -150,7 +150,7 @@ class AdminControllerTest {
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"admin@nautiflow.com","password":"Admin123*"}
+                                {"email":"admin@nautiflow.com","password":"clave-de-prueba"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("jwt"))
@@ -162,7 +162,7 @@ class AdminControllerTest {
     void camposDeLoginVaciosDevuelven400ConFormatoApi() throws Exception {
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"\",\"password\":\"Admin123*\"}"))
+                        .content("{\"email\":\"\",\"password\":\"clave-de-prueba\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
@@ -223,7 +223,7 @@ class AdminControllerTest {
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"admin@nautiflow.com","password":"Admin123*"}
+                                {"email":"admin@nautiflow.com","password":"clave-de-prueba"}
                                 """))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().string("Retry-After", "600"))

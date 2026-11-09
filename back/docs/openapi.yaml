@@ -108,7 +108,7 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
             example:
               email: admin@nautiflow.com
-              password: "Admin123*"
+              password: "********"
       responses:
         "200":
           description: Solicitud procesada correctamente.

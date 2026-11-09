@@ -2,6 +2,7 @@ package com.nautiflow.service;
 
 import com.nautiflow.dto.LoginRequest;
 import com.nautiflow.dto.LoginResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -12,27 +13,34 @@ import java.security.MessageDigest;
  */
 @Service
 public class AdminAuthService {
-    private static final String ADMIN_EMAIL = "admin@nautiflow.com";
-    private static final String ADMIN_PASSWORD = "Admin123*";
-
     private final JwtTokenService jwtTokenService;
+    private final String adminEmail;
+    private final String adminPassword;
 
     /**
      * Inyecta el servicio que genera los tokens JWT.
      */
-    public AdminAuthService(JwtTokenService jwtTokenService) {
+    public AdminAuthService(
+            JwtTokenService jwtTokenService,
+            @Value("${nautiflow.admin.email:}") String adminEmail,
+            @Value("${nautiflow.admin.password:}") String adminPassword
+    ) {
         this.jwtTokenService = jwtTokenService;
+        this.adminEmail = adminEmail == null ? "" : adminEmail.trim();
+        this.adminPassword = adminPassword == null ? "" : adminPassword;
     }
 
     /**
      * Valida las credenciales del administrador y devuelve un token JWT si son correctas.
      */
     public LoginResponse login(LoginRequest request) {
-        if (!coincide(request.email(), ADMIN_EMAIL) || !coincide(request.password(), ADMIN_PASSWORD)) {
+        if (adminEmail.isEmpty() || adminPassword.isEmpty()
+                || !coincide(request.email(), adminEmail)
+                || !coincide(request.password(), adminPassword)) {
             throw new CredencialesInvalidasException();
         }
         return new LoginResponse(
-                jwtTokenService.crearTokenAdministrador(ADMIN_EMAIL),
+                jwtTokenService.crearTokenAdministrador(adminEmail),
                 "Bearer",
                 "Inicio de sesión exitoso."
         );

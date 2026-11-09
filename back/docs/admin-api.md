@@ -10,7 +10,7 @@ $bytes = New-Object byte[] 32
 $env:NAUTIFLOW_JWT_SECRET = [Convert]::ToBase64String($bytes)
 ```
 
-Configúrela en el entorno del proceso del backend. Los tokens duran 12 horas. Las credenciales del administrador son las constantes indicadas en `AdminAuthService`.
+Configúrela en el entorno del proceso del backend. Los tokens duran 12 horas. Las credenciales del administrador se configuran con `NAUTIFLOW_ADMIN_EMAIL` y `NAUTIFLOW_ADMIN_PASSWORD`; si falta alguna, `POST /login` rechaza todas las solicitudes.
 
 El indicador `viajesActivos` cuenta lancheros cuyo `estado_viaje` es `EN_VIAJE`. La tabla `viaje` no tiene un campo de estado.
 

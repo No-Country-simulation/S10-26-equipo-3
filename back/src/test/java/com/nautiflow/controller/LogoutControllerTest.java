@@ -35,7 +35,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(
         controllers = {LogoutController.class, AdminDashboardController.class, LoginController.class},
-        properties = "nautiflow.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+        properties = {
+                "nautiflow.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+                "nautiflow.admin.email=admin@nautiflow.com",
+                "nautiflow.admin.password=clave-de-prueba"
+        }
 )
 @Import({SecurityConfig.class, JacksonConfig.class, JwtTokenService.class, AdminAuthService.class})
 class LogoutControllerTest {
@@ -124,7 +128,7 @@ class LogoutControllerTest {
         MvcResult result = mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"email":"admin@nautiflow.com","password":"Admin123*"}
+                                {"email":"admin@nautiflow.com","password":"clave-de-prueba"}
                                 """))
                 .andExpect(status().isOk())
                 .andReturn();
