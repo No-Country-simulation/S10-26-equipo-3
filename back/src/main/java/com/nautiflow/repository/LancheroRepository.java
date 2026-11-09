@@ -38,6 +38,19 @@ public interface LancheroRepository extends JpaRepository<Lanchero, Long> {
      */
     Page<Lanchero> findByEstadoSolicitud(EstadoSolicitud estadoSolicitud, Pageable pageable);
 
+    /** Lista lancheros con la lancha asociada cargada para el listado administrativo paginado. */
+    @EntityGraph(attributePaths = "lancha")
+    @Query("select l from Lanchero l")
+    Page<Lanchero> findAllWithLancha(Pageable pageable);
+
+    /** Filtra por estado y carga la lancha asociada en la consulta paginada administrativa. */
+    @EntityGraph(attributePaths = "lancha")
+    @Query("select l from Lanchero l where l.estadoSolicitud = :estadoSolicitud")
+    Page<Lanchero> findByEstadoSolicitudWithLancha(
+            @Param("estadoSolicitud") EstadoSolicitud estadoSolicitud,
+            Pageable pageable
+    );
+
     /**
      * Busca un lanchero y aplica bloqueo pesimista de escritura para actualizarlo con seguridad.
      */

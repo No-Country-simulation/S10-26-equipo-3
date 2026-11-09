@@ -31,8 +31,9 @@ export default function Hero() {
                 <h1 className="max-w-[342px] text-[28px] font-bold leading-8 text-text-invert">
                     Encontrá tu próxima lancha en el Delta
                 </h1>
+          
 
-                <a href="#lanchas"
+                <a href="#lanchas-destacadas"
                     className="inline-flex h-10 items-center gap-2 rounded-full bg-bg-fill-primary px-4 text-sm font-medium leading-5 text-text-invert hover:bg-bg-fill-primary-hover focus-visible:ring-2 focus-visible:ring-text-invert md:h-12 md:text-lg md:leading-7"
                 >
                     Explorar lanchas

@@ -30,7 +30,7 @@ export default function RegistroLanchaSection() {
 
           <button
             type="button"
-            onClick={() => navigate("/registro-lanchero")}
+            onClick={() => navigate("/registro")}
             className="flex items-center justify-center gap-2 h-11 px-6 rounded-full bg-bg-fill-primary text-text-invert font-semibold text-sm sm:text-base transition-colors hover:bg-bg-fill-primary-hover w-full sm:w-auto cursor-pointer mt-2"
           >
             Registrar mi lancha

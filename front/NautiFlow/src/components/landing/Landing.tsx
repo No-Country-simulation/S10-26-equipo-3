@@ -1,5 +1,10 @@
 import LandingHeader from "./LandingHeader";
 import Hero from "./Hero";
+import LanchasDestacadasSection from "./LanchasDestacadasSection";
+import ComoFuncionaSection from "./ComoFuncionaSection";
+import DestinosSection from "./DestinosSection";
+import RegistroLanchaSection from "./RegistroLanchaSection";
+import LandingFooter from "./LandingFooter";
 
 export default function Landing() {
     return (
@@ -8,11 +13,14 @@ export default function Landing() {
             <main>
                 <Hero />
 
-                {/* Destino de "Explorar lanchas": el listado de lanchas verificadas se implementa en HU-20 */}
-                <section id="lanchas" className="min-h-dvh scroll-mt-18 bg-bg-surface-primary px-4 py-16 font-inter md:px-[60px]">
-                    <h2 className="text-2xl font-bold leading-[30px] text-text-primary">Lanchas verificadas</h2>
-                </section>
+                <LanchasDestacadasSection/>
+                <ComoFuncionaSection/>
+                <DestinosSection/>
+                <RegistroLanchaSection/>
+                <LandingFooter/>
+
             </main>
+
         </>
     );
 }

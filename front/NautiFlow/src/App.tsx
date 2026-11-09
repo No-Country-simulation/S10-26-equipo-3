@@ -7,6 +7,8 @@ import SolicitudesPendientes from "./components/Admin/SolicitudesPendientes";
 import DashboardPage from "./pages/admin/DashboardPage";
 import ViajesPage from "./pages/admin/ViajesPage";
 import LancherosPage from "./pages/admin/LancherosPage";
+import BuscadorPage from "./pages/admin/BuscadorPage";
+import ResenaPage from "./pages/turista/ResenaPage";
 
 function SolicitudesPanel() {
   const { token, onLogout } = useOutletContext<AdminOutletContext>();
@@ -16,6 +18,11 @@ function SolicitudesPanel() {
 function DashboardPanel() {
   const { token } = useOutletContext<AdminOutletContext>();
   return <DashboardPage token={token} />;
+}
+
+function BuscadorPanel() {
+  const { token } = useOutletContext<AdminOutletContext>();
+  return <BuscadorPage token={token} />;
 }
 
 function ViajesPanel() {
@@ -42,16 +49,18 @@ function App() {
           }
         />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/resena/:token" element={<ResenaPage />} />
         <Route path="/admin/*" element={<Navigate to="/panel" replace />} />
         <Route path="/panel" element={<Admin />}>
           <Route index element={<DashboardPanel />} />
-          <Route path="buscador" element={<p className="text-text-primary">Buscador (pendiente)</p>} />
+          <Route path="buscador" element={<BuscadorPanel />} />
           <Route path="viajes" element={<ViajesPanel />} />
           <Route path="solicitudes" element={<SolicitudesPanel />} />
           <Route path="solicitudes/:id" element={<SolicitudesPanel />} />
           <Route path="lancheros" element={<LancherosPanel />} />
           <Route path="*" element={<Navigate to="/panel/solicitudes" replace />} />
         </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

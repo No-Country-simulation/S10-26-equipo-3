@@ -6,6 +6,7 @@ import com.nautiflow.dto.AdminDashboardDTO;
 import com.nautiflow.dto.DecisionSolicitudDTO;
 import com.nautiflow.dto.ViajeAdminDTO;
 import com.nautiflow.dto.LancheroAdminDTO;
+import com.nautiflow.dto.LancheroListadoAdminDTO;
 import com.nautiflow.dto.LanchaDisponibleDTO;
 import com.nautiflow.dto.LoginRequest;
 import com.nautiflow.dto.LoginResponse;
@@ -347,9 +348,9 @@ class AdminControllerTest {
 
     @Test
     void seguimientoDevuelveHistorialConEstadoYUltimaUbicacion() throws Exception {
-        when(viajeWorkflowService.listarSeguimiento(0, 10)).thenReturn(new PaginaSeguimientoViajesDTO(
+        when(viajeWorkflowService.listarSeguimiento(0, 10, "TODOS")).thenReturn(new PaginaSeguimientoViajesDTO(
                 List.of(new ViajeSeguimientoDTO(
-                        25L, "Brisa Marina", "Delta", "Primera Seccion",
+                        25L, "Brisa Marina", "Turista Prueba", "+573001112233", "Delta", "Primera Seccion",
                         OffsetDateTime.parse("2026-11-02T14:00:00Z"), null,
                         "EN_VIAJE", "Segunda Seccion"
                 )),
@@ -360,6 +361,8 @@ class AdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(25))
                 .andExpect(jsonPath("$.content[0].nombreEmbarcacion").value("Brisa Marina"))
+                .andExpect(jsonPath("$.content[0].turistaNombreCompleto").value("Turista Prueba"))
+                .andExpect(jsonPath("$.content[0].turistaWhatsapp").value("+573001112233"))
                 .andExpect(jsonPath("$.content[0].estado").value("EN_VIAJE"))
                 .andExpect(jsonPath("$.content[0].ultimaUbicacionConfirmada").value("Segunda Seccion"));
     }
@@ -604,8 +607,9 @@ class AdminControllerTest {
     @Test
     void listadoLancherosExponeAmbosEstadosPorSeparado() throws Exception {
         when(adminWorkflowService.listarLancheros(EstadoSolicitud.APROBADO, 0, 10)).thenReturn(new PaginaLancherosDTO(
-                List.of(new LancheroAdminDTO(
-                        12L, "Ana Pérez", OffsetDateTime.parse("2026-10-25T10:30:00Z"), "APROBADO", "ACTIVO"
+                List.of(new LancheroListadoAdminDTO(
+                        12L, "Ana Pérez", "+573001234567", "La Aurora",
+                        OffsetDateTime.parse("2026-10-25T10:30:00Z"), "APROBADO", "ACTIVO"
                 )),
                 0, 10, 1, 1
         ));
@@ -615,6 +619,8 @@ class AdminControllerTest {
                         .header("Authorization", bearerToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].estadoSolicitud").value("APROBADO"))
+                .andExpect(jsonPath("$.content[0].whatsapp").value("+573001234567"))
+                .andExpect(jsonPath("$.content[0].nombreLancha").value("La Aurora"))
                 .andExpect(jsonPath("$.content[0].estadoViaje").value("ACTIVO"));
         verify(adminWorkflowService).listarLancheros(EstadoSolicitud.APROBADO, 0, 10);
     }
@@ -758,9 +764,9 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.content[0].turistaNombreCompleto").value("Ana Pérez"))
                 .andExpect(jsonPath("$.content[0].zonaOrigen").value("Zona Norte"))
                 .andExpect(jsonPath("$.content[0].zonaDestino").value("Zona Sur"))
-                .andExpect(jsonPath("$.content[0].fecha").value("2026-11-02T11:05:00.000000Z"))
-                .andExpect(jsonPath("$.content[0].fechaHoraInicio").value("2026-11-02T10:00:00.000000Z"))
-                .andExpect(jsonPath("$.content[0].fechaHoraFin").value("2026-11-02T11:00:00.000000Z"))
+                .andExpect(jsonPath("$.content[0].fecha").value("2026-11-02T08:05:00.000000-03:00"))
+                .andExpect(jsonPath("$.content[0].fechaHoraInicio").value("2026-11-02T07:00:00.000000-03:00"))
+                .andExpect(jsonPath("$.content[0].fechaHoraFin").value("2026-11-02T08:00:00.000000-03:00"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(10))
                 .andExpect(jsonPath("$.totalElements").value(1))
@@ -899,7 +905,7 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.resena.comentario").value("Excelente servicio"))
                 .andExpect(jsonPath("$.resena.idLanchero").value(3))
                 .andExpect(jsonPath("$.resena.nombreLanchero").value("María Pérez"))
-                .andExpect(jsonPath("$.resena.fecha").value("2026-11-02T18:22:22.682942Z"))
+                .andExpect(jsonPath("$.resena.fecha").value("2026-11-02T15:22:22.682942-03:00"))
                 .andExpect(jsonPath("$.resena.idViaje").doesNotExist())
                 .andExpect(jsonPath("$.resena.turistaNombreCompleto").doesNotExist())
                 .andExpect(jsonPath("$.resena.zonaOrigen").doesNotExist())
@@ -909,8 +915,8 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.idViaje").value(3))
                 .andExpect(jsonPath("$.zonaOrigen").value("Zona Norte"))
                 .andExpect(jsonPath("$.zonaDestino").value("Zona Sur"))
-                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T18:16:19.230457Z"))
-                .andExpect(jsonPath("$.fechaHoraFin").value("2026-11-02T18:22:18.068711Z"));
+                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T15:16:19.230457-03:00"))
+                .andExpect(jsonPath("$.fechaHoraFin").value("2026-11-02T15:22:18.068711-03:00"));
     }
 
     @Test
@@ -946,7 +952,7 @@ class AdminControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.turistaWhatsapp").value("+5491123456789"))
                 .andExpect(jsonPath("$.turistaWhatsapp").isString())
-                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T17:53:31.897597Z"))
+                .andExpect(jsonPath("$.fechaHoraInicio").value("2026-11-02T14:53:31.897597-03:00"))
                 .andExpect(jsonPath("$.turistaNombreCompleto").value("Pasajero de prueba"))
                 .andExpect(jsonPath("$.fechaHoraFin").value(org.hamcrest.Matchers.nullValue()));
     }

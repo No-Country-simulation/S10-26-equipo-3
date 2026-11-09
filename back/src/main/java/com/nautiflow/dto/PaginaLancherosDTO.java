@@ -12,7 +12,7 @@ import java.util.List;
  * @param totalPages Cantidad total de páginas.
  */
 public record PaginaLancherosDTO(
-        List<LancheroAdminDTO> content,
+        List<LancheroListadoAdminDTO> content,
         int page,
         int size,
         long totalElements,

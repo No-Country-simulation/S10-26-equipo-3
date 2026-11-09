@@ -7,7 +7,8 @@ import Notification, { type NotificationKind } from "../../components/Admin/Noti
 import SolicitudesPaginacion from "../../components/solicitudes/SolicitudesPaginacion";
 import EstadoBadge from "../../components/solicitudes/EstadoBadge";
 import { listarSeguimientoViajes, type ViajeSeguimiento } from "../../services/adminDashboardService";
-import { finalizarViaje } from "../../services/viajeAdminService";
+import { finalizarViaje, type ViajeFinalizado } from "../../services/viajeAdminService";
+import ModalSolicitarResena from "../../components/Admin/ModalSolicitarResena";
 
 type Props = { token: string };
 
@@ -87,6 +88,7 @@ export default function ViajesPage({ token }: Props) {
   const [selected, setSelected] = useState<ViajeSeguimiento | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [notice, setNotice] = useState<{ id: number; kind: NotificationKind; title: string; message: string } | null>(null);
+  const [viajeFinalizadoReciente, setViajeFinalizadoReciente] = useState<ViajeFinalizado | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -120,10 +122,11 @@ export default function ViajesPage({ token }: Props) {
     if (!selected || finishing) return;
     setFinishing(true);
     try {
-      await finalizarViaje(token, selected.id);
+      const resultado = await finalizarViaje(token, selected.id);
       setSelected(null);
       setNotice({ id: Date.now(), kind: "success", title: "Viaje finalizado", message: "El viaje se marcó como completado correctamente." });
       retry();
+      setViajeFinalizadoReciente(resultado);
     } catch (cause) {
       setNotice({ id: Date.now(), kind: "error", title: "No se pudo finalizar el viaje", message: cause instanceof Error ? cause.message : "Inténtalo nuevamente." });
     } finally { setFinishing(false); }
@@ -159,6 +162,12 @@ export default function ViajesPage({ token }: Props) {
       {activeTab === "viajes" && !loading && !error && ordered.length > 0 && <SolicitudesPaginacion page={page} totalPages={totalPages} onChange={(nextPage) => { setLoading(true); setPage(nextPage); }} />}
     </div>
     {selected && <ModalDecision title="¿Finalizar viaje?" description={`Confirma que el viaje de ${selected.turistaNombreCompleto} ha terminado. Esta acción liberará la lancha.`} onClose={() => { if (!finishing) setSelected(null); }} closeDisabled={finishing}><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setSelected(null)} disabled={finishing} className="rounded-full border border-border-secondary px-5 py-2.5 text-sm font-semibold text-text-primary disabled:opacity-60">Cancelar</button><button type="button" onClick={() => void completar()} disabled={finishing} className="rounded-full bg-bg-fill-primary px-5 py-2.5 text-sm font-semibold text-text-invert disabled:opacity-60">{finishing ? "Finalizando…" : "Confirmar"}</button></div></ModalDecision>}
+    {viajeFinalizadoReciente && (
+      <ModalSolicitarResena
+        viajeFinalizado={viajeFinalizadoReciente}
+        onClose={() => setViajeFinalizadoReciente(null)}
+      />
+    )}
     {notice && <div className="pointer-events-none fixed right-4 top-4 z-[60]"><Notification key={notice.id} kind={notice.kind} title={notice.title} message={notice.message} onClose={() => setNotice(null)} /></div>}
   </div>;
 }

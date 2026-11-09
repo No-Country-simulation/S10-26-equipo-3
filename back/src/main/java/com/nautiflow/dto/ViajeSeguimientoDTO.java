@@ -7,6 +7,8 @@ import java.time.OffsetDateTime;
  *
  * @param id Identificador del registro.
  * @param nombreEmbarcacion Nombre de la embarcación.
+ * @param turistaNombreCompleto Nombre completo del turista registrado.
+ * @param turistaWhatsapp WhatsApp del turista registrado.
  * @param zonaOrigen Nombre de la zona de origen.
  * @param zonaDestino Nombre de la zona de destino.
  * @param fechaHoraInicio Fecha y hora de inicio del viaje.
@@ -17,6 +19,8 @@ import java.time.OffsetDateTime;
 public record ViajeSeguimientoDTO(
         Long id,
         String nombreEmbarcacion,
+        String turistaNombreCompleto,
+        String turistaWhatsapp,
         String zonaOrigen,
         String zonaDestino,
         OffsetDateTime fechaHoraInicio,

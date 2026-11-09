@@ -72,10 +72,11 @@ public class ViajeAdminController {
             summary = "Consultar el historial y estado operativo de los viajes"
     )
     public PaginaSeguimientoViajesDTO seguimientoViajes(
+            @RequestParam(defaultValue = "TODOS") String estado,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        return viajeWorkflowService.listarSeguimiento(page, size);
+        return viajeWorkflowService.listarSeguimiento(page, size, estado);
     }
 
     /**

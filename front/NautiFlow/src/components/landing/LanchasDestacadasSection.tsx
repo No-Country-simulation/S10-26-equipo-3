@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import waterAnimation from "../../assets/landing/water-animation.svg";
 import LanchaCard from "./LanchaCard";
+import ModalResenas from "./ModalResenas";
 import { BsChevronLeft, BsChevronRight } from "react-icons/bs";
 import {
   lanchasService,
@@ -13,9 +14,21 @@ type Estado =
   | { tipo: "vacio" }
   | { tipo: "ok"; lanchas: LanchaDestacada[]; totalPages: number };
 
+/** Lancha seleccionada para mostrar su modal de reseñas */
+type LanchaModal = {
+  idLanchero: number;
+  nombre: string;
+  lanchero: string;
+  rating: number;
+  totalReseñas: number;
+  verificado: boolean;
+  imagen?: string;
+};
+
 export default function LanchasDestacadasSection() {
   const [estado, setEstado] = useState<Estado>({ tipo: "cargando" });
   const [page, setPage] = useState(0);
+  const [lanchaModal, setLanchaModal] = useState<LanchaModal | null>(null);
   const PAGE_SIZE = 3;
 
   useEffect(() => {
@@ -44,6 +57,7 @@ export default function LanchasDestacadasSection() {
   const totalPages = estado.tipo === "ok" ? estado.totalPages : 0;
 
   return (
+    <>
     <section id="lanchas-destacadas" className="flex flex-col gap-8 md:gap-12 items-center w-full overflow-clip shrink-0 ">
       <div className="flex items-center justify-center w-full">
         <img
@@ -109,10 +123,20 @@ export default function LanchasDestacadasSection() {
                   lanchero={lancha.lancheroNombreCompleto}
                   rating={lancha.promedioCalificacion}
                   reseñas={lancha.totalResenas}
-                  capacidad={0}
                   verificado={lancha.verificada}
                   esNuevo={lancha.totalResenas === 0}
                   imagen={lancha.fotoPrincipalUrl}
+                  onVerDetalle={() =>
+                    setLanchaModal({
+                      idLanchero: lancha.idLanchero ?? lancha.idLancha,
+                      nombre: lancha.nombreEmbarcacion,
+                      lanchero: lancha.lancheroNombreCompleto,
+                      rating: lancha.promedioCalificacion,
+                      totalReseñas: lancha.totalResenas,
+                      verificado: lancha.verificada,
+                      imagen: lancha.fotoPrincipalUrl,
+                    })
+                  }
                 />
               ))}
             </div>
@@ -147,5 +171,20 @@ export default function LanchasDestacadasSection() {
         </>
       )}
     </section>
+
+      {/* Modal de reseñas */}
+      {lanchaModal && (
+        <ModalResenas
+          idLanchero={lanchaModal.idLanchero}
+          nombre={lanchaModal.nombre}
+          lanchero={lanchaModal.lanchero}
+          rating={lanchaModal.rating}
+          totalReseñas={lanchaModal.totalReseñas}
+          verificado={lanchaModal.verificado}
+          imagen={lanchaModal.imagen}
+          onClose={() => setLanchaModal(null)}
+        />
+      )}
+    </>
   );
 }
