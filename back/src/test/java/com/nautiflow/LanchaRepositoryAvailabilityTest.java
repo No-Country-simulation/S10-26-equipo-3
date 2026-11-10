@@ -61,6 +61,7 @@ class LanchaRepositoryAvailabilityTest {
                 null,
                 null,
                 null,
+                false,
                 EstadoSolicitud.APROBADO,
                 EstadoOperativoLanchero.ACTIVO,
                 fechaHoraConsulta
@@ -69,9 +70,153 @@ class LanchaRepositoryAvailabilityTest {
                 4,
                 1L,
                 2L,
+                false,
                 EstadoSolicitud.APROBADO,
                 EstadoOperativoLanchero.ACTIVO,
                 fechaHoraConsulta
+        ));
+    }
+
+    @Test
+    @Transactional
+    void lanchaDisponiblePuedeAgendarseEnZonasRegistradasAunqueHayaFinalizadoEnOtraZona() {
+        Zona origenSolicitado = crearZona("origen-solicitado");
+        Zona destinoSolicitado = crearZona("destino-solicitado");
+        Zona origenAnterior = crearZona("origen-anterior");
+        Zona destinoAnterior = crearZona("destino-anterior");
+        Lancha lancha = crearLancha("reubicacion", EstadoSolicitud.APROBADO, origenSolicitado, destinoSolicitado);
+        lancha.getLanchero().setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
+        lancheroRepository.saveAndFlush(lancha.getLanchero());
+
+        Viaje viajeAnterior = new Viaje();
+        viajeAnterior.setLancha(lancha);
+        viajeAnterior.setZonaOrigen(origenAnterior);
+        viajeAnterior.setZonaDestino(destinoAnterior);
+        viajeAnterior.setFechaHoraInicio(OffsetDateTime.parse("2030-01-10T08:00:00Z"));
+        viajeAnterior.setFechaHoraFin(OffsetDateTime.parse("2030-01-10T09:00:00Z"));
+        viajeAnterior.setCantidadPasajeros(1);
+        viajeAnterior.setTuristaNombreCompleto("Pasajero de prueba");
+        viajeAnterior.setTuristaWhatsapp("+570000000000");
+        viajeAnterior = viajeRepository.saveAndFlush(viajeAnterior);
+
+        var disponibles = lanchaRepository.buscarDisponibles(
+                null,
+                origenSolicitado.getIdZona(),
+                destinoSolicitado.getIdZona(),
+                false,
+                EstadoSolicitud.APROBADO,
+                EstadoOperativoLanchero.ACTIVO,
+                OffsetDateTime.parse("2030-01-10T11:00:00Z")
+        );
+
+        assertTrue(disponibles.stream().anyMatch(disponible ->
+                disponible.getIdLancha().equals(lancha.getIdLancha())
+        ));
+    }
+
+    @Test
+    @Transactional
+    void lanchaEnViajeNoEstaDisponibleYUnaVezFinalizadoPuedeAgendarseEnZonasRegistradas() {
+        Zona zonaRegistradaOrigen = crearZona("zona-registrada-origen");
+        Zona zonaRegistradaDestino = crearZona("zona-registrada-destino");
+        Lancha lancha = crearLancha(
+                "viaje-en-curso",
+                EstadoSolicitud.APROBADO,
+                zonaRegistradaOrigen,
+                zonaRegistradaDestino
+        );
+        lancha.getLanchero().setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
+        lancheroRepository.saveAndFlush(lancha.getLanchero());
+
+        Viaje viajeEnCurso = new Viaje();
+        viajeEnCurso.setLancha(lancha);
+        viajeEnCurso.setZonaOrigen(zonaRegistradaOrigen);
+        viajeEnCurso.setZonaDestino(zonaRegistradaDestino);
+        viajeEnCurso.setFechaHoraInicio(OffsetDateTime.parse("2030-01-10T08:00:00Z"));
+        viajeEnCurso.setCantidadPasajeros(1);
+        viajeEnCurso.setTuristaNombreCompleto("Pasajero de prueba");
+        viajeEnCurso.setTuristaWhatsapp("+570000000000");
+        viajeEnCurso = viajeRepository.saveAndFlush(viajeEnCurso);
+
+        var duranteElViaje = lanchaRepository.buscarDisponibles(
+                null,
+                zonaRegistradaOrigen.getIdZona(),
+                zonaRegistradaDestino.getIdZona(),
+                false,
+                EstadoSolicitud.APROBADO,
+                EstadoOperativoLanchero.ACTIVO,
+                OffsetDateTime.parse("2030-01-10T09:00:00Z")
+        );
+        assertTrue(duranteElViaje.stream().noneMatch(disponible ->
+                disponible.getIdLancha().equals(lancha.getIdLancha())
+        ));
+
+        viajeEnCurso.setFechaHoraFin(OffsetDateTime.parse("2030-01-10T10:00:00Z"));
+        viajeRepository.saveAndFlush(viajeEnCurso);
+        var despuesDeFinalizar = lanchaRepository.buscarDisponibles(
+                null,
+                zonaRegistradaOrigen.getIdZona(),
+                zonaRegistradaDestino.getIdZona(),
+                false,
+                EstadoSolicitud.APROBADO,
+                EstadoOperativoLanchero.ACTIVO,
+                OffsetDateTime.parse("2030-01-10T11:00:00Z")
+        );
+        assertTrue(despuesDeFinalizar.stream().anyMatch(disponible ->
+                disponible.getIdLancha().equals(lancha.getIdLancha())
+        ));
+    }
+
+    @Test
+    @Transactional
+    void noIncluyeLanchaCuandoLaRutaSolicitadaTieneUnaZonaNoRegistrada() {
+        Zona zonaRegistrada = crearZona("zona-registrada");
+        Zona zonaNoRegistrada = crearZona("zona-no-registrada");
+        Lancha lancha = crearLancha("sin-zona", EstadoSolicitud.APROBADO, zonaRegistrada, crearZona("otra-zona"));
+        lancha.getLanchero().setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
+        lancheroRepository.saveAndFlush(lancha.getLanchero());
+
+        var disponibles = lanchaRepository.buscarDisponibles(
+                null,
+                zonaRegistrada.getIdZona(),
+                zonaNoRegistrada.getIdZona(),
+                false,
+                EstadoSolicitud.APROBADO,
+                EstadoOperativoLanchero.ACTIVO,
+                OffsetDateTime.parse("2030-01-10T11:00:00Z")
+        );
+
+        assertTrue(disponibles.stream().noneMatch(disponible ->
+                disponible.getIdLancha().equals(lancha.getIdLancha())
+        ));
+    }
+
+    @Test
+    @Transactional
+    void deltaComoOrigenIncluyeLanchasAunqueNoTenganEsaZonaRegistrada() {
+        Zona delta = crearZona("Delta");
+        Zona destinoRegistrado = crearZona("destino-registrado");
+        Lancha lancha = crearLancha(
+                "delta-comun",
+                EstadoSolicitud.APROBADO,
+                crearZona("origen-registrado"),
+                destinoRegistrado
+        );
+        lancha.getLanchero().setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
+        lancheroRepository.saveAndFlush(lancha.getLanchero());
+
+        var disponibles = lanchaRepository.buscarDisponibles(
+                null,
+                delta.getIdZona(),
+                destinoRegistrado.getIdZona(),
+                true,
+                EstadoSolicitud.APROBADO,
+                EstadoOperativoLanchero.ACTIVO,
+                OffsetDateTime.parse("2030-01-10T11:00:00Z")
+        );
+
+        assertTrue(disponibles.stream().anyMatch(disponible ->
+                disponible.getIdLancha().equals(lancha.getIdLancha())
         ));
     }
 

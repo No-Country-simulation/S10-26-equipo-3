@@ -175,6 +175,7 @@ public class ViajeWorkflowService {
                         capacidad,
                         origen == null ? null : origen.getIdZona(),
                         destino == null ? null : destino.getIdZona(),
+                        origen != null && "Delta".equalsIgnoreCase(origen.getNombre()),
                         EstadoSolicitud.APROBADO,
                         EstadoOperativoLanchero.ACTIVO,
                         fechaHoraConsulta

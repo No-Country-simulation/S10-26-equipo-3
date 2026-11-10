@@ -78,7 +78,7 @@ public interface LanchaRepository extends JpaRepository<Lancha, Long> {
             where l.lanchero.estadoSolicitud = :estadoSolicitud
               and l.lanchero.estadoViaje = :estadoViaje
               and (:capacidad is null or l.capacidad >= :capacidad)
-              and (:idZonaOrigen is null or exists (
+              and (:idZonaOrigen is null or :origenEsDelta = true or exists (
                     select z from Lancha lOrigen join lOrigen.zonas z
                     where lOrigen = l and z.idZona = :idZonaOrigen
               ))
@@ -92,15 +92,12 @@ public interface LanchaRepository extends JpaRepository<Lancha, Long> {
                       and v.fechaHoraInicio <= :fechaHoraConsulta
                       and (v.fechaHoraFin is null or v.fechaHoraFin > :fechaHoraConsulta)
               )
-              and not exists (
-                    select t from TrayectoRetornoVacio t
-                    where t.viaje.lancha = l and t.estado = 'ACTIVO'
-              )
             """)
     List<Lancha> buscarDisponibles(
             @Param("capacidad") Integer capacidad,
             @Param("idZonaOrigen") Long idZonaOrigen,
             @Param("idZonaDestino") Long idZonaDestino,
+            @Param("origenEsDelta") boolean origenEsDelta,
             @Param("estadoSolicitud") EstadoSolicitud estadoSolicitud,
             @Param("estadoViaje") EstadoOperativoLanchero estadoViaje,
             @Param("fechaHoraConsulta") OffsetDateTime fechaHoraConsulta
