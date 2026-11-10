@@ -5,6 +5,11 @@ export interface AdminDashboardMetrics {
   lanchasVerificadas: number;
   viajesActivos: number;
 }
+export interface ViajesFinalizadosPorMes {
+  anio: number;
+  mes: number;
+  cantidad: number;
+}
 export interface ViajeSeguimiento {
   id: number;
   nombreEmbarcacion: string;
@@ -36,6 +41,13 @@ function esViaje(value: unknown): value is ViajeSeguimiento {
     typeof value.estado === "string" &&
     (typeof value.ultimaUbicacionConfirmada === "string" || value.ultimaUbicacionConfirmada === null);
 }
+function esViajesFinalizadosPorMes(value: unknown): value is ViajesFinalizadosPorMes {
+  return esRegistro(value) &&
+    typeof value.anio === "number" &&
+    typeof value.mes === "number" &&
+    value.mes >= 1 && value.mes <= 12 &&
+    typeof value.cantidad === "number" && value.cantidad >= 0;
+}
 async function solicitar(token: string, path: string, signal: AbortSignal): Promise<unknown> {
   let response: Response;
   try {
@@ -64,6 +76,16 @@ export async function obtenerAdminDashboard(token: string, signal: AbortSignal):
     lanchasVerificadas: body.lanchasVerificadas,
     viajesActivos: body.viajesActivos,
   };
+}
+export async function obtenerViajesFinalizadosPorMes(
+  token: string,
+  signal: AbortSignal,
+): Promise<ViajesFinalizadosPorMes[]> {
+  const body = await solicitar(token, "/admin/dashboard/viajes-finalizados-por-mes", signal);
+  if (!Array.isArray(body) || !body.every(esViajesFinalizadosPorMes)) {
+    throw new Error("El servidor devolvió datos mensuales de viajes inválidos.");
+  }
+  return body;
 }
 export async function listarSeguimientoViajes(
   token: string,
