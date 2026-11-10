@@ -3,12 +3,12 @@ import { BsArrowRight, BsCheck, BsPersonCheck, BsFillStarFill } from "react-icon
 type LanchaCardProps = {
   nombre: string;
   lanchero: string;
-  rating: number;
-  reseñas: number;
+  rating?: number | null;
+  reseñas?: number | null;
   verificado: boolean;
   /** "nuevo" muestra badge de nuevo en lugar de rating con estrellas */
   esNuevo?: boolean;
-  imagen?: string;
+  imagen?: string | null;
   onVerDetalle?: () => void;
 };
 
@@ -22,6 +22,11 @@ export default function LanchaCard({
   imagen = lanchaCadImg,
   onVerDetalle,
 }: LanchaCardProps) {
+  const imgSrc = imagen || lanchaCadImg;
+  const ratingNum = typeof rating === "number" && !isNaN(rating) ? rating : 0;
+  const resenasNum = typeof reseñas === "number" && !isNaN(reseñas) ? reseñas : 0;
+  const esLanchaNueva = esNuevo || resenasNum === 0 || rating == null;
+
   return (
     <div className="relative flex flex-col flex-1 min-w-0 w-full max-w-sm sm:max-w-none mx-auto bg-bg-surface-primary rounded-m shadow-[0px_12px_8px_rgba(12,12,13,0.08),0px_4px_2px_rgba(12,12,13,0.05)] px-2.5 py-1">
       {/* Imagen */}
@@ -31,7 +36,7 @@ export default function LanchaCard({
       >
         <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
           <img
-            src={imagen}
+            src={imgSrc}
             alt={nombre}
             className="absolute max-w-none"
             style={{
@@ -60,7 +65,7 @@ export default function LanchaCard({
         {/* Rating row */}
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1">
-            {esNuevo ? (
+            {esLanchaNueva ? (
               <div className="flex items-center gap-1 border border-white/60 rounded-sm px-1.5 py-0.5">
                 <span className="font-semibold text-xs leading-4 text-white whitespace-nowrap">
                   Nuevo
@@ -71,8 +76,8 @@ export default function LanchaCard({
                 <BsFillStarFill aria-hidden="true" className="h-4 w-4 shrink-0 text-bg-warning-primary" />
 
                 <p className="font-semibold text-[length:var(--text-body-sm-size)] leading-[var(--text-heading-lg-line-height)] text-white whitespace-nowrap">
-                  <span>{rating.toFixed(1)} </span>
-                  <span className="text-white/80 font-normal">({reseñas} reseñas)</span>
+                  <span>{ratingNum.toFixed(1)} </span>
+                  <span className="text-white/80 font-normal">({resenasNum} reseñas)</span>
                 </p>
               </div>
             )}

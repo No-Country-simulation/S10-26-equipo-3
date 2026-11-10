@@ -19,10 +19,11 @@ type LanchaModal = {
   idLanchero: number;
   nombre: string;
   lanchero: string;
-  rating: number;
+  rating?: number | null;
   totalReseñas: number;
   verificado: boolean;
-  imagen?: string;
+  esNuevo?: boolean;
+  imagen?: string | null;
 };
 
 export default function LanchasDestacadasSection() {
@@ -128,12 +129,13 @@ export default function LanchasDestacadasSection() {
                   imagen={lancha.fotoPrincipalUrl}
                   onVerDetalle={() =>
                     setLanchaModal({
-                      idLanchero: lancha.idLanchero ?? lancha.idLancha,
+                      idLanchero: lancha.idLancha,
                       nombre: lancha.nombreEmbarcacion,
                       lanchero: lancha.lancheroNombreCompleto,
                       rating: lancha.promedioCalificacion,
                       totalReseñas: lancha.totalResenas,
                       verificado: lancha.verificada,
+                      esNuevo: lancha.totalResenas === 0 || lancha.promedioCalificacion == null,
                       imagen: lancha.fotoPrincipalUrl,
                     })
                   }
@@ -181,6 +183,7 @@ export default function LanchasDestacadasSection() {
           rating={lanchaModal.rating}
           totalReseñas={lanchaModal.totalReseñas}
           verificado={lanchaModal.verificado}
+          esNuevo={lanchaModal.esNuevo}
           imagen={lanchaModal.imagen}
           onClose={() => setLanchaModal(null)}
         />
