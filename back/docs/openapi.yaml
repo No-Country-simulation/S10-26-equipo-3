@@ -413,6 +413,10 @@ paths:
       operationId: buscarLanchasDisponibles
       tags: [Lancheros]
       summary: Buscar embarcaciones activas para una ruta y hora
+      description: >
+        Devuelve lanchas aprobadas y activas que tengan registrada la zona de destino y la zona de origen,
+        excepto Delta, que es un punto de partida común para todas las lanchas. No deben tener un viaje en curso
+        en el horario consultado. La ubicación donde finalizó su último viaje no afecta la disponibilidad.
       security:
         - bearerAuth: []
       parameters:

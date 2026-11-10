@@ -485,7 +485,7 @@ class AdminWorkflowServiceTest {
         when(zonaRepository.findByNombreIgnoreCase("DELTA")).thenReturn(Optional.of(origen));
         when(zonaRepository.findByNombreIgnoreCase("PRIMERA_SECCION")).thenReturn(Optional.of(destino));
         when(lanchaRepository.buscarDisponibles(
-                eq(5), eq(2L), eq(3L), eq(EstadoSolicitud.APROBADO),
+                eq(5), eq(2L), eq(3L), eq(true), eq(EstadoSolicitud.APROBADO),
                 eq(EstadoOperativoLanchero.ACTIVO), any()
         ))
                 .thenReturn(List.of(lancha));
@@ -501,7 +501,7 @@ class AdminWorkflowServiceTest {
         assertEquals("+573001234567", resultado.getFirst().whatsappLanchero());
         ArgumentCaptor<OffsetDateTime> fechaConsulta = ArgumentCaptor.forClass(OffsetDateTime.class);
         verify(lanchaRepository).buscarDisponibles(
-                eq(5), eq(2L), eq(3L), eq(EstadoSolicitud.APROBADO),
+                eq(5), eq(2L), eq(3L), eq(true), eq(EstadoSolicitud.APROBADO),
                 eq(EstadoOperativoLanchero.ACTIVO), fechaConsulta.capture()
         );
         assertEquals(OffsetDateTime.parse("2026-11-02T20:00:00-03:00"), fechaConsulta.getValue());
@@ -535,7 +535,7 @@ class AdminWorkflowServiceTest {
         DataAccessResourceFailureException errorConsulta =
                 new DataAccessResourceFailureException("fallo de consulta");
         when(lanchaRepository.buscarDisponibles(
-                eq(null), eq(null), eq(null), eq(EstadoSolicitud.APROBADO),
+                eq(null), eq(null), eq(null), eq(false), eq(EstadoSolicitud.APROBADO),
                 eq(EstadoOperativoLanchero.ACTIVO), any()
         ))
                 .thenThrow(errorConsulta);
