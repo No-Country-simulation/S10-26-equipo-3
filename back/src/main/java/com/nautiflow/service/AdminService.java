@@ -5,12 +5,12 @@ import com.nautiflow.dto.PaginaSolicitudesDTO;
 import com.nautiflow.dto.SolicitudDetalleDTO;
 import com.nautiflow.dto.SolicitudResumenDTO;
 import com.nautiflow.model.Documento;
-import com.nautiflow.model.EstadoOperativoLanchero;
 import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.model.Lanchero;
 import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
+import com.nautiflow.repository.ViajeRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -31,6 +31,7 @@ public class AdminService {
     private final LancheroRepository lancheroRepository;
     private final LanchaRepository lanchaRepository;
     private final DocumentoRepository documentoRepository;
+    private final ViajeRepository viajeRepository;
     private final ArchivoLancheroStorage archivoStorage;
 
     /**
@@ -40,11 +41,13 @@ public class AdminService {
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
             DocumentoRepository documentoRepository,
+            ViajeRepository viajeRepository,
             ArchivoLancheroStorage archivoStorage
     ) {
         this.lancheroRepository = lancheroRepository;
         this.lanchaRepository = lanchaRepository;
         this.documentoRepository = documentoRepository;
+        this.viajeRepository = viajeRepository;
         this.archivoStorage = archivoStorage;
     }
 
@@ -56,7 +59,7 @@ public class AdminService {
         return new AdminDashboardDTO(
                 lancheroRepository.countByEstadoSolicitud(EstadoSolicitud.PENDIENTE),
                 lanchaRepository.countByLanchero_EstadoSolicitud(EstadoSolicitud.APROBADO),
-                lancheroRepository.countByEstadoViaje(EstadoOperativoLanchero.EN_VIAJE)
+                viajeRepository.countByFechaHoraFinIsNull()
         );
     }
 

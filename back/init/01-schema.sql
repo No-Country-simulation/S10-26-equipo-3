@@ -15,7 +15,7 @@ CREATE TABLE lanchero (
     CONSTRAINT ck_lanchero_estado_solicitud
         CHECK (estado_solicitud IN ('PENDIENTE', 'APROBADO', 'RECHAZADO')),
     CONSTRAINT ck_lanchero_estado_viaje
-        CHECK (estado_viaje IN ('ACTIVO', 'INACTIVO', 'EN_VIAJE'))
+        CHECK (estado_viaje IN ('ACTIVO', 'INACTIVO', 'EN_VIAJE', 'EN_RETORNO'))
 );
 
 CREATE TABLE documento (
@@ -99,13 +99,19 @@ CREATE TABLE trayecto_retorno_vacio (
     id_zona_origen BIGINT NOT NULL,
     id_zona_destino BIGINT NOT NULL,
     fecha_hora_retorno TIMESTAMP WITH TIME ZONE NOT NULL,
+    turista_nombre_completo VARCHAR(201),
+    turista_whatsapp VARCHAR(20),
     estado VARCHAR(20) NOT NULL DEFAULT 'ACTIVO',
+    fecha_creacion TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_retorno_viaje
         FOREIGN KEY (id_viaje) REFERENCES viaje (id_viaje) ON DELETE CASCADE,
     CONSTRAINT fk_retorno_zona_origen
         FOREIGN KEY (id_zona_origen) REFERENCES zona (id_zona),
     CONSTRAINT fk_retorno_zona_destino
         FOREIGN KEY (id_zona_destino) REFERENCES zona (id_zona),
-    CONSTRAINT ck_retorno_estado CHECK (estado IN ('ACTIVO', 'CERRADO'))
+    CONSTRAINT ck_retorno_estado CHECK (estado IN ('ACTIVO', 'INACTIVO'))
 );
 CREATE INDEX idx_retorno_id_viaje ON trayecto_retorno_vacio (id_viaje);
+CREATE UNIQUE INDEX uq_retorno_viaje_activo
+    ON trayecto_retorno_vacio (id_viaje)
+    WHERE estado = 'ACTIVO';

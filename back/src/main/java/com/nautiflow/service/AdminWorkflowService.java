@@ -123,10 +123,11 @@ public class AdminWorkflowService {
                     "Solo se puede cambiar el estado operativo de un lanchero aprobado."
             );
         }
-        if (lanchero.getEstadoViaje() == EstadoOperativoLanchero.EN_VIAJE) {
+        if (lanchero.getEstadoViaje() == EstadoOperativoLanchero.EN_VIAJE
+                || lanchero.getEstadoViaje() == EstadoOperativoLanchero.EN_RETORNO) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "No se puede cambiar el estado operativo mientras el lanchero está en viaje."
+                    "No se puede cambiar el estado operativo mientras el lanchero tiene un compromiso vigente."
             );
         }
         lanchero.setEstadoViaje(EstadoOperativoLanchero.valueOf(solicitud.estadoViaje().name()));

@@ -10,6 +10,7 @@ import com.nautiflow.model.Zona;
 import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
+import com.nautiflow.repository.ViajeRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -43,6 +44,8 @@ class AdminServiceTest {
     @Mock
     private DocumentoRepository documentoRepository;
     @Mock
+    private ViajeRepository viajeRepository;
+    @Mock
     private ArchivoLancheroStorage archivoStorage;
 
     @InjectMocks
@@ -52,7 +55,7 @@ class AdminServiceTest {
     void dashboardCalculaLosTresIndicadoresConConsultasDeConteo() {
         when(lancheroRepository.countByEstadoSolicitud(EstadoSolicitud.PENDIENTE)).thenReturn(12L);
         when(lanchaRepository.countByLanchero_EstadoSolicitud(EstadoSolicitud.APROBADO)).thenReturn(28L);
-        when(lancheroRepository.countByEstadoViaje(EstadoOperativoLanchero.EN_VIAJE)).thenReturn(4L);
+        when(viajeRepository.countByFechaHoraFinIsNull()).thenReturn(4L);
 
         var dashboard = adminService.obtenerDashboard();
 

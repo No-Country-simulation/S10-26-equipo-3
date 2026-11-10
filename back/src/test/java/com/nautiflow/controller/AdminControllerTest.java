@@ -4,6 +4,9 @@ import com.nautiflow.config.SecurityConfig;
 import com.nautiflow.config.JacksonConfig;
 import com.nautiflow.dto.AdminDashboardDTO;
 import com.nautiflow.dto.DecisionSolicitudDTO;
+import com.nautiflow.dto.CrearTramoVacioRequest;
+import com.nautiflow.dto.TramoVacioDTO;
+import com.nautiflow.dto.MensajeTramoVacioDTO;
 import com.nautiflow.dto.ViajeAdminDTO;
 import com.nautiflow.dto.LancheroAdminDTO;
 import com.nautiflow.dto.LancheroListadoAdminDTO;
@@ -32,6 +35,7 @@ import com.nautiflow.service.AdminService;
 import com.nautiflow.service.AdminWorkflowService;
 import com.nautiflow.service.LoginAttemptService;
 import com.nautiflow.service.ViajeWorkflowService;
+import com.nautiflow.service.TrayectoRetornoVacioService;
 import com.nautiflow.service.JwtTokenService;
 import com.nautiflow.service.ResenaService;
 import com.nautiflow.service.ZonaService;
@@ -50,6 +54,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Date;
 import java.util.List;
@@ -78,6 +83,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         SolicitudAdminController.class,
         LancheroAdminController.class,
         ViajeAdminController.class,
+        TrayectoRetornoVacioAdminController.class,
         ResenaAdminController.class,
         LoginController.class,
         ResenaController.class,
@@ -106,6 +112,9 @@ class AdminControllerTest {
 
     @MockitoBean
     private ViajeWorkflowService viajeWorkflowService;
+
+    @MockitoBean
+    private TrayectoRetornoVacioService trayectoRetornoVacioService;
 
     @MockitoBean
     private ResenaService resenaService;
@@ -246,6 +255,46 @@ class AdminControllerTest {
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/admin/viajes/seguimiento"))
                 .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/admin/tramos-vacios"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/admin/viajes/25/retornos-vacios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horaRetorno\":\"15:00\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void publicarRetornoVacioRequiereAdminYSerializaHoraYDatosOpcionales() throws Exception {
+        String mensaje =
+                "Lancha X vuelve vacía desde Zona B a Zona A a las 15:00 hs. ¿Alguien necesita un rescate o envío en ese trayecto?";
+        when(trayectoRetornoVacioService.publicar(eq(25L), any(CrearTramoVacioRequest.class)))
+                .thenReturn(new TramoVacioDTO(
+                        15L,
+                        25L,
+                        "Lancha X",
+                        "Ana Pérez",
+                        "Zona B",
+                        "Zona A",
+                        LocalDate.of(2026, 11, 9),
+                        LocalTime.of(15, 0),
+                        null,
+                        null,
+                        "ACTIVO",
+                        mensaje
+                ));
+
+        mockMvc.perform(post("/admin/viajes/25/retornos-vacios")
+                        .header("Authorization", bearerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horaRetorno\":\"15:00\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.viajeId").value(25))
+                .andExpect(jsonPath("$.zonaOrigen").value("Zona B"))
+                .andExpect(jsonPath("$.zonaDestino").value("Zona A"))
+                .andExpect(jsonPath("$.horaRetorno").value("15:00"))
+                .andExpect(jsonPath("$.turistaNombreCompleto").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.turistaWhatsapp").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.mensaje").value(mensaje));
     }
 
     @Test
@@ -420,6 +469,9 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.error").value("Forbidden"))
                 .andExpect(jsonPath("$.path").value("/admin/dashboard"));
+        mockMvc.perform(get("/admin/tramos-vacios").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.path").value("/admin/tramos-vacios"));
     }
 
     @Test

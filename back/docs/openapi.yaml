@@ -9,6 +9,7 @@ tags:
   - name: Solicitudes
   - name: Lancheros
   - name: Viajes
+  - name: Retornos vacíos
   - name: Reseñas
   - name: Reseñas públicas
   - name: Zonas
@@ -619,6 +620,189 @@ paths:
           description: Recurso no encontrado.
         "409":
           description: Conflicto.
+  /admin/viajes/{viajeId}/retornos-vacios:
+    post:
+      operationId: publicarRetornoVacio
+      tags: [Retornos vacíos]
+      summary: Publicar el retorno vacío asociado a un viaje
+      description: Invierte origen y destino del viaje y conserva las zonas del retorno para su historial. La fecha es el día local de publicación. El viaje puede estar en curso o finalizado; el lanchero queda EN_RETORNO hasta cancelar o finalizar este compromiso.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: viajeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearTramoVacioRequest"
+            example:
+              horaRetorno: "15:00"
+              turistaNombreCompleto: Pedro Gómez
+              turistaWhatsapp: "+5491123456789"
+      responses:
+        "201":
+          description: Retorno publicado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TramoVacio"
+              example:
+                id: 15
+                viajeId: 25
+                lanchaNombre: Lancha X
+                lancheroNombre: Ana Pérez
+                zonaOrigen: Zona B
+                zonaDestino: Zona A
+                fecha: "2026-11-09"
+                horaRetorno: "15:00"
+                turistaNombreCompleto: Pedro Gómez
+                turistaWhatsapp: "+5491123456789"
+                estado: ACTIVO
+                mensaje: "Lancha X vuelve vacía desde Zona B a Zona A a las 15:00 hs. ¿Alguien necesita un rescate o envío en ese trayecto?"
+        "400":
+          description: Solicitud inválida.
+        "401":
+          description: No autenticado.
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          description: Sin permiso.
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Viaje no encontrado.
+        "409":
+          description: Estado incompatible o ya existe otro compromiso activo.
+  /admin/tramos-vacios:
+    get:
+      operationId: listarTramosVacios
+      tags: [Retornos vacíos]
+      summary: Consultar retornos vacíos
+      description: Por defecto devuelve únicamente retornos ACTIVO. Se puede consultar el historial indicando estado=INACTIVO.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fechaDesde
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: fechaHasta
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: estado
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ACTIVO, INACTIVO]
+            default: ACTIVO
+      responses:
+        "200":
+          description: Retornos encontrados, ordenados por fecha y hora descendentes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TramoVacio"
+        "400":
+          description: Filtros inválidos.
+        "401":
+          description: No autenticado.
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          description: Sin permiso.
+          $ref: "#/components/responses/SinPermiso"
+  /admin/tramos-vacios/{id}/mensaje:
+    get:
+      operationId: obtenerMensajeTramoVacio
+      tags: [Retornos vacíos]
+      summary: Recuperar el mensaje para compartir el retorno
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdTramoVacio"
+      responses:
+        "200":
+          description: Mensaje del retorno vacío.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeTramoVacio"
+              example:
+                mensaje: "Lancha X vuelve vacía desde Zona B a Zona A a las 15:00 hs. ¿Alguien necesita un rescate o envío en ese trayecto?"
+        "401":
+          description: No autenticado.
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          description: Sin permiso.
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Retorno vacío no encontrado.
+  /admin/tramos-vacios/{id}/cancelar:
+    patch:
+      operationId: cancelarTramoVacio
+      tags: [Retornos vacíos]
+      summary: Cancelar un retorno vacío activo
+      description: Conserva el registro y no modifica el estado del viaje original.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdTramoVacio"
+      responses:
+        "200":
+          description: Retorno cancelado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TramoVacio"
+        "401":
+          description: No autenticado.
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          description: Sin permiso.
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Retorno vacío no encontrado.
+        "409":
+          description: El retorno ya estaba cerrado.
+  /admin/tramos-vacios/{id}/finalizar:
+    patch:
+      operationId: finalizarTramoVacio
+      tags: [Retornos vacíos]
+      summary: Finalizar un retorno vacío
+      description: Cierra el retorno únicamente cuando el viaje original ya finalizó. Conserva el historial y libera al lanchero solo si no tiene otros compromisos.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdTramoVacio"
+      responses:
+        "200":
+          description: Retorno finalizado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TramoVacio"
+        "401":
+          description: No autenticado.
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          description: Sin permiso.
+          $ref: "#/components/responses/SinPermiso"
+        "404":
+          description: Retorno vacío no encontrado.
+        "409":
+          description: El retorno no está activo o el viaje original continúa en curso.
   /admin/viajes/seguimiento:
     get:
       operationId: listarSeguimientoViajes
@@ -767,6 +951,14 @@ components:
         minimum: 1
         maximum: 100
         default: 10
+    IdTramoVacio:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
     EstadoSolicitud:
       name: estado
       in: query
@@ -1041,7 +1233,7 @@ components:
           enum: [PENDIENTE, APROBADO, RECHAZADO]
         estadoViaje:
           type: string
-          enum: [ACTIVO, INACTIVO, EN_VIAJE]
+          enum: [ACTIVO, INACTIVO, EN_VIAJE, EN_RETORNO]
     LancheroListadoAdmin:
       type: object
       required: [id, nombreCompleto, whatsapp, fechaRegistro, estadoSolicitud, estadoViaje]
@@ -1064,7 +1256,7 @@ components:
           enum: [PENDIENTE, APROBADO, RECHAZADO]
         estadoViaje:
           type: string
-          enum: [ACTIVO, INACTIVO, EN_VIAJE]
+          enum: [ACTIVO, INACTIVO, EN_VIAJE, EN_RETORNO]
     LanchaDisponible:
       type: object
       required: [id, nombre, capacidad, zonasDisponibles, verificada, estadoOperativo, whatsappLanchero]
@@ -1118,6 +1310,76 @@ components:
           type: string
           minLength: 1
           maxLength: 20
+    CrearTramoVacioRequest:
+      type: object
+      required: [horaRetorno]
+      properties:
+        horaRetorno:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          example: "15:00"
+        turistaNombreCompleto:
+          type: [string, "null"]
+          maxLength: 201
+          example: Pedro Gómez
+        turistaWhatsapp:
+          type: [string, "null"]
+          maxLength: 20
+          example: "+5491123456789"
+    TramoVacio:
+      type: object
+      required:
+        - id
+        - viajeId
+        - lanchaNombre
+        - lancheroNombre
+        - zonaOrigen
+        - zonaDestino
+        - fecha
+        - horaRetorno
+        - turistaNombreCompleto
+        - turistaWhatsapp
+        - estado
+        - mensaje
+      properties:
+        id:
+          type: integer
+          format: int64
+        viajeId:
+          type: integer
+          format: int64
+        lanchaNombre:
+          type: string
+        lancheroNombre:
+          type: string
+        zonaOrigen:
+          type: string
+        zonaDestino:
+          type: string
+        fecha:
+          type: string
+          format: date
+          description: Fecha local calculada a partir de la fecha y hora de retorno.
+        horaRetorno:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        turistaNombreCompleto:
+          type: [string, "null"]
+        turistaWhatsapp:
+          type: [string, "null"]
+        estado:
+          type: string
+          enum: [ACTIVO, INACTIVO]
+        mensaje:
+          type: string
+          example: "Lancha X vuelve vacía desde Zona B a Zona A a las 15:00 hs. ¿Alguien necesita un rescate o envío en ese trayecto?"
+    MensajeTramoVacio:
+      type: object
+      required: [mensaje]
+      properties:
+        mensaje:
+          type: string
+          example: "Lancha X vuelve vacía desde Zona B a Zona A a las 15:00 hs. ¿Alguien necesita un rescate o envío en ese trayecto?"
     PaginaViajes:
       type: object
       required: [content, page, size, totalElements, totalPages]

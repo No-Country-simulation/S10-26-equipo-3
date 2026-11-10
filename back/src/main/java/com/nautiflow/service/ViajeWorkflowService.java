@@ -12,10 +12,12 @@ import com.nautiflow.model.Lanchero;
 import com.nautiflow.model.Lancha;
 import com.nautiflow.model.EstadoOperativoLanchero;
 import com.nautiflow.model.EstadoSolicitud;
+import com.nautiflow.model.EstadoTramoVacio;
 import com.nautiflow.model.Viaje;
 import com.nautiflow.model.Zona;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
+import com.nautiflow.repository.TrayectoRetornoVacioRepository;
 import com.nautiflow.repository.ViajeRepository;
 import com.nautiflow.repository.ZonaRepository;
 import com.nautiflow.util.FechaHoraUtc;
@@ -49,6 +51,7 @@ public class ViajeWorkflowService {
     private final LancheroRepository lancheroRepository;
     private final LanchaRepository lanchaRepository;
     private final ViajeRepository viajeRepository;
+    private final TrayectoRetornoVacioRepository trayectoRetornoVacioRepository;
     private final ZonaRepository zonaRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
@@ -60,6 +63,7 @@ public class ViajeWorkflowService {
             LancheroRepository lancheroRepository,
             LanchaRepository lanchaRepository,
             ViajeRepository viajeRepository,
+            TrayectoRetornoVacioRepository trayectoRetornoVacioRepository,
             ZonaRepository zonaRepository,
             ApplicationEventPublisher eventPublisher,
             Clock clock
@@ -67,6 +71,7 @@ public class ViajeWorkflowService {
         this.lancheroRepository = lancheroRepository;
         this.lanchaRepository = lanchaRepository;
         this.viajeRepository = viajeRepository;
+        this.trayectoRetornoVacioRepository = trayectoRetornoVacioRepository;
         this.zonaRepository = zonaRepository;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
@@ -128,10 +133,7 @@ public class ViajeWorkflowService {
         Sort sort = Sort.by(Sort.Direction.DESC, "fechaHoraInicio")
                 .and(Sort.by(Sort.Direction.DESC, "idViaje"));
         Page<ViajeEnCursoDTO> resultados = viajeRepository
-                .findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
-                        EstadoOperativoLanchero.EN_VIAJE,
-                        PageRequest.of(page, size, sort)
-                )
+                .findByFechaHoraFinIsNull(PageRequest.of(page, size, sort))
                 .map(this::toViajeEnCursoDTO);
         return new PaginaViajesDTO(
                 resultados.getContent(),
@@ -224,7 +226,13 @@ public class ViajeWorkflowService {
         Viaje viaje = viajeRepository.findById(idViaje)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Viaje no encontrado."));
         viaje.getLancha().setLanchero(lanchero);
-        if (lanchero.getEstadoViaje() != EstadoOperativoLanchero.EN_VIAJE || viaje.getFechaHoraFin() != null) {
+        boolean retornoComprometido = trayectoRetornoVacioRepository.existsByViaje_IdViajeAndEstado(
+                idViaje,
+                EstadoTramoVacio.ACTIVO
+        );
+        boolean estadoCompatible = lanchero.getEstadoViaje() == EstadoOperativoLanchero.EN_VIAJE
+                || lanchero.getEstadoViaje() == EstadoOperativoLanchero.EN_RETORNO && retornoComprometido;
+        if (!estadoCompatible || viaje.getFechaHoraFin() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El viaje no está en curso.");
         }
 
@@ -233,10 +241,15 @@ public class ViajeWorkflowService {
         String mensajeResena = "Hola " + viaje.getTuristaNombreCompleto()
                 + ", esperamos que hayas disfrutado tu viaje. Nos gustaría conocer tu experiencia. "
                 + "Nos encantaría que dejaras una reseña.";
-        if (!viajeRepository.existsByLancha_Lanchero_IdLancheroAndIdViajeNotAndFechaHoraFinIsNull(
-                idLanchero,
-                idViaje
-        )) {
+        boolean otroViajeEnCurso = viajeRepository
+                .existsByLancha_Lanchero_IdLancheroAndIdViajeNotAndFechaHoraFinIsNull(idLanchero, idViaje);
+        boolean otroRetornoActivo = trayectoRetornoVacioRepository
+                .existsByViaje_Lancha_Lanchero_IdLancheroAndEstado(idLanchero, EstadoTramoVacio.ACTIVO);
+        if (otroViajeEnCurso) {
+            lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_VIAJE);
+        } else if (otroRetornoActivo) {
+            lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_RETORNO);
+        } else {
             lanchero.setEstadoViaje(EstadoOperativoLanchero.ACTIVO);
         }
         viajeRepository.saveAndFlush(viaje);
