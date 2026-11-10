@@ -20,6 +20,7 @@ import {
   type FiltrosTramosVacios,
   type TramoVacio,
 } from "../../services/tramoVacioAdminService";
+import { formatReturnTime } from "../../utils/formatReturnTime";
 
 type Props = {
   token: string;
@@ -112,7 +113,7 @@ function DatosTramo({
               <BsClock aria-hidden="true" />
               Hora de retorno
             </p>
-            <p className="mt-1 text-sm font-semibold text-text-primary">{tramo.horaRetorno}</p>
+            <p className="mt-1 text-sm font-semibold text-text-primary">{formatReturnTime(tramo.horaRetorno)}</p>
           </div>
           <div className="rounded-lg border border-border-secondary p-2.5">
             <p className="text-xs text-text-secondary">Viaje asociado</p>

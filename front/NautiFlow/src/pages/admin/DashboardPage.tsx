@@ -11,6 +11,7 @@ import {
   type ViajeSeguimiento,
 } from "../../services/adminDashboardService";
 import { listarTramosVacios, type TramoVacio } from "../../services/tramoVacioAdminService";
+import { formatReturnTime } from "../../utils/formatReturnTime";
 
 type Props = { token: string };
 
@@ -170,7 +171,7 @@ function ReturnTrackingRow({ tramo }: { tramo: TramoVacio }) {
       </td>
       <td className="whitespace-nowrap px-5 py-3">
         <span className="block font-medium text-text-primary">{formatDeparture(tramo.fecha + "T12:00:00").date}</span>
-        <span className="mt-1 block text-xs text-text-secondary">{tramo.horaRetorno}</span>
+        <span className="mt-1 block text-xs text-text-secondary">{formatReturnTime(tramo.horaRetorno)}</span>
       </td>
       <td className="px-5 py-3">
         <span className="inline-flex whitespace-nowrap rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
@@ -221,7 +222,7 @@ function MobileReturnTrackingCard({ tramo }: { tramo: TramoVacio }) {
       <dl className="mt-3 grid grid-cols-2 gap-3">
         <div>
           <dt className="text-xs text-text-secondary">Fecha y hora</dt>
-          <dd className="mt-1 text-sm font-medium text-text-primary">{date} · {tramo.horaRetorno}</dd>
+          <dd className="mt-1 text-sm font-medium text-text-primary">{date} · {formatReturnTime(tramo.horaRetorno)}</dd>
         </div>
         <div>
           <dt className="text-xs text-text-secondary">Turista interesado</dt>
