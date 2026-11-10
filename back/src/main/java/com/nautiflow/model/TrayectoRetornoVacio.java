@@ -1,7 +1,10 @@
 package com.nautiflow.model;
 
+import com.nautiflow.util.ZonaNegocio;
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 /**
@@ -30,8 +33,18 @@ public class TrayectoRetornoVacio {
     @Column(name = "fecha_hora_retorno", nullable = false)
     private OffsetDateTime fechaHoraRetorno;
 
+    @Column(name = "turista_nombre_completo", length = 201)
+    private String turistaNombreCompleto;
+
+    @Column(name = "turista_whatsapp", length = 20)
+    private String turistaWhatsapp;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String estado = "ACTIVO";
+    private EstadoTramoVacio estado = EstadoTramoVacio.ACTIVO;
+
+    @Column(name = "fecha_creacion", nullable = false)
+    private OffsetDateTime fechaCreacion;
 
     /**
      * Obtiene identificador del trayecto.
@@ -51,41 +64,42 @@ public class TrayectoRetornoVacio {
      */
     public void setViaje(Viaje viaje) { this.viaje = viaje; }
 
-    /**
-     * Obtiene nombre de la zona de origen.
-     */
     public Zona getZonaOrigen() { return zonaOrigen; }
-    /**
-     * Establece nombre de la zona de origen.
-     */
     public void setZonaOrigen(Zona zonaOrigen) { this.zonaOrigen = zonaOrigen; }
 
-    /**
-     * Obtiene nombre de la zona de destino.
-     */
     public Zona getZonaDestino() { return zonaDestino; }
-    /**
-     * Establece nombre de la zona de destino.
-     */
     public void setZonaDestino(Zona zonaDestino) { this.zonaDestino = zonaDestino; }
 
-    /**
-     * Obtiene fecha y hora prevista para el retorno.
-     */
     public OffsetDateTime getFechaHoraRetorno() { return fechaHoraRetorno; }
-    /**
-     * Establece fecha y hora prevista para el retorno.
-     */
     public void setFechaHoraRetorno(OffsetDateTime fechaHoraRetorno) {
         this.fechaHoraRetorno = fechaHoraRetorno;
     }
 
+    public LocalDate getFecha() {
+        return fechaHoraRetorno.atZoneSameInstant(ZonaNegocio.ZONA).toLocalDate();
+    }
+
+    public LocalTime getHoraRetorno() {
+        return fechaHoraRetorno.atZoneSameInstant(ZonaNegocio.ZONA).toLocalTime();
+    }
+
+    public String getTuristaNombreCompleto() { return turistaNombreCompleto; }
+    public void setTuristaNombreCompleto(String turistaNombreCompleto) {
+        this.turistaNombreCompleto = turistaNombreCompleto;
+    }
+
+    public String getTuristaWhatsapp() { return turistaWhatsapp; }
+    public void setTuristaWhatsapp(String turistaWhatsapp) { this.turistaWhatsapp = turistaWhatsapp; }
+
     /**
      * Obtiene estado actual del registro.
      */
-    public String getEstado() { return estado; }
+    public EstadoTramoVacio getEstado() { return estado; }
     /**
      * Establece estado actual del registro.
      */
-    public void setEstado(String estado) { this.estado = estado; }
+    public void setEstado(EstadoTramoVacio estado) { this.estado = estado; }
+
+    public OffsetDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(OffsetDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 }

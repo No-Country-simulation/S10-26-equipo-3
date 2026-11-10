@@ -86,23 +86,14 @@ public class Zona {
      */
     public void setViajesDestino(Set<Viaje> viajesDestino) { this.viajesDestino = viajesDestino; }
 
-    /**
-     * Obtiene trayectos de retorno que salen de la zona.
-     */
     public Set<TrayectoRetornoVacio> getRetornosOrigen() { return retornosOrigen; }
-    /**
-     * Establece trayectos de retorno que salen de la zona.
-     */
-    public void setRetornosOrigen(Set<TrayectoRetornoVacio> retornosOrigen) { this.retornosOrigen = retornosOrigen; }
+    public void setRetornosOrigen(Set<TrayectoRetornoVacio> retornosOrigen) {
+        this.retornosOrigen = retornosOrigen;
+    }
 
-    /**
-     * Obtiene trayectos de retorno que llegan a la zona.
-     */
     public Set<TrayectoRetornoVacio> getRetornosDestino() { return retornosDestino; }
-    /**
-     * Establece trayectos de retorno que llegan a la zona.
-     */
     public void setRetornosDestino(Set<TrayectoRetornoVacio> retornosDestino) {
         this.retornosDestino = retornosDestino;
     }
+
 }

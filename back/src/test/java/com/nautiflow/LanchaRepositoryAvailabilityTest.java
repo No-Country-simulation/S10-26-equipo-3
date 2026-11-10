@@ -5,14 +5,17 @@ import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.RegistroEmailOutboxRepository;
 import com.nautiflow.repository.ResenaRepository;
+import com.nautiflow.repository.TrayectoRetornoVacioRepository;
 import com.nautiflow.repository.ViajeRepository;
 import com.nautiflow.repository.ZonaRepository;
 import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.model.EstadoOperativoLanchero;
+import com.nautiflow.model.EstadoTramoVacio;
 import com.nautiflow.model.Documento;
 import com.nautiflow.model.Lanchero;
 import com.nautiflow.model.Lancha;
 import com.nautiflow.model.Resena;
+import com.nautiflow.model.TrayectoRetornoVacio;
 import com.nautiflow.model.Viaje;
 import com.nautiflow.model.Zona;
 import org.junit.jupiter.api.Test;
@@ -47,6 +50,9 @@ class LanchaRepositoryAvailabilityTest {
 
     @Autowired
     private ViajeRepository viajeRepository;
+
+    @Autowired
+    private TrayectoRetornoVacioRepository trayectoRetornoVacioRepository;
 
     @Autowired
     private ResenaRepository resenaRepository;
@@ -298,6 +304,55 @@ class LanchaRepositoryAvailabilityTest {
         ).size());
     }
 
+    @Test
+    @Transactional
+    void returnQueryFiltersByDateAndStateAndLoadsRelatedRoute() {
+        long viajesAbiertosAntes = viajeRepository.countByFechaHoraFinIsNull();
+        Zona origen = crearZona("retorno-origen");
+        Zona destino = crearZona("retorno-destino");
+        Lancha lancha = crearLancha("retorno-query", EstadoSolicitud.APROBADO, origen, destino);
+        Viaje viaje = new Viaje();
+        viaje.setLancha(lancha);
+        viaje.setZonaOrigen(origen);
+        viaje.setZonaDestino(destino);
+        viaje.setFechaHoraInicio(OffsetDateTime.parse("2026-11-09T12:00:00-03:00"));
+        viaje.setCantidadPasajeros(1);
+        viaje.setTuristaNombreCompleto("Pasajero de prueba");
+        viaje.setTuristaWhatsapp("+570000000000");
+        viaje = viajeRepository.saveAndFlush(viaje);
+        lancha.getLanchero().setEstadoViaje(EstadoOperativoLanchero.EN_RETORNO);
+        lancheroRepository.saveAndFlush(lancha.getLanchero());
+
+        TrayectoRetornoVacio activo = crearRetorno(
+                viaje,
+                destino,
+                origen,
+                OffsetDateTime.parse("2099-11-09T15:00:00-03:00"),
+                EstadoTramoVacio.ACTIVO
+        );
+        crearRetorno(
+                viaje,
+                destino,
+                origen,
+                OffsetDateTime.parse("2099-11-10T15:00:00-03:00"),
+                EstadoTramoVacio.INACTIVO
+        );
+
+        var resultados = trayectoRetornoVacioRepository.buscar(
+                OffsetDateTime.parse("2099-11-09T00:00:00-03:00"),
+                OffsetDateTime.parse("2099-11-10T00:00:00-03:00"),
+                EstadoTramoVacio.ACTIVO
+        );
+
+        assertEquals(1, resultados.size());
+        assertEquals(activo.getIdTramo(), resultados.getFirst().getIdTramo());
+        assertEquals(destino.getNombre(), resultados.getFirst().getZonaOrigen().getNombre());
+        assertEquals("Lancha retorno-query", resultados.getFirst().getViaje().getLancha().getNombre());
+        assertEquals(viajesAbiertosAntes + 1, viajeRepository.countByFechaHoraFinIsNull());
+        assertEquals(viajesAbiertosAntes + 1,
+                viajeRepository.findByFechaHoraFinIsNull(PageRequest.of(0, 10)).getTotalElements());
+    }
+
     private Zona crearZona(String sufijo) {
         Zona zona = new Zona();
         zona.setNombre("test-" + UUID.randomUUID() + "-" + sufijo);
@@ -320,6 +375,23 @@ class LanchaRepositoryAvailabilityTest {
         lancha.agregarZona(origen);
         lancha.agregarZona(destino);
         return lanchaRepository.saveAndFlush(lancha);
+    }
+
+    private TrayectoRetornoVacio crearRetorno(
+            Viaje viaje,
+            Zona zonaOrigen,
+            Zona zonaDestino,
+            OffsetDateTime fechaHoraRetorno,
+            EstadoTramoVacio estado
+    ) {
+        TrayectoRetornoVacio retorno = new TrayectoRetornoVacio();
+        retorno.setViaje(viaje);
+        retorno.setZonaOrigen(zonaOrigen);
+        retorno.setZonaDestino(zonaDestino);
+        retorno.setFechaHoraRetorno(fechaHoraRetorno);
+        retorno.setEstado(estado);
+        retorno.setFechaCreacion(OffsetDateTime.now(ZoneOffset.UTC));
+        return trayectoRetornoVacioRepository.saveAndFlush(retorno);
     }
 
     private void agregarResena(Lancha lancha, Zona origen, Zona destino, int estrellas) {

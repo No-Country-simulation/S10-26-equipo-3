@@ -1,7 +1,6 @@
 package com.nautiflow.repository;
 
 import com.nautiflow.model.Viaje;
-import com.nautiflow.model.EstadoOperativoLanchero;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +33,12 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
     Optional<Long> findLancheroIdByIdViaje(@Param("id") Long idViaje);
 
     /**
+     * Busca un viaje con sus asociaciones administrativas cargadas.
+     */
+    @EntityGraph(attributePaths = {"lancha", "lancha.lanchero", "zonaOrigen", "zonaDestino"})
+    Optional<Viaje> findWithDetailsByIdViaje(Long idViaje);
+
+    /**
      * Indica si el lanchero tiene un viaje sin finalizar.
      */
     boolean existsByLancha_Lanchero_IdLancheroAndFechaHoraFinIsNull(Long idLanchero);
@@ -47,13 +52,15 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
     );
 
     /**
-     * Lista viajes sin finalizar de lancheros en el estado operativo indicado.
+     * Lista los viajes sin finalizar, incluso si el lanchero ya publicó el retorno.
      */
     @EntityGraph(attributePaths = {"lancha", "lancha.lanchero", "zonaOrigen", "zonaDestino"})
-    Page<Viaje> findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
-            EstadoOperativoLanchero estadoViaje,
-            Pageable pageable
-    );
+    Page<Viaje> findByFechaHoraFinIsNull(Pageable pageable);
+
+    /**
+     * Cuenta los viajes que aún no tienen fecha de finalización.
+     */
+    long countByFechaHoraFinIsNull();
 
     /**
      * Lista todos los viajes con lancha, lanchero y zonas cargados para seguimiento.

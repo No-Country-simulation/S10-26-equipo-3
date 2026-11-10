@@ -10,6 +10,7 @@ import com.nautiflow.model.EstadoOperativoLanchero;
 import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
+import com.nautiflow.repository.TrayectoRetornoVacioRepository;
 import com.nautiflow.repository.ViajeRepository;
 import com.nautiflow.repository.ZonaRepository;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,8 @@ class AdminWorkflowServiceTest {
     @Mock
     private ViajeRepository viajeRepository;
     @Mock
+    private TrayectoRetornoVacioRepository trayectoRetornoVacioRepository;
+    @Mock
     private ZonaRepository zonaRepository;
     @Mock
     private RegistroNotificacionService notificacionService;
@@ -60,7 +63,13 @@ class AdminWorkflowServiceTest {
         Clock clock = Clock.systemUTC();
         service = new AdminWorkflowService(lancheroRepository, notificacionService, clock);
         viajeService = new ViajeWorkflowService(
-                lancheroRepository, lanchaRepository, viajeRepository, zonaRepository, eventPublisher, clock
+                lancheroRepository,
+                lanchaRepository,
+                viajeRepository,
+                trayectoRetornoVacioRepository,
+                zonaRepository,
+                eventPublisher,
+                clock
         );
     }
 
@@ -291,6 +300,26 @@ class AdminWorkflowServiceTest {
     }
 
     @Test
+    void noPermiteCambiarEstadoOperativoDeLancheroConRetornoComprometido() {
+        Lanchero lanchero = pendiente();
+        lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_RETORNO);
+        when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.actualizarEstadoOperativo(
+                        12L,
+                        new EstadoOperativoRequest(EstadoOperativoRequest.EstadoOperativo.INACTIVO)
+                )
+        );
+
+        assertEquals(409, exception.getStatusCode().value());
+        assertEquals(EstadoOperativoLanchero.EN_RETORNO, lanchero.getEstadoViaje());
+        verify(lancheroRepository, never()).save(lanchero);
+    }
+
+    @Test
     void crearViajeValidoIniciaViajeYActualizaSoloEstadoOperativo() {
         Lanchero lanchero = pendiente();
         lanchero.setEstadoSolicitud(EstadoSolicitud.APROBADO);
@@ -421,9 +450,41 @@ class AdminWorkflowServiceTest {
     }
 
     @Test
+    void finalizarViajeConRetornoPublicadoConservaEstadoEnRetorno() {
+        Lanchero lanchero = pendiente();
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_RETORNO);
+        Lancha lancha = new Lancha();
+        lancha.setLanchero(lanchero);
+        Viaje viaje = new Viaje();
+        viaje.setIdViaje(25L);
+        viaje.setLancha(lancha);
+        viaje.setTuristaNombreCompleto("Turista");
+        viaje.setTuristaWhatsapp("5491123456789");
+        when(viajeRepository.findLancheroIdByIdViaje(25L)).thenReturn(Optional.of(12L));
+        when(viajeRepository.findById(25L)).thenReturn(Optional.of(viaje));
+        when(lancheroRepository.findLockedById(12L)).thenReturn(Optional.of(lanchero));
+        when(trayectoRetornoVacioRepository.existsByViaje_IdViajeAndEstado(
+                25L,
+                com.nautiflow.model.EstadoTramoVacio.ACTIVO
+        )).thenReturn(true);
+        when(viajeRepository.existsByLancha_Lanchero_IdLancheroAndIdViajeNotAndFechaHoraFinIsNull(12L, 25L))
+                .thenReturn(false);
+        when(trayectoRetornoVacioRepository.existsByViaje_Lancha_Lanchero_IdLancheroAndEstado(
+                12L,
+                com.nautiflow.model.EstadoTramoVacio.ACTIVO
+        )).thenReturn(true);
+
+        viajeService.finalizar(25L);
+
+        assertEquals(EstadoOperativoLanchero.EN_RETORNO, lanchero.getEstadoViaje());
+        verify(viajeRepository).saveAndFlush(viaje);
+        verify(lancheroRepository).save(lanchero);
+    }
+
+    @Test
     void listaViajesIncluyeWhatsappDelTuristaYConservaPaginacion() {
         Lanchero lanchero = pendiente();
-        lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_VIAJE);
+        lanchero.setEstadoViaje(EstadoOperativoLanchero.EN_RETORNO);
         Lancha lancha = new Lancha();
         lancha.setIdLancha(34L);
         lancha.setLanchero(lanchero);
@@ -438,9 +499,8 @@ class AdminWorkflowServiceTest {
         viaje.setCantidadPasajeros(2);
         viaje.setTuristaNombreCompleto("Ana Pérez");
         viaje.setTuristaWhatsapp("+573001234567");
-        when(viajeRepository.findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
-                eq(EstadoOperativoLanchero.EN_VIAJE), any(Pageable.class)
-        )).thenReturn(new PageImpl<>(List.of(viaje), PageRequest.of(0, 2), 3));
+        when(viajeRepository.findByFechaHoraFinIsNull(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(viaje), PageRequest.of(0, 2), 3));
 
         var resultado = viajeService.listarEnCurso(0, 2);
 
@@ -459,16 +519,20 @@ class AdminWorkflowServiceTest {
         assertEquals("Segunda Sección", viajeDTO.zonaDestino());
         assertEquals(2, viajeDTO.cantidadPasajeros());
 
-        verify(viajeRepository).findByLancha_Lanchero_EstadoViajeAndFechaHoraFinIsNull(
-                eq(EstadoOperativoLanchero.EN_VIAJE), any(Pageable.class)
-        );
+        verify(viajeRepository).findByFechaHoraFinIsNull(any(Pageable.class));
     }
 
     @Test
     void buscarDisponiblesConstruyeLaFechaActualConLaHoraYFiltraLasZonasPedidas() {
         Clock clock = Clock.fixed(Instant.parse("2026-11-02T22:06:00Z"), ZoneOffset.UTC);
         ViajeWorkflowService servicio = new ViajeWorkflowService(
-                lancheroRepository, lanchaRepository, viajeRepository, zonaRepository, eventPublisher, clock
+                lancheroRepository,
+                lanchaRepository,
+                viajeRepository,
+                trayectoRetornoVacioRepository,
+                zonaRepository,
+                eventPublisher,
+                clock
         );
         Zona origen = zona(2L, "Delta");
         Zona destino = zona(3L, "Primera Seccion");
@@ -512,7 +576,13 @@ class AdminWorkflowServiceTest {
     void buscarDisponiblesRechazaCapacidadInvalidaYHoraPasada() {
         Clock clock = Clock.fixed(Instant.parse("2026-11-02T19:30:00Z"), ZoneOffset.UTC);
         ViajeWorkflowService servicio = new ViajeWorkflowService(
-                lancheroRepository, lanchaRepository, viajeRepository, zonaRepository, eventPublisher, clock
+                lancheroRepository,
+                lanchaRepository,
+                viajeRepository,
+                trayectoRetornoVacioRepository,
+                zonaRepository,
+                eventPublisher,
+                clock
         );
 
         assertEquals(400, assertThrows(
@@ -530,7 +600,13 @@ class AdminWorkflowServiceTest {
     void propagaElErrorRealDeLaConsultaDeDisponibilidad() {
         Clock clock = Clock.fixed(Instant.parse("2026-11-02T22:06:00Z"), ZoneOffset.UTC);
         ViajeWorkflowService servicio = new ViajeWorkflowService(
-                lancheroRepository, lanchaRepository, viajeRepository, zonaRepository, eventPublisher, clock
+                lancheroRepository,
+                lanchaRepository,
+                viajeRepository,
+                trayectoRetornoVacioRepository,
+                zonaRepository,
+                eventPublisher,
+                clock
         );
         DataAccessResourceFailureException errorConsulta =
                 new DataAccessResourceFailureException("fallo de consulta");
