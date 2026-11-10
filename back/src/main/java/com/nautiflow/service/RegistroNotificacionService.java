@@ -32,6 +32,7 @@ public interface RegistroNotificacionService {
             String correo,
             String nombreTurista,
             int estrellas,
+            double promedioCalificacion,
             String zonaOrigen,
             String zonaDestino,
             String comentario

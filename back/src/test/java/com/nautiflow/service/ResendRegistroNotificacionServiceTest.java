@@ -54,4 +54,27 @@ class ResendRegistroNotificacionServiceTest {
         assertSame(original, recibida);
         assertSame(original.getCause(), recibida.getCause());
     }
+
+    @Test
+    void notificaElPromedioActualizadoEnTextoYHtml() {
+        service.notificarResena(
+                12L,
+                "ana@example.com",
+                "Ana Pérez",
+                5,
+                4.3,
+                "Zona origen",
+                "Zona destino",
+                "Excelente"
+        );
+
+        org.mockito.ArgumentCaptor<CorreoTransaccional> captor =
+                org.mockito.ArgumentCaptor.forClass(CorreoTransaccional.class);
+        verify(resendEmailClient).enviar(captor.capture());
+        CorreoTransaccional correo = captor.getValue();
+
+        assertTrue(correo.texto().contains("Tu nuevo promedio de calificación es 4.3 estrellas sobre 5."));
+        assertTrue(correo.html().contains("Tu nuevo promedio de calificación es"));
+        assertTrue(correo.html().contains("<strong>4.3 estrellas sobre 5</strong>"));
+    }
 }

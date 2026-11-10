@@ -166,10 +166,12 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
             String correo,
             String nombreTurista,
             int estrellas,
+            double promedioCalificacion,
             String zonaOrigen,
             String zonaDestino,
             String comentario
     ) {
+        String promedioFormateado = String.format(Locale.ROOT, "%.1f", promedioCalificacion);
         String comentarioPlano = comentario != null && !comentario.isBlank()
                 ? "\n\nComentario del pasajero:\n\n" + comentario
                 : "";
@@ -188,8 +190,10 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
 
                 %s ha calificado con %s estrellas su viaje desde %s hasta %s.%s
 
+                Tu nuevo promedio de calificación es %s estrellas sobre 5.
+
                 El equipo de NautiFlow
-                """.formatted(nombreTurista, estrellas, zonaOrigen, zonaDestino, comentarioPlano);
+                """.formatted(nombreTurista, estrellas, zonaOrigen, zonaDestino, comentarioPlano, promedioFormateado);
         String html = """
                 <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0"
                        style="width:100%%;border-collapse:collapse">
@@ -199,6 +203,12 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
                       <strong>%s</strong> hasta <strong>%s</strong>.
                     </td>
                   </tr>
+                  <tr>
+                    <td style="padding:12px">
+                      Tu nuevo promedio de calificación es
+                      <strong>%s estrellas sobre 5</strong>.
+                    </td>
+                  </tr>
                   %s
                 </table>
                 """.formatted(
@@ -206,6 +216,7 @@ public class ResendRegistroNotificacionService implements RegistroNotificacionSe
                 estrellas,
                 CorreoHtmlTemplate.escapar(zonaOrigen),
                 CorreoHtmlTemplate.escapar(zonaDestino),
+                promedioFormateado,
                 comentarioHtml
         );
         enviarNotificacionEstrictaHtml(
