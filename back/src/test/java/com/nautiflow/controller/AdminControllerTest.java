@@ -27,6 +27,7 @@ import com.nautiflow.dto.SolicitudDetalleDTO;
 import com.nautiflow.dto.SolicitudResumenDTO;
 import com.nautiflow.dto.ViajeEnCursoDTO;
 import com.nautiflow.dto.ViajeSeguimientoDTO;
+import com.nautiflow.dto.ViajesFinalizadosPorMesDTO;
 import com.nautiflow.dto.ZonaDTO;
 import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.service.AdminAuthService;
@@ -483,6 +484,25 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$.solicitudesPendientes").value(12))
                 .andExpect(jsonPath("$.lanchasVerificadas").value(28))
                 .andExpect(jsonPath("$.viajesActivos").value(4));
+    }
+
+    @Test
+    void viajesFinalizadosPorMesConTokenDevuelveLosDatos() throws Exception {
+        when(adminService.obtenerViajesFinalizadosPorMes())
+                .thenReturn(List.of(new ViajesFinalizadosPorMesDTO(2026, 3, 5)));
+
+        mockMvc.perform(get("/admin/dashboard/viajes-finalizados-por-mes")
+                        .header("Authorization", bearerToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].anio").value(2026))
+                .andExpect(jsonPath("$[0].mes").value(3))
+                .andExpect(jsonPath("$[0].cantidad").value(5));
+    }
+
+    @Test
+    void viajesFinalizadosPorMesSinTokenDevuelve401() throws Exception {
+        mockMvc.perform(get("/admin/dashboard/viajes-finalizados-por-mes"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

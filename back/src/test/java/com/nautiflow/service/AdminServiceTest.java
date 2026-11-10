@@ -11,6 +11,8 @@ import com.nautiflow.repository.DocumentoRepository;
 import com.nautiflow.repository.LancheroRepository;
 import com.nautiflow.repository.LanchaRepository;
 import com.nautiflow.repository.ViajeRepository;
+import com.nautiflow.repository.ViajeRepository.ViajesPorMesProjection;
+import com.nautiflow.util.ZonaNegocio;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,6 +26,7 @@ import org.springframework.data.domain.Sort;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -34,6 +37,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class AdminServiceTest {
@@ -62,6 +66,27 @@ class AdminServiceTest {
         assertEquals(12L, dashboard.solicitudesPendientes());
         assertEquals(28L, dashboard.lanchasVerificadas());
         assertEquals(4L, dashboard.viajesActivos());
+    }
+
+    @Test
+    void viajesFinalizadosPorMesIncluyeLosUltimosDoceMesesYCompletaLosMesesVacios() {
+        YearMonth mesActual = YearMonth.now(ZonaNegocio.ZONA);
+        ViajesPorMesProjection mesActualProjection = mock(ViajesPorMesProjection.class);
+        when(mesActualProjection.getAnio()).thenReturn(mesActual.getYear());
+        when(mesActualProjection.getMes()).thenReturn(mesActual.getMonthValue());
+        when(mesActualProjection.getCantidad()).thenReturn(7L);
+        when(viajeRepository.contarFinalizadosPorMes(any(OffsetDateTime.class), any(OffsetDateTime.class)))
+                .thenReturn(List.of(mesActualProjection));
+
+        var resultado = adminService.obtenerViajesFinalizadosPorMes();
+
+        assertEquals(12, resultado.size());
+        assertEquals(mesActual.minusMonths(11).getYear(), resultado.getFirst().anio());
+        assertEquals(mesActual.minusMonths(11).getMonthValue(), resultado.getFirst().mes());
+        assertEquals(mesActual.getYear(), resultado.getLast().anio());
+        assertEquals(mesActual.getMonthValue(), resultado.getLast().mes());
+        assertEquals(7L, resultado.getLast().cantidad());
+        assertEquals(0L, resultado.getFirst().cantidad());
     }
 
     @Test

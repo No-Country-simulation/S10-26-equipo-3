@@ -4,6 +4,7 @@ import com.nautiflow.dto.AdminDashboardDTO;
 import com.nautiflow.dto.PaginaSolicitudesDTO;
 import com.nautiflow.dto.SolicitudDetalleDTO;
 import com.nautiflow.dto.SolicitudResumenDTO;
+import com.nautiflow.dto.ViajesFinalizadosPorMesDTO;
 import com.nautiflow.model.Documento;
 import com.nautiflow.model.EstadoSolicitud;
 import com.nautiflow.model.Lanchero;
@@ -19,9 +20,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Comparator;
-import java.util.List;
 import com.nautiflow.util.ZonaNegocio;
+
+import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.IntStream;
 
 /**
  * Servicio de consultas del panel administrativo: métricas, listado y detalle de solicitudes.
@@ -61,6 +68,36 @@ public class AdminService {
                 lanchaRepository.countByLanchero_EstadoSolicitud(EstadoSolicitud.APROBADO),
                 viajeRepository.countByFechaHoraFinIsNull()
         );
+    }
+
+    /**
+     * Devuelve los viajes finalizados de los últimos doce meses, agrupados por mes de inicio.
+     */
+    @Transactional(readOnly = true)
+    public List<ViajesFinalizadosPorMesDTO> obtenerViajesFinalizadosPorMes() {
+        YearMonth mesActual = YearMonth.now(ZonaNegocio.ZONA);
+        YearMonth primerMes = mesActual.minusMonths(11);
+        OffsetDateTime desde = primerMes.atDay(1).atStartOfDay(ZonaNegocio.ZONA).toOffsetDateTime();
+        OffsetDateTime hasta = mesActual.plusMonths(1).atDay(1).atStartOfDay(ZonaNegocio.ZONA).toOffsetDateTime();
+
+        Map<YearMonth, Long> cantidades = new HashMap<>();
+        viajeRepository.contarFinalizadosPorMes(desde, hasta).forEach(resultado ->
+                cantidades.put(
+                        YearMonth.of(resultado.getAnio(), resultado.getMes()),
+                        resultado.getCantidad()
+                )
+        );
+
+        return IntStream.range(0, 12)
+                .mapToObj(indice -> {
+                    YearMonth mes = primerMes.plusMonths(indice);
+                    return new ViajesFinalizadosPorMesDTO(
+                            mes.getYear(),
+                            mes.getMonthValue(),
+                            cantidades.getOrDefault(mes, 0L)
+                    );
+                })
+                .toList();
     }
 
     /**

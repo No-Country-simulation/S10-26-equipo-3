@@ -267,6 +267,36 @@ paths:
         "403":
           description: Sin permiso.
           $ref: "#/components/responses/SinPermiso"
+  /admin/dashboard/viajes-finalizados-por-mes:
+    get:
+      operationId: obtenerViajesFinalizadosPorMes
+      tags: [Dashboard]
+      summary: Consultar viajes finalizados de los últimos doce meses por mes
+      description: Cuenta los viajes finalizados por fecha de inicio local (America/Argentina/Buenos_Aires). Incluye los doce meses, incluso si alguno no tiene viajes.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cantidades mensuales en orden cronológico.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ViajesFinalizadosPorMes"
+              example:
+                - anio: 2025
+                  mes: 12
+                  cantidad: 8
+                - anio: 2026
+                  mes: 1
+                  cantidad: 0
+        "401":
+          description: No autenticado.
+          $ref: "#/components/responses/NoAutenticado"
+        "403":
+          description: Sin permiso.
+          $ref: "#/components/responses/SinPermiso"
   /admin/solicitudes:
     get:
       operationId: listarSolicitudes
@@ -1074,6 +1104,22 @@ components:
         viajesActivos:
           type: integer
           format: int64
+    ViajesFinalizadosPorMes:
+      type: object
+      required: [anio, mes, cantidad]
+      properties:
+        anio:
+          type: integer
+          example: 2026
+        mes:
+          type: integer
+          minimum: 1
+          maximum: 12
+          example: 3
+        cantidad:
+          type: integer
+          format: int64
+          minimum: 0
     PaginaSolicitudes:
       type: object
       required: [content, page, size, totalElements, totalPages]

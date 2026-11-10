@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,10 +71,37 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
     Page<Viaje> findForSeguimiento(@Param("estado") String estado, Pageable pageable);
 
     /**
+     * Agrupa los viajes finalizados por mes de inicio usando la zona horaria del negocio.
+     */
+    @Query(value = """
+            select extract(year from v.fecha_hora_inicio at time zone 'America/Argentina/Buenos_Aires')::integer as anio,
+                   extract(month from v.fecha_hora_inicio at time zone 'America/Argentina/Buenos_Aires')::integer as mes,
+                   count(*) as cantidad
+            from viaje v
+            where v.fecha_hora_fin is not null
+              and v.fecha_hora_inicio >= :desde
+              and v.fecha_hora_inicio < :hasta
+            group by anio, mes
+            order by anio, mes
+            """, nativeQuery = true)
+    List<ViajesPorMesProjection> contarFinalizadosPorMes(
+            @Param("desde") OffsetDateTime desde,
+            @Param("hasta") OffsetDateTime hasta
+    );
+
+    /**
      * Obtiene el último viaje finalizado de una lancha para mostrar su última ubicación conocida.
      */
     @EntityGraph(attributePaths = "zonaDestino")
     Optional<Viaje> findFirstByLancha_IdLanchaAndFechaHoraFinIsNotNullOrderByFechaHoraFinDescIdViajeDesc(
             Long idLancha
     );
+
+    interface ViajesPorMesProjection {
+        Integer getAnio();
+
+        Integer getMes();
+
+        Long getCantidad();
+    }
 }

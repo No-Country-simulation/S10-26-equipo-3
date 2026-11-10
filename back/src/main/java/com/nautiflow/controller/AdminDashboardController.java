@@ -1,8 +1,10 @@
 package com.nautiflow.controller;
 
 import com.nautiflow.dto.AdminDashboardDTO;
+import com.nautiflow.dto.ViajesFinalizadosPorMesDTO;
 import com.nautiflow.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,5 +31,14 @@ public class AdminDashboardController {
     @Operation(tags = "Dashboard")
     public AdminDashboardDTO dashboard() {
         return adminService.obtenerDashboard();
+    }
+
+    /**
+     * Devuelve el historial mensual de viajes finalizados de los últimos doce meses.
+     */
+    @GetMapping("/dashboard/viajes-finalizados-por-mes")
+    @Operation(tags = "Dashboard", summary = "Consultar viajes finalizados por mes")
+    public List<ViajesFinalizadosPorMesDTO> viajesFinalizadosPorMes() {
+        return adminService.obtenerViajesFinalizadosPorMes();
     }
 }
