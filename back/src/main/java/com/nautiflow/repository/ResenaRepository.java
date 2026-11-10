@@ -16,6 +16,16 @@ import java.util.Optional;
  */
 public interface ResenaRepository extends JpaRepository<Resena, Long> {
     /**
+     * Calcula el promedio de estrellas de todas las reseñas del lanchero.
+     */
+    @Query("""
+            select avg(r.estrellas)
+            from Resena r
+            where r.viaje.lancha.lanchero.idLanchero = :idLanchero
+            """)
+    Double calcularPromedioPorLanchero(@Param("idLanchero") Long idLanchero);
+
+    /**
      * Busca la reseña de un viaje.
      */
     Optional<Resena> findByViaje_IdViaje(Long idViaje);

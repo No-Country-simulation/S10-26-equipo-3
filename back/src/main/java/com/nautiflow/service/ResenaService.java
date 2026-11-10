@@ -83,11 +83,13 @@ public class ResenaService {
         }
 
         Lanchero lanchero = viaje.getLancha().getLanchero();
+        double promedioCalificacion = resenaRepository.calcularPromedioPorLanchero(lanchero.getIdLanchero());
         notificacionService.notificarResena(
                 lanchero.getIdLanchero(),
                 lanchero.getCorreo(),
                 viaje.getTuristaNombreCompleto(),
                 resena.getEstrellas(),
+                promedioCalificacion,
                 viaje.getZonaOrigen().getNombre(),
                 viaje.getZonaDestino().getNombre(),
                 resena.getComentario()
