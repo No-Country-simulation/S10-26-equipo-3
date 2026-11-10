@@ -19,12 +19,10 @@ export interface ResenasResponse {
 
 export interface LanchaDestacada {
   idLancha: number;
-  /** ID del lanchero dueño de la embarcación (para consultar sus reseñas) */
-  idLanchero?: number;
   nombreEmbarcacion: string;
   lancheroNombreCompleto: string;
-  fotoPrincipalUrl: string;
-  promedioCalificacion: number;
+  fotoPrincipalUrl?: string | null;
+  promedioCalificacion?: number | null;
   totalResenas: number;
   verificada: boolean;
 }
