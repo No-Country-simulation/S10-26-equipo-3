@@ -37,9 +37,10 @@ function SelectorEstado({
   onChange: (estado: EstadoViajeEditable) => void;
 }) {
   const editable = lanchero.estadoSolicitud === "APROBADO" &&
-    lanchero.estadoViaje !== "EN_VIAJE";
-  const ayuda = lanchero.estadoViaje === "EN_VIAJE"
-    ? "El estado cambia automáticamente cuando termina el viaje."
+    lanchero.estadoViaje !== "EN_VIAJE" &&
+    lanchero.estadoViaje !== "EN_RETORNO";
+  const ayuda = lanchero.estadoViaje === "EN_VIAJE" || lanchero.estadoViaje === "EN_RETORNO"
+    ? "No se puede cambiar el estado mientras tiene un viaje o retorno activo."
     : lanchero.estadoSolicitud !== "APROBADO"
       ? "Solo se puede cambiar el estado operativo de lancheros aprobados."
       : undefined;
@@ -61,6 +62,7 @@ function SelectorEstado({
         <option value="ACTIVO">Activo</option>
         <option value="INACTIVO">Inactivo</option>
         <option value="EN_VIAJE" disabled>En viaje</option>
+        <option value="EN_RETORNO" disabled>En retorno</option>
       </select>
       {actualizando && (
         <span
@@ -106,7 +108,7 @@ function FichaLanchero({
         </div>
         <div>
           <dt className="text-xs font-medium text-text-secondary">Lancha</dt>
-          <dd className="mt-0.5 break-words text-sm text-text-primary">{lanchero.nombreLancha}</dd>
+          <dd className="mt-0.5 break-words text-sm text-text-primary">{lanchero.nombreLancha ?? "Sin lancha"}</dd>
         </div>
       </dl>
     </article>
@@ -203,7 +205,7 @@ export default function LancherosPage({ token }: Props) {
     if (actualizacionesEnCurso.current.has(lanchero.id) ||
         lanchero.estadoViaje === nuevoEstado ||
         lanchero.estadoSolicitud !== "APROBADO" ||
-        lanchero.estadoViaje === "EN_VIAJE") {
+        (lanchero.estadoViaje === "EN_VIAJE" || lanchero.estadoViaje === "EN_RETORNO")) {
       return;
     }
 
@@ -336,7 +338,7 @@ export default function LancherosPage({ token }: Props) {
                       <tr key={lanchero.id} className="border-b border-border-secondary text-sm text-text-primary last:border-b-0 2xl:text-[15px]">
                         <td className="overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2.5 font-medium" title={lanchero.nombreCompleto}>{lanchero.nombreCompleto}</td>
                         <td className="whitespace-nowrap px-3 py-2.5">{lanchero.whatsapp}</td>
-                        <td className="overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2.5" title={lanchero.nombreLancha}>{lanchero.nombreLancha}</td>
+                        <td className="overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2.5" title={lanchero.nombreLancha ?? "Sin lancha"}>{lanchero.nombreLancha ?? "Sin lancha"}</td>
                         <td className="px-2 py-2.5">
                           <SelectorEstado
                             lanchero={lanchero}

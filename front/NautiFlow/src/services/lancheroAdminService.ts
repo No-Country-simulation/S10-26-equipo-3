@@ -8,14 +8,14 @@ export type EstadoSolicitudLanchero =
   | "RECHAZADO"
   | "TODOS";
 
-export type EstadoViajeLanchero = "ACTIVO" | "INACTIVO" | "EN_VIAJE";
+export type EstadoViajeLanchero = "ACTIVO" | "INACTIVO" | "EN_VIAJE" | "EN_RETORNO";
 export type EstadoViajeEditable = Extract<EstadoViajeLanchero, "ACTIVO" | "INACTIVO">;
 
 export interface LancheroAdmin {
   id: number;
   nombreCompleto: string;
   whatsapp: string;
-  nombreLancha: string;
+  nombreLancha: string | null;
   fechaRegistro: string;
   estadoSolicitud: Exclude<EstadoSolicitudLanchero, "TODOS">;
   estadoViaje: EstadoViajeLanchero;
@@ -40,7 +40,11 @@ function esEstadoSolicitud(
 }
 
 function esEstadoViaje(value: unknown): value is EstadoViajeLanchero {
-  return value === "ACTIVO" || value === "INACTIVO" || value === "EN_VIAJE";
+  return value === "ACTIVO" || value === "INACTIVO" || value === "EN_VIAJE" || value === "EN_RETORNO";
+}
+
+function esTextoNullable(value: unknown): value is string | null {
+  return typeof value === "string" || value === null;
 }
 
 function esLanchero(value: unknown): value is LancheroAdmin {
@@ -48,7 +52,7 @@ function esLanchero(value: unknown): value is LancheroAdmin {
     typeof value.id === "number" &&
     typeof value.nombreCompleto === "string" &&
     typeof value.whatsapp === "string" &&
-    typeof value.nombreLancha === "string" &&
+    esTextoNullable(value.nombreLancha) &&
     typeof value.fechaRegistro === "string" &&
     esEstadoSolicitud(value.estadoSolicitud) &&
     esEstadoViaje(value.estadoViaje);
